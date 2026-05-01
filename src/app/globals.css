@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
 :root {
+  /* LM FIT — brand primary; mirrors src/theme/tokens.ts */
+  --lmfit-primary: #f68006;
+  --lmfit-primary-dark: #c76705;
+  --lmfit-accent: #000000;
+  --lmfit-accent-light: #333333;
+  --lmfit-text: #000000;
+  --lmfit-muted: #6d6d6d;
+  --lmfit-border: #e6e6e6;
+  --lmfit-surface: #f6f6f6;
+  --lmfit-success: #3caf65;
+  --lmfit-error: #cc4845;
+  --lmfit-warning-bg: #fdf6ec;
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #000000;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-lmfit-primary: var(--lmfit-primary);
+  --color-lmfit-accent: var(--lmfit-accent);
+  --color-lmfit-success: var(--lmfit-success);
+  --color-lmfit-error: var(--lmfit-error);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }

@@ -1,0 +1,288 @@
+openapi: 3.0.3
+info:
+  title: LM FIT CRM API (proposta)
+  version: 0.1.0
+  description: >
+    Contratos sugeridos para lmfit-api. O painel web (lmfit-web) já compõe dados de cliente
+    com pedidos/notas/escalações; estes endpoints consolidam CRM quando implementados.
+
+servers:
+  - url: http://127.0.0.1:4000
+    description: Dev
+
+tags:
+  - name: customers-crm
+  - name: crm-opportunities
+  - name: crm-tasks
+  - name: crm-segments
+  - name: audit
+
+paths:
+  /customers/{id}/summary:
+    get:
+      tags: [customers-crm]
+      summary: Visão 360 agregada do cliente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Blocos agregados + timeline opcional
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer: { type: object }
+                  recentOrders: { type: array, items: { type: object } }
+                  recentInvoices: { type: array, items: { type: object } }
+                  timeline:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string, enum: [order, invoice, note, escalation, audit] }
+                        at: { type: string, format: date-time }
+                        title: { type: string }
+                        refId: { type: string }
+
+  /customers/{id}/notes:
+    get:
+      tags: [customers-crm]
+      summary: Notas internas
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id: { type: string }
+                    text: { type: string }
+                    createdAt: { type: string, format: date-time }
+                    authorUserId: { type: string }
+    post:
+      tags: [customers-crm]
+      summary: Criar nota interna
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, maxLength: 8000 }
+      responses:
+        "201": { description: Created }
+
+  /crm/opportunities:
+    get:
+      tags: [crm-opportunities]
+      summary: Listar oportunidades (funil)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+        - in: query
+          name: stage
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Opportunity"
+                  total: { type: integer }
+    post:
+      tags: [crm-opportunities]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpportunityCreate"
+      responses:
+        "201": { description: Created }
+
+  /crm/opportunities/{id}:
+    patch:
+      tags: [crm-opportunities]
+      summary: Atualizar estágio / valor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stage: { type: string, enum: [new, qualified, proposal, won, lost] }
+                value: { type: number }
+                ownerUserId: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /crm/tasks:
+    get:
+      tags: [crm-tasks]
+      summary: Listar tarefas
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+                  total: { type: integer }
+    post:
+      tags: [crm-tasks]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCreate"
+      responses:
+        "201": { description: Created }
+
+  /crm/tasks/{id}:
+    patch:
+      tags: [crm-tasks]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                done: { type: boolean }
+                dueAt: { type: string, format: date-time }
+      responses:
+        "200": { description: OK }
+
+  /crm/segments:
+    get:
+      tags: [crm-segments]
+      summary: Segmentos salvos
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id: { type: string }
+                    name: { type: string }
+                    filter: { type: object }
+
+  /crm/segments/{id}/export:
+    get:
+      tags: [crm-segments]
+      summary: Exportar segmento (CSV/xlsx)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, xlsx], default: csv }
+      responses:
+        "200": { description: File stream }
+
+  /audit/logs:
+    get:
+      tags: [audit]
+      summary: Log de auditoria (staff)
+      parameters:
+        - in: query
+          name: entityType
+          schema: { type: string, example: Order }
+        - in: query
+          name: entityId
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        at: { type: string, format: date-time }
+                        actorUserId: { type: string }
+                        action: { type: string }
+                        payload: { type: object }
+
+components:
+  schemas:
+    Opportunity:
+      type: object
+      properties:
+        _id: { type: string }
+        title: { type: string }
+        customerId: { type: string }
+        stage: { type: string }
+        value: { type: number }
+        ownerUserId: { type: string }
+        expectedCloseAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    OpportunityCreate:
+      type: object
+      required: [title, customerId]
+      properties:
+        title: { type: string }
+        customerId: { type: string }
+        value: { type: number }
+        stage: { type: string }
+    Task:
+      type: object
+      properties:
+        _id: { type: string }
+        title: { type: string }
+        customerId: { type: string }
+        dueAt: { type: string, format: date-time }
+        assigneeUserId: { type: string }
+        doneAt: { type: string, format: date-time }
+    TaskCreate:
+      type: object
+      required: [title, dueAt]
+      properties:
+        title: { type: string }
+        dueAt: { type: string, format: date-time }
+        customerId: { type: string }
+        assigneeUserId: { type: string }

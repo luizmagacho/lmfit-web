@@ -1,0 +1,65 @@
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { apiBaseUrl } from "./apiBase";
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+} from "./tokenStorage";
+
+export const http = axios.create({
+  baseURL: apiBaseUrl(),
+  headers: { "Content-Type": "application/json" },
+});
+
+http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  // For FormData, remove the preset Content-Type so axios auto-sets
+  // "multipart/form-data; boundary=..." with the correct boundary.
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  }
+  return config;
+});
+
+http.interceptors.response.use(
+  (res) => res,
+  async (error: AxiosError) => {
+    const original = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
+    if (
+      error.response?.status !== 401 ||
+      !original ||
+      original._retry ||
+      original.url?.includes("/auth/login") ||
+      original.url?.includes("/auth/refresh")
+    ) {
+      return Promise.reject(error);
+    }
+    original._retry = true;
+    const refresh = getRefreshToken();
+    if (!refresh) {
+      clearTokens();
+      return Promise.reject(error);
+    }
+    try {
+      const { data } = await axios.post<{
+        accessToken: string;
+        refreshToken: string;
+      }>(`${apiBaseUrl()}/auth/refresh`, { refreshToken: refresh });
+      setTokens(data.accessToken, data.refreshToken);
+      original.headers.Authorization = `Bearer ${data.accessToken}`;
+      return http(original);
+    } catch {
+      clearTokens();
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+      return Promise.reject(error);
+    }
+  },
+);
