@@ -185,6 +185,7 @@ function PreviewModal({
   onConfirm,
   onCancel,
   loading,
+  lang,
 }: {
   report: InfinitepayReport;
   onConfirm: (analyzeAi: boolean, selectedTxs: ParsedTransaction[]) => void;

@@ -8,7 +8,7 @@ import { documentId, extractListItems } from "@/lib/normalizeApiList";
 import { formatBRL } from "@/lib/formatMoney";
 import { slugifyFileBase } from "@/lib/slugifyFileBase";
 import { orderChannelLabel, ORDER_CHANNELS } from "@/lib/orders/orderChannel";
-import type { OrderChannel } from "@/lib/orders/types";
+import type { OrderChannel, OrderWithWarnings } from "@/lib/orders/types";
 import { orderStatusLabel } from "@/lib/orders/orderStatus";
 import { listOrders, ordersExportParams } from "@/lib/orders/ordersApi";
 import { useLanguage } from "@/context/LanguageContext";
