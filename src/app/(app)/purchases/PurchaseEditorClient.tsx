@@ -262,7 +262,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
           <span style={{ color: lmfitTokens.textMuted }}>Fornecedor *</span>
           <select
             required
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={supplierId}
             onChange={(e) => setSupplierId(e.target.value)}
@@ -279,7 +279,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
         <label className="block text-sm space-y-1">
           <span style={{ color: lmfitTokens.textMuted }}>Status</span>
           <input
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -290,7 +290,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
         <label className="block text-sm space-y-1">
           <span style={{ color: lmfitTokens.textMuted }}>Referência</span>
           <input
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={reference}
             onChange={(e) => setReference(e.target.value)}
@@ -300,7 +300,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
         <label className="block text-sm space-y-1 sm:col-span-2">
           <span style={{ color: lmfitTokens.textMuted }}>Observações</span>
           <textarea
-            className="w-full border rounded-md px-3 py-2 min-h-[4.5rem] bg-white text-sm"
+            className="w-full border rounded-md px-3 py-2 min-h-[4.5rem] bg-[var(--card-bg)] text-sm"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -308,7 +308,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
         </label>
       </div>
 
-      <div className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
             Linhas
@@ -343,7 +343,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                 <tr key={row.key} className="border-b align-top" style={{ borderColor: lmfitTokens.border }}>
                   <td className="py-2 pr-2">
                     <select
-                      className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-white"
+                      className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-[var(--card-bg)]"
                       style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                       value={row.variantId}
                       onChange={(e) =>

@@ -11,10 +11,11 @@ import { orderChannelLabel, ORDER_CHANNELS } from "@/lib/orders/orderChannel";
 import type { OrderChannel } from "@/lib/orders/types";
 import { orderStatusLabel } from "@/lib/orders/orderStatus";
 import { listOrders, ordersExportParams } from "@/lib/orders/ordersApi";
-import type { OrderWithWarnings } from "@/lib/orders/types";
+import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
 
 export function OrdersClient() {
+  const { t } = useLanguage();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [channel, setChannel] = useState<OrderChannel | "">("");
@@ -141,7 +142,7 @@ export function OrdersClient() {
         <label className="block text-sm space-y-1 min-w-[12rem] flex-1">
           <span style={{ color: lmfitTokens.textMuted }}>Buscar</span>
           <input
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={search}
             onChange={(e) => {
@@ -154,7 +155,7 @@ export function OrdersClient() {
         <label className="block text-sm space-y-1 w-full sm:w-48">
           <span style={{ color: lmfitTokens.textMuted }}>Canal</span>
           <select
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={channel}
             onChange={(e) => {
@@ -162,10 +163,10 @@ export function OrdersClient() {
               setPage(1);
             }}
           >
-            <option value="">Todos</option>
+            <option value="">{t("filter.all", "Todos")}</option>
             {ORDER_CHANNELS.map((c) => (
               <option key={c.value} value={c.value}>
-                {c.label}
+                {t(`channel.${c.value}`, c.label)}
               </option>
             ))}
           </select>
@@ -178,37 +179,40 @@ export function OrdersClient() {
         </p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border bg-white" style={{ borderColor: lmfitTokens.border }}>
+      <div className="overflow-x-auto rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>
-              <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                Referência
+              <th className="px-3 py-2 font-medium w-16" style={{ color: lmfitTokens.accentBlue }}>
+                {t("orders.id", "ID")}
               </th>
               <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                Cliente
+                {t("orders.reference", "Referência")}
               </th>
               <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                Canal
+                {t("orders.customer", "Cliente")}
               </th>
               <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                Status
+                {t("orders.channel", "Canal")}
               </th>
               <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                Total
+                {t("orders.status", "Status")}
               </th>
               <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                Data
+                {t("orders.total", "Total")}
+              </th>
+              <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
+                {t("orders.date", "Data")}
               </th>
               <th className="px-3 py-2 font-medium w-28" style={{ color: lmfitTokens.accentBlue }}>
-                Ações
+                {t("orders.actions", "Ações")}
               </th>
             </tr>
           </thead>
           <tbody>
             {!loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center" style={{ color: lmfitTokens.textMuted }}>
+                <td colSpan={8} className="px-3 py-8 text-center" style={{ color: lmfitTokens.textMuted }}>
                   Nenhum pedido encontrado.
                 </td>
               </tr>
@@ -219,6 +223,9 @@ export function OrdersClient() {
               const created = row.createdAt ? new Date(String(row.createdAt)) : null;
               return (
                 <tr key={id || `row-${rowIdx}`} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
+                  <td className="px-3 py-2 align-top font-medium tabular-nums" style={{ color: lmfitTokens.text }}>
+                    #{row.number ?? "—"}
+                  </td>
                   <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
                     {row.reference != null && String(row.reference) !== "" ? String(row.reference) : "—"}
                   </td>
@@ -226,10 +233,10 @@ export function OrdersClient() {
                     {cid ? customerById[cid] ?? cid : "—"}
                   </td>
                   <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
-                    {orderChannelLabel(row.channel as string)}
+                    {t(`channel.${row.channel}`, orderChannelLabel(row.channel as string))}
                   </td>
                   <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
-                    {orderStatusLabel(row.status as string)}
+                    {t(`status.${row.status}`, orderStatusLabel(row.status as string))}
                   </td>
                   <td className="px-3 py-2 align-top tabular-nums" style={{ color: lmfitTokens.text }}>
                     {typeof row.total === "number" && Number.isFinite(row.total) ? formatBRL(row.total) : "—"}

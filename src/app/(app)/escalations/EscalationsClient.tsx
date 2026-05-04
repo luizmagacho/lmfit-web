@@ -75,7 +75,7 @@ export function EscalationsClient() {
         </p>
       )}
       <div
-        className="overflow-x-auto rounded-lg border bg-white"
+        className="overflow-x-auto rounded-lg border bg-[var(--card-bg)]"
         style={{ borderColor: lmfitTokens.border }}
       >
         <table className="min-w-full text-sm">

@@ -1,6 +1,6 @@
-export type OrderChannel = "in_person" | "online" | "site" | "whatsapp";
+export type OrderChannel = "in_person" | "online" | "site" | "whatsapp" | "banca";
 
-export type OrderStatus = "draft" | "paid" | "fulfilled" | "cancelled";
+export type OrderStatus = "open" | "picking" | "shipped" | "completed" | "cancelled";
 
 export type OrderWarningType = "shortfall" | "pending_purchase";
 
@@ -31,6 +31,7 @@ export type OrderLineInput = {
 
 export type OrderRecord = {
   _id: string;
+  number?: number;
   customerId?: string;
   channel?: OrderChannel | string;
   status?: OrderStatus | string;
@@ -45,5 +46,5 @@ export type OrderRecord = {
 export type OrderWithWarnings = OrderRecord & { warnings?: OrderWarning[] };
 
 export function isLinesLockedStatus(status: string | undefined | null): boolean {
-  return status === "paid" || status === "fulfilled";
+  return status === "picking" || status === "shipped" || status === "completed";
 }

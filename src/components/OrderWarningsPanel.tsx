@@ -21,7 +21,7 @@ export function OrderWarningsPanel({ warnings }: { warnings: OrderWarning[] }) {
         {warnings.map((w, i) => (
           <li
             key={`${w.variantId}-${w.type}-${i}`}
-            className="rounded-md border px-2 py-2 bg-white/80"
+            className="rounded-md border px-2 py-2 bg-[var(--card-bg)]/80"
             style={{ borderColor: lmfitTokens.border }}
           >
             <div className="flex flex-wrap items-start justify-between gap-2">

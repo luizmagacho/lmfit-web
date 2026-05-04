@@ -84,7 +84,8 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
 
   const [customerId, setCustomerId] = useState("");
   const [channel, setChannel] = useState<OrderChannel>(DEFAULT_ORDER_CHANNEL);
-  const [status, setStatus] = useState<OrderStatus>("draft");
+  const [status, setStatus] = useState<OrderStatus>("open");
+  const [orderNumber, setOrderNumber] = useState<number | null>(null);
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const keyBase = useId();
@@ -189,7 +190,8 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         if (cancelled) return;
         setCustomerId(o.customerId ? String(o.customerId) : "");
         setChannel((o.channel as OrderChannel) || DEFAULT_ORDER_CHANNEL);
-        setStatus((o.status as OrderStatus) || "draft");
+        setStatus((o.status as OrderStatus) || "open");
+        setOrderNumber(o.number ?? null);
         setReference(o.reference != null ? String(o.reference) : "");
         setNotes(o.notes != null ? String(o.notes) : "");
         const normalized = normalizeOrderLines(o.lines);
@@ -250,7 +252,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
       return;
     }
     if (orderId && !linesLocked && (!payloadLines || payloadLines.length === 0)) {
-      setSaveErr("Inclua ao menos uma linha com variante ou mantenha o status em rascunho com linhas existentes.");
+      setSaveErr("Inclua ao menos uma linha com variante.");
       return;
     }
 
@@ -321,7 +323,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
     <form onSubmit={(ev) => void onSubmit(ev)} className="space-y-4 max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight" style={{ color: lmfitTokens.text }}>
-          {orderId ? "Editar pedido" : "Novo pedido"}
+          {orderId ? (orderNumber ? `Pedido #${orderNumber}` : "Editar pedido") : "Novo pedido"}
         </h1>
         <Link
           href={!orderId && presetCustomerId ? `/customers/${encodeURIComponent(presetCustomerId)}` : "/orders"}
@@ -390,7 +392,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
           <span style={{ color: lmfitTokens.textMuted }}>Cliente *</span>
           <select
             required
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={customerId}
             disabled={Boolean(orderId) || Boolean(presetCustomerId)}
@@ -418,7 +420,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
           <span style={{ color: lmfitTokens.textMuted }}>Canal *</span>
           <select
             required
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={channel}
             onChange={(e) => setChannel(e.target.value as OrderChannel)}
@@ -434,7 +436,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         <label className="block text-sm space-y-1">
           <span style={{ color: lmfitTokens.textMuted }}>Status</span>
           <select
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={status}
             onChange={(e) => setStatus(e.target.value as OrderStatus)}
@@ -450,7 +452,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         <label className="block text-sm space-y-1">
           <span style={{ color: lmfitTokens.textMuted }}>Referência</span>
           <input
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={reference}
             onChange={(e) => setReference(e.target.value)}
@@ -461,7 +463,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         <label className="block text-sm space-y-1 sm:col-span-2">
           <span style={{ color: lmfitTokens.textMuted }}>Observações</span>
           <textarea
-            className="w-full border rounded-md px-3 py-2 min-h-[4.5rem] bg-white text-sm"
+            className="w-full border rounded-md px-3 py-2 min-h-[4.5rem] bg-[var(--card-bg)] text-sm"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -470,7 +472,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         </label>
       </div>
 
-      <div className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
             Linhas
@@ -479,9 +481,9 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
             <span
               className="text-xs max-w-md"
               style={{ color: lmfitTokens.textMuted }}
-              title="Pedidos pagos ou atendidos não permitem alterar linhas na API (erro 422 se enviado)."
+              title="Pedidos em separação ou concluídos não permitem alterar linhas."
             >
-              Edição de linhas bloqueada: status pago ou atendido.
+              Edição de linhas bloqueada: status em separação, enviado ou concluído.
             </span>
           ) : (
             <input
@@ -523,7 +525,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
                     <tr key={row.key} className="border-b align-top" style={{ borderColor: lmfitTokens.border }}>
                       <td className="py-2 pr-2">
                         <select
-                          className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-white"
+                          className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-[var(--card-bg)]"
                           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                           value={row.variantId}
                           onChange={(e) => onVariantPick(row.key, e.target.value)}

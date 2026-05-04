@@ -180,7 +180,7 @@ export function BulkEditorClient() {
           type="search"
           inputMode="search"
           placeholder="Buscar produtos…"
-          className="flex-1 min-w-48 min-h-10 border rounded-md px-3 text-sm bg-white"
+          className="flex-1 min-w-48 min-h-10 border rounded-md px-3 text-sm bg-[var(--card-bg)]"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -190,7 +190,7 @@ export function BulkEditorClient() {
         />
         <button
           type="button"
-          className="inline-flex items-center gap-1 min-h-10 px-3 rounded-md border bg-white text-sm"
+          className="inline-flex items-center gap-1 min-h-10 px-3 rounded-md border bg-[var(--card-bg)] text-sm"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           onClick={() => void load()}
           disabled={loading}
@@ -217,7 +217,7 @@ export function BulkEditorClient() {
       ) : null}
 
       <section
-        className="rounded-lg border bg-white p-3 grid grid-cols-1 md:grid-cols-5 gap-3 items-end"
+        className="rounded-lg border bg-[var(--card-bg)] p-3 grid grid-cols-1 md:grid-cols-5 gap-3 items-end"
         style={{ borderColor: lmfitTokens.border }}
       >
         <label className="text-xs col-span-1" style={{ color: lmfitTokens.textMuted }}>
@@ -229,7 +229,7 @@ export function BulkEditorClient() {
             value={pricePercent}
             onChange={(e) => setPricePercent(e.target.value === "" ? "" : Number(e.target.value))}
             disabled={priceSet !== ""}
-            className="mt-1 block w-full border rounded px-2 py-1.5 text-sm bg-white"
+            className="mt-1 block w-full border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             placeholder="ex.: 10"
           />
@@ -242,7 +242,7 @@ export function BulkEditorClient() {
             step="0.01"
             value={priceSet}
             onChange={(e) => setPriceSet(e.target.value === "" ? "" : Number(e.target.value))}
-            className="mt-1 block w-full border rounded px-2 py-1.5 text-sm bg-white"
+            className="mt-1 block w-full border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             placeholder="ex.: 79.90"
           />
@@ -256,7 +256,7 @@ export function BulkEditorClient() {
             value={qtyDelta}
             onChange={(e) => setQtyDelta(e.target.value === "" ? "" : Number(e.target.value))}
             disabled={qtySet !== ""}
-            className="mt-1 block w-full border rounded px-2 py-1.5 text-sm bg-white"
+            className="mt-1 block w-full border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             placeholder="ex.: -2"
           />
@@ -269,7 +269,7 @@ export function BulkEditorClient() {
             step="1"
             value={qtySet}
             onChange={(e) => setQtySet(e.target.value === "" ? "" : Number(e.target.value))}
-            className="mt-1 block w-full border rounded px-2 py-1.5 text-sm bg-white"
+            className="mt-1 block w-full border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             placeholder="ex.: 10"
           />
@@ -285,7 +285,7 @@ export function BulkEditorClient() {
         </button>
       </section>
 
-      <section className="rounded-lg border bg-white overflow-hidden" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-lg border bg-[var(--card-bg)] overflow-hidden" style={{ borderColor: lmfitTokens.border }}>
         <div
           className="flex items-center gap-2 border-b px-3 py-2 text-xs"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}

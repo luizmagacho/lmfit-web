@@ -41,7 +41,7 @@ export function StockConflictPanel({
           {conflicts.map((c) => (
             <li
               key={c.variantId}
-              className="rounded-md border bg-white px-2 py-2"
+              className="rounded-md border bg-[var(--card-bg)] px-2 py-2"
               style={{ borderColor: lmfitTokens.border }}
             >
               <p className="font-medium tabular-nums" style={{ color: lmfitTokens.text }}>

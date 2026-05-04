@@ -75,7 +75,7 @@ export function AddressForm({ onValid }: { onValid?: (ok: boolean) => void }) {
           type="text"
           inputMode="numeric"
           autoComplete="postal-code"
-          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-white"
+          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={maskCep(cep)}
           onChange={(e) => setCep(onlyCepDigits(e.target.value))}
@@ -94,7 +94,7 @@ export function AddressForm({ onValid }: { onValid?: (ok: boolean) => void }) {
         <input
           type="text"
           autoComplete="street-address"
-          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-white"
+          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={form.logradouro}
           onChange={(e) => commit({ logradouro: e.target.value })}
@@ -105,7 +105,7 @@ export function AddressForm({ onValid }: { onValid?: (ok: boolean) => void }) {
         <input
           type="text"
           inputMode="numeric"
-          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-white"
+          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={form.numero}
           onChange={(e) => commit({ numero: e.target.value })}
@@ -115,7 +115,7 @@ export function AddressForm({ onValid }: { onValid?: (ok: boolean) => void }) {
         Complemento
         <input
           type="text"
-          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-white"
+          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={form.complemento}
           onChange={(e) => commit({ complemento: e.target.value })}
@@ -125,7 +125,7 @@ export function AddressForm({ onValid }: { onValid?: (ok: boolean) => void }) {
         Bairro
         <input
           type="text"
-          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-white"
+          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={form.bairro}
           onChange={(e) => commit({ bairro: e.target.value })}
@@ -135,7 +135,7 @@ export function AddressForm({ onValid }: { onValid?: (ok: boolean) => void }) {
         Cidade
         <input
           type="text"
-          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-white"
+          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={form.cidade}
           onChange={(e) => commit({ cidade: e.target.value })}
@@ -146,7 +146,7 @@ export function AddressForm({ onValid }: { onValid?: (ok: boolean) => void }) {
         <input
           type="text"
           maxLength={2}
-          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-white uppercase"
+          className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)] uppercase"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={form.uf}
           onChange={(e) => commit({ uf: e.target.value.toUpperCase() })}

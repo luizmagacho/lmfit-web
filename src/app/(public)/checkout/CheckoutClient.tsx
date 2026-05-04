@@ -97,7 +97,7 @@ export function CheckoutClient() {
 
       {snap.items === 0 && step === "address" ? (
         <div
-          className="rounded-lg border bg-white p-6 text-center text-sm"
+          className="rounded-lg border bg-[var(--card-bg)] p-6 text-center text-sm"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}
         >
           Seu carrinho está vazio. Adicione produtos no{" "}
@@ -111,7 +111,7 @@ export function CheckoutClient() {
       {step !== "payment" && snap.items > 0 ? (
         <>
           <section
-            className="rounded-lg border bg-white p-4 space-y-3"
+            className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3"
             style={{ borderColor: lmfitTokens.border }}
           >
             <h2 className="text-base font-semibold" style={{ color: lmfitTokens.text }}>
@@ -123,7 +123,7 @@ export function CheckoutClient() {
                 <input
                   type="text"
                   autoComplete="name"
-                  className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-white"
+                  className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
                   style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                   value={checkout.customerName}
                   onChange={(e) => checkout.setCustomer({ customerName: e.target.value })}
@@ -134,7 +134,7 @@ export function CheckoutClient() {
                 <input
                   type="tel"
                   autoComplete="tel"
-                  className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-white"
+                  className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
                   style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                   value={checkout.customerPhone}
                   onChange={(e) => checkout.setCustomer({ customerPhone: e.target.value })}
@@ -145,7 +145,7 @@ export function CheckoutClient() {
                 <input
                   type="email"
                   autoComplete="email"
-                  className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-white"
+                  className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-[var(--card-bg)]"
                   style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                   value={checkout.customerEmail}
                   onChange={(e) => checkout.setCustomer({ customerEmail: e.target.value })}
@@ -155,7 +155,7 @@ export function CheckoutClient() {
           </section>
 
           <section
-            className="rounded-lg border bg-white p-4 space-y-3"
+            className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3"
             style={{ borderColor: lmfitTokens.border }}
           >
             <h2 className="text-base font-semibold" style={{ color: lmfitTokens.text }}>
@@ -168,7 +168,7 @@ export function CheckoutClient() {
           </section>
 
           <section
-            className="rounded-lg border bg-white p-4 space-y-3"
+            className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3"
             style={{ borderColor: lmfitTokens.border }}
           >
             <h2 className="text-base font-semibold" style={{ color: lmfitTokens.text }}>

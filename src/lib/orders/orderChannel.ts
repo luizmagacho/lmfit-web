@@ -5,6 +5,7 @@ export const ORDER_CHANNELS: { value: OrderChannel; label: string }[] = [
   { value: "online", label: "Online" },
   { value: "site", label: "Site" },
   { value: "whatsapp", label: "WhatsApp" },
+  { value: "banca", label: "Banca" },
 ];
 
 export function orderChannelLabel(channel: string | undefined | null): string {

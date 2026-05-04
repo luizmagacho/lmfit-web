@@ -7,25 +7,25 @@ export const lmfitLogoSrc =
 
 export const lmfitTokens = {
   /** Brand orange from the official logo */
-  primary: "#f68006",
+  primary: "var(--lmfit-primary)",
   /** Darkened for hover / pressed states */
-  primaryDark: "#c76705",
+  primaryDark: "var(--lmfit-primary-dark)",
   /** `--accent_color` → rgb(0, 0, 0) */
-  accentBlue: "#000000",
+  accentBlue: "var(--lmfit-accent)",
   /** Secondary text on black accents */
-  accentBlueLight: "#333333",
+  accentBlueLight: "var(--lmfit-accent-light)",
   /** `--text_color` */
-  text: "#000000",
-  textMuted: "#6d6d6d",
+  text: "var(--lmfit-text)",
+  textMuted: "var(--lmfit-text-muted)",
   /** `rgba(var(--main-foreground), 0.1)` on white */
-  border: "#e6e6e6",
-  surface: "#f6f6f6",
-  background: "#ffffff",
+  border: "var(--lmfit-border)",
+  surface: "var(--lmfit-surface)",
+  background: "var(--background)",
   /** `--color-success` → rgb(60, 175, 101) */
-  success: "#3caf65",
-  warningBg: "#fdf6ec",
+  success: "var(--lmfit-success)",
+  warningBg: "var(--lmfit-warning-bg)",
   /** `--color-error` → rgb(204, 72, 69) */
-  error: "#cc4845",
+  error: "var(--lmfit-error)",
 } as const;
 
 export type LmfitTokenKey = keyof typeof lmfitTokens;

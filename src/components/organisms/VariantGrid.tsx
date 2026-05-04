@@ -151,7 +151,7 @@ export function VariantGrid({
   }
 
   return (
-    <ul className="rounded-lg border bg-white" style={{ borderColor: lmfitTokens.border }}>
+    <ul className="rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
       {rows.map((r) => {
         const cartQty = cart.lines.find((l) => l.variantId === r.variantId)?.quantity ?? 0;
         const qty = localQty[r.variantId] ?? cartQty;

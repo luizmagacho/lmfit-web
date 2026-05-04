@@ -122,7 +122,7 @@ export function Customer360Client({ customerId }: { customerId: string }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="rounded-lg border bg-white p-4 space-y-2 text-sm" style={{ borderColor: lmfitTokens.border }}>
+        <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-2 text-sm" style={{ borderColor: lmfitTokens.border }}>
           <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
             Contato
           </h2>
@@ -147,7 +147,7 @@ export function Customer360Client({ customerId }: { customerId: string }) {
             </a>
           ) : null}
         </div>
-        <div className="rounded-lg border bg-white p-4 space-y-2 text-sm" style={{ borderColor: lmfitTokens.border }}>
+        <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-2 text-sm" style={{ borderColor: lmfitTokens.border }}>
           <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
             Resumo
           </h2>
@@ -166,7 +166,7 @@ export function Customer360Client({ customerId }: { customerId: string }) {
         </div>
       </div>
 
-      <section className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
           Notas internas
         </h2>
@@ -206,7 +206,7 @@ export function Customer360Client({ customerId }: { customerId: string }) {
         </ul>
       </section>
 
-      <section className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
           Linha do tempo
         </h2>
@@ -245,7 +245,7 @@ export function Customer360Client({ customerId }: { customerId: string }) {
         </ul>
       </section>
 
-      <section className="rounded-lg border bg-white p-4 space-y-2" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-2" style={{ borderColor: lmfitTokens.border }}>
         <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
           Pedidos
         </h2>

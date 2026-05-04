@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 import { useAuthStore } from "@/stores/useAuthStore";
 import {
   deriveAbcFromRevenue,
@@ -33,6 +34,7 @@ function shortDate(iso: string) {
 }
 
 export function DashboardClient() {
+  const { language, t } = useLanguage();
   const user = useAuthStore((s) => s.user);
   const [days, setDays] = useState(30);
   const [summary, setSummary] = useState<ReportSummary | null>(null);
@@ -132,24 +134,25 @@ export function DashboardClient() {
             className="text-2xl font-semibold tracking-tight"
             style={{ color: lmfitTokens.text }}
           >
-            Painel LM FIT
+            {language === "en" ? "LM FIT Dashboard" : "Painel LM FIT"}
           </h1>
           <p className="mt-1" style={{ color: lmfitTokens.textMuted }}>
-            Olá, {user?.name}. Visão inspirada em painéis de e-commerce (pedidos, compras, receita por
-            SKU).
+            {language === "en" 
+              ? `Hello, ${user?.name}. Vision inspired by e-commerce dashboards (orders, purchases, revenue by SKU).`
+              : `Olá, ${user?.name}. Visão inspirada em painéis de e-commerce (pedidos, compras, receita por SKU).`}
           </p>
         </div>
         <label className="flex flex-col text-sm gap-1 shrink-0" style={{ color: lmfitTokens.textMuted }}>
-          Período
+          {language === "en" ? "Period" : "Período"}
           <select
-            className="border rounded-md px-3 py-2 min-h-11 bg-white min-w-[10rem]"
+            className="border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)] min-w-[10rem]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
           >
             {[7, 30, 90].map((d) => (
               <option key={d} value={d}>
-                Últimos {d} dias
+                {language === "en" ? `Last ${d} days` : `Últimos ${d} dias`}
               </option>
             ))}
           </select>
@@ -158,39 +161,39 @@ export function DashboardClient() {
 
       {loadErr ? (
         <p className="text-sm" style={{ color: lmfitTokens.error }}>
-          {loadErr}
+          {language === "en" ? "Summary unavailable (check login and API)." : "Resumo indisponível (verifique login e API)."}
         </p>
       ) : null}
 
       {crmKpis ? (
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <KpiCard
-            title="CRM · Clientes"
+            title={language === "en" ? "CRM · Customers" : "CRM · Clientes"}
             value={String(crmKpis.customers)}
-            subtitle="Total (API / listagem)"
+            subtitle={language === "en" ? "Total (API / list)" : "Total (API / listagem)"}
             footer={
               <Link className="underline text-sm" href="/customers">
-                Abrir clientes
+                {language === "en" ? "Open customers" : "Abrir clientes"}
               </Link>
             }
           />
           <KpiCard
-            title="CRM · Escalações abertas"
+            title={language === "en" ? "CRM · Open Escalations" : "CRM · Escalações abertas"}
             value={String(crmKpis.escalationsOpen)}
-            subtitle="Heurística: status ≠ done/resolved/closed"
+            subtitle={language === "en" ? "Heuristic: status ≠ done/resolved/closed" : "Heurística: status ≠ done/resolved/closed"}
             footer={
               <Link className="underline text-sm" href="/escalations">
-                Fila WhatsApp
+                {language === "en" ? "WhatsApp Queue" : "Fila WhatsApp"}
               </Link>
             }
           />
           <KpiCard
-            title="CRM · Oportunidades (local)"
+            title={language === "en" ? "CRM · Opportunities (local)" : "CRM · Oportunidades (local)"}
             value={String(crmKpis.localOpportunities)}
-            subtitle="Navegador até existir GET /crm/opportunities"
+            subtitle={language === "en" ? "Browser until GET /crm/opportunities exists" : "Navegador até existir GET /crm/opportunities"}
             footer={
               <Link className="underline text-sm" href="/crm/pipeline">
-                Abrir funil
+                {language === "en" ? "Open pipeline" : "Abrir funil"}
               </Link>
             }
           />
@@ -199,16 +202,16 @@ export function DashboardClient() {
 
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard
-          title="Vendas do dia"
+          title={language === "en" ? "Daily Sales" : "Vendas do dia"}
           value={salesToday ? formatBRL(salesToday.total) : "—"}
           subtitle={
             salesToday
-              ? `${salesToday.orderCount} pedido(s) hoje`
+              ? (language === "en" ? `${salesToday.orderCount} order(s) today` : `${salesToday.orderCount} pedido(s) hoje`)
               : "Endpoint /reports/sales-today"
           }
         />
         <KpiCard
-          title="Ticket médio"
+          title={language === "en" ? "Avg Ticket" : "Ticket médio"}
           value={
             salesToday
               ? formatBRL(salesToday.avgTicket)
@@ -216,25 +219,25 @@ export function DashboardClient() {
                 ? formatBRL(avgTicketFromSummary)
                 : "—"
           }
-          subtitle={salesToday ? "Hoje" : "Período selecionado"}
+          subtitle={salesToday ? (language === "en" ? "Today" : "Hoje") : (language === "en" ? "Selected period" : "Período selecionado")}
         />
         <KpiCard
-          title="Receita (período)"
+          title={language === "en" ? "Revenue (Period)" : "Receita (período)"}
           value={summary ? formatBRL(summary.revenue.total) : "—"}
-          subtitle={summary ? `${summary.revenue.orderCount} pedidos` : "Carregando…"}
+          subtitle={summary ? (language === "en" ? `${summary.revenue.orderCount} orders` : `${summary.revenue.orderCount} pedidos`) : (language === "en" ? "Loading…" : "Carregando…")}
         />
         <KpiCard
-          title="Valor em estoque"
+          title={language === "en" ? "Inventory Value" : "Valor em estoque"}
           value={summary ? formatBRL(summary.stockValue.totalRetail) : "—"}
-          subtitle={summary?.stockValue.note ?? "Varejo"}
+          subtitle={summary?.stockValue.note ?? (language === "en" ? "Retail" : "Varejo")}
           footer={
             <div className="flex flex-wrap gap-x-2 gap-y-1 text-sm pt-1">
               <Link className="underline" href="/inventory">
-                Edição em lote
+                {language === "en" ? "Batch Edit" : "Edição em lote"}
               </Link>
               <span style={{ color: lmfitTokens.textMuted }}>·</span>
               <Link className="underline" href="/pdv">
-                PDV
+                POS
               </Link>
             </div>
           }
@@ -242,9 +245,9 @@ export function DashboardClient() {
       </section>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <section className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+        <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
-            Compras por dia
+            {language === "en" ? "Daily Purchases" : "Compras por dia"}
           </h2>
           {purchasesDaily?.points?.length ? (
             <div className="flex items-end gap-1 h-36 px-1">
@@ -252,10 +255,10 @@ export function DashboardClient() {
                 <div
                   key={p.date}
                   className="flex-1 min-w-0 flex flex-col items-center gap-1"
-                  title={`${p.date}: ${p.purchaseCount} compra(s)`}
+                  title={`${p.date}: ${p.purchaseCount} purchase(s)`}
                 >
                   <div
-                    className="w-full max-w-[2.5rem] mx-auto rounded-t bg-black/5 relative overflow-hidden"
+                    className="w-full max-w-[2.5rem] mx-auto rounded-t bg-[var(--chart-track)] relative overflow-hidden"
                     style={{ height: "7rem" }}
                   >
                     <div
@@ -280,16 +283,15 @@ export function DashboardClient() {
             </div>
           ) : (
             <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
-              Sem dados de compras diárias. Quando a API expuser{" "}
-              <code className="text-xs bg-black/5 px-1 rounded">GET /reports/purchases-daily</code>, o gráfico
-              aparece aqui automaticamente.
+              {language === "en" ? "No daily purchase data. When API exposes " : "Sem dados de compras diárias. Quando a API expuser "}
+              <code className="text-xs bg-[var(--chart-track)] px-1 rounded">GET /reports/purchases-daily</code>, {language === "en" ? "the chart will appear here automatically." : "o gráfico aparece aqui automaticamente."}
             </p>
           )}
         </section>
 
-        <section className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+        <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
-            Receita por produto
+            {language === "en" ? "Revenue per Product" : "Receita por produto"}
           </h2>
           {revenueByProduct?.items?.length ? (
             <div className="space-y-3">
@@ -306,10 +308,10 @@ export function DashboardClient() {
                     </span>
                     <span className="shrink-0 tabular-nums" style={{ color: lmfitTokens.textMuted }}>
                       {formatBRL(p.revenue)}
-                      {typeof p.units === "number" ? ` · ${p.units} un.` : ""}
+                      {typeof p.units === "number" ? ` · ${p.units} units` : ""}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-black/5 overflow-hidden" aria-hidden>
+                  <div className="h-2 rounded-full bg-[var(--chart-track)] overflow-hidden" aria-hidden>
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -323,21 +325,22 @@ export function DashboardClient() {
             </div>
           ) : (
             <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
-              Sem ranking por produto. Com{" "}
-              <code className="text-xs bg-black/5 px-1 rounded">GET /reports/revenue-by-product</code> o painel
-              exibe barras proporcionais à receita no período.
+              {language === "en" ? "No ranking by product. With " : "Sem ranking por produto. Com "}
+              <code className="text-xs bg-[var(--chart-track)] px-1 rounded">GET /reports/revenue-by-product</code> {language === "en" ? "the panel displays proportional bars to revenue in the period." : "o painel exibe barras proporcionais à receita no período."}
             </p>
           )}
         </section>
       </div>
 
-      <section className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <div className="flex flex-wrap justify-between gap-2 items-baseline">
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
-            Curva ABC (80/15/5)
+            {language === "en" ? "ABC Curve (80/15/5)" : "Curva ABC (80/15/5)"}
           </h2>
           <span className="text-xs" style={{ color: lmfitTokens.textMuted }}>
-            {abc ? `${abcCurveA.length} produto(s) na curva A de ${abc.items.length}` : "Calculando a partir da receita por produto…"}
+            {abc 
+              ? (language === "en" ? `${abcCurveA.length} product(s) in curve A of ${abc.items.length}` : `${abcCurveA.length} produto(s) na curva A de ${abc.items.length}`)
+              : (language === "en" ? "Calculating from product revenue…" : "Calculando a partir da receita por produto…")}
           </span>
         </div>
         {abc?.items.length ? (
@@ -380,19 +383,20 @@ export function DashboardClient() {
           </ol>
         ) : (
           <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
-            Sem dados suficientes para montar a curva ABC. Assim que houver receita por produto no período, os
-            destaques aparecem aqui.
+            {language === "en" 
+              ? "Not enough data to build the ABC curve. Once there is product revenue in the period, the highlights appear here." 
+              : "Sem dados suficientes para montar a curva ABC. Assim que houver receita por produto no período, os destaques aparecem aqui."}
           </p>
         )}
       </section>
 
-      <section className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <div className="flex flex-wrap justify-between gap-2 items-baseline">
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
-            Top variantes (SKU) — mesmo dado dos relatórios
+            {language === "en" ? "Top Variants (SKU) — same data as reports" : "Top variantes (SKU) — mesmo dado dos relatórios"}
           </h2>
           <Link href="/reports" className="text-sm underline" style={{ color: lmfitTokens.primary }}>
-            Abrir relatórios
+            {language === "en" ? "Open reports" : "Abrir relatórios"}
           </Link>
         </div>
         {topFromSummary.length ? (
@@ -402,10 +406,10 @@ export function DashboardClient() {
                 <div className="flex justify-between text-sm gap-2">
                   <span style={{ color: lmfitTokens.text }}>{v.sku ?? v.variantId}</span>
                   <span style={{ color: lmfitTokens.textMuted }}>
-                    {formatBRL(v.revenue)} · {v.units} un.
+                    {formatBRL(v.revenue)} · {v.units} units
                   </span>
                 </div>
-                <div className="h-2 rounded-full bg-black/5 overflow-hidden" aria-hidden>
+                <div className="h-2 rounded-full bg-[var(--chart-track)] overflow-hidden" aria-hidden>
                   <div
                     className="h-full rounded-full"
                     style={{
@@ -419,17 +423,17 @@ export function DashboardClient() {
           </div>
         ) : (
           <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
-            Nenhuma variante no período ou resumo ainda não carregou.
+            {language === "en" ? "No variant in the period or summary not yet loaded." : "Nenhuma variante no período ou resumo ainda não carregou."}
           </p>
         )}
       </section>
 
       <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
-        Catálogo público:{" "}
+        {language === "en" ? "Public Catalog" : "Catálogo público"}:{" "}
         <Link href="/catalogo" className="underline">
           /catalogo
         </Link>{" "}
-        · PDV:{" "}
+        · POS:{" "}
         <Link href="/pdv" className="underline">
           /pdv
         </Link>
@@ -451,8 +455,8 @@ function KpiCard({
 }) {
   return (
     <div
-      className="rounded-lg border p-4 space-y-1"
-      style={{ borderColor: lmfitTokens.border, backgroundColor: "#fff" }}
+      className="rounded-lg border p-4 space-y-1 bg-[var(--card-bg)]"
+      style={{ borderColor: lmfitTokens.border }}
     >
       <div className="text-sm" style={{ color: lmfitTokens.textMuted }}>
         {title}

@@ -123,7 +123,7 @@ export function PurchasesListClient() {
       <label className="block text-sm space-y-1 max-w-md">
         <span style={{ color: lmfitTokens.textMuted }}>Buscar</span>
         <input
-          className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+          className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={search}
           onChange={(e) => {
@@ -140,7 +140,7 @@ export function PurchasesListClient() {
         </p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border bg-white" style={{ borderColor: lmfitTokens.border }}>
+      <div className="overflow-x-auto rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>

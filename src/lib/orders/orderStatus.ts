@@ -1,9 +1,10 @@
 import type { OrderStatus } from "./types";
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
-  { value: "draft", label: "Rascunho" },
-  { value: "paid", label: "Pago" },
-  { value: "fulfilled", label: "Atendido" },
+  { value: "open", label: "Em aberto" },
+  { value: "picking", label: "Em separação" },
+  { value: "shipped", label: "Enviado" },
+  { value: "completed", label: "Concluído" },
   { value: "cancelled", label: "Cancelado" },
 ];
 

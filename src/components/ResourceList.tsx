@@ -927,7 +927,7 @@ export function ResourceList({
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-lg border bg-white" style={{ borderColor: lmfitTokens.border }}>
+      <div className="overflow-x-auto rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>
@@ -1033,7 +1033,7 @@ export function ResourceList({
             aria-modal
             aria-labelledby="resource-modal-title"
             className={[
-              "relative z-10 w-full max-h-[92vh] flex flex-col rounded-t-lg sm:rounded-lg bg-white shadow-xl border sm:m-0",
+              "relative z-10 w-full max-h-[92vh] flex flex-col rounded-t-lg sm:rounded-lg bg-[var(--card-bg)] shadow-xl border sm:m-0",
               modalLayout === "wide" ? "sm:max-w-3xl" : "sm:max-w-lg",
             ].join(" ")}
             style={{ borderColor: lmfitTokens.border }}
@@ -1281,7 +1281,7 @@ export function ResourceList({
                           />
                         ) : ft === "select" && c.selectOptions?.length ? (
                           <select
-                            className="mt-1 w-full border rounded px-3 py-2 min-h-11 bg-white"
+                            className="mt-1 w-full border rounded px-3 py-2 min-h-11 bg-[var(--card-bg)]"
                             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                             value={val}
                             onChange={(e) => setFormValues((prev) => ({ ...prev, [c.key]: e.target.value }))}
@@ -1387,7 +1387,7 @@ export function ResourceList({
                 </div>
               </div>
               <div
-                className="shrink-0 flex flex-wrap justify-end gap-2 pt-3 mt-2 border-t bg-white"
+                className="shrink-0 flex flex-wrap justify-end gap-2 pt-3 mt-2 border-t bg-[var(--card-bg)]"
                 style={{ borderColor: lmfitTokens.border }}
               >
                 <button
@@ -1425,7 +1425,7 @@ export function ResourceList({
           <div
             role="dialog"
             aria-modal
-            className="relative z-10 w-full max-w-sm rounded-lg bg-white shadow-xl border p-4"
+            className="relative z-10 w-full max-w-sm rounded-lg bg-[var(--card-bg)] shadow-xl border p-4"
             style={{ borderColor: lmfitTokens.border }}
           >
             <p className="text-sm mb-4" style={{ color: lmfitTokens.text }}>

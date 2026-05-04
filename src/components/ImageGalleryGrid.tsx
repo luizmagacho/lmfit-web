@@ -47,7 +47,7 @@ export function ImageGalleryGrid({ urls, onRemoveIndex, className }: Props) {
           {urls.map((src, i) => (
             <li
               key={`${i}-${src.slice(0, 80)}`}
-              className="relative aspect-square overflow-hidden rounded-md border bg-white shadow-sm group"
+              className="relative aspect-square overflow-hidden rounded-md border bg-[var(--card-bg)] shadow-sm group"
               style={{ borderColor: lmfitTokens.border }}
             >
               {broken[i] ? (

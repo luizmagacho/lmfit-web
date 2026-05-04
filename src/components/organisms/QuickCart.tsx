@@ -26,7 +26,7 @@ function CartRow({ line, onRemove }: { line: CartLine; onRemove: () => void }) {
         <Trash2 size={18} color="#fff" aria-hidden />
       </div>
       <div
-        className="relative bg-white flex items-center gap-3 px-3 py-2"
+        className="relative bg-[var(--card-bg)] flex items-center gap-3 px-3 py-2"
         style={{ transform: `translateX(${Math.min(0, dx)}px)`, transition: start.current === null ? "transform 120ms ease" : undefined }}
         onPointerDown={(e) => {
           start.current = e.clientX;
@@ -113,7 +113,7 @@ export function QuickCart({
 
   return (
     <aside
-      className="sticky bottom-0 left-0 right-0 border-t bg-white"
+      className="sticky bottom-0 left-0 right-0 border-t bg-[var(--card-bg)]"
       style={{ borderColor: lmfitTokens.border }}
       aria-label="Carrinho rápido"
     >

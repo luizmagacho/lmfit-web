@@ -56,7 +56,7 @@ export function NumberStepper({
           const n = Number(e.target.value);
           onChange(clamp(Number.isFinite(n) ? n : min));
         }}
-        className={`text-center tabular-nums text-sm ${inputW} bg-white outline-none`}
+        className={`text-center tabular-nums text-sm ${inputW} bg-[var(--card-bg)] outline-none`}
         style={{ color: lmfitTokens.text }}
       />
       <IconButton

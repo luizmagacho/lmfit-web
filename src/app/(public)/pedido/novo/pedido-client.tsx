@@ -183,7 +183,7 @@ export function PedidoNovoClient() {
         <label className="block text-sm space-y-1" style={{ color: lmfitTokens.textMuted }}>
           ID do cliente (opcional)
           <input
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={customerId}
             onChange={(e) => setCustomerId(e.target.value)}
@@ -193,7 +193,7 @@ export function PedidoNovoClient() {
         <label className="block text-sm space-y-1" style={{ color: lmfitTokens.textMuted }}>
           WhatsApp (opcional)
           <input
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={waId}
             onChange={(e) => setWaId(e.target.value)}
@@ -229,11 +229,11 @@ export function PedidoNovoClient() {
         </p>
       ) : (
         <>
-          <div className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+          <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
             <label className="block text-sm space-y-1" style={{ color: lmfitTokens.textMuted }}>
               Variante
               <select
-                className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+                className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
                 style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                 value={variantId}
                 onChange={(e) => setVariantId(e.target.value)}
@@ -250,7 +250,7 @@ export function PedidoNovoClient() {
               Quantidade
               <input
                 inputMode="numeric"
-                className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+                className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
                 style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
@@ -266,7 +266,7 @@ export function PedidoNovoClient() {
               Adicionar / atualizar linha
             </button>
           </div>
-          <div className="rounded-lg border bg-white p-4 space-y-2" style={{ borderColor: lmfitTokens.border }}>
+          <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-2" style={{ borderColor: lmfitTokens.border }}>
             <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
               Linhas
             </h2>
@@ -282,7 +282,7 @@ export function PedidoNovoClient() {
           <label className="block text-sm space-y-1" style={{ color: lmfitTokens.textMuted }}>
             ID do cliente (obrigatório se não vinculado ao rascunho)
             <input
-              className="w-full border rounded-md px-3 py-2 min-h-11 bg-white"
+              className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
               style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
               value={submitCustomerId}
               onChange={(e) => setSubmitCustomerId(e.target.value)}

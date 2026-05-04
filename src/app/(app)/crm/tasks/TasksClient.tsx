@@ -99,7 +99,7 @@ export function TasksClient() {
         </p>
       ) : null}
 
-      <div className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <h2 className="font-medium text-sm" style={{ color: lmfitTokens.text }}>
           Nova tarefa (modo local)
         </h2>
@@ -141,7 +141,7 @@ export function TasksClient() {
         {sorted.map((t) => (
           <li
             key={t.id}
-            className="rounded-lg border bg-white px-3 py-3 flex flex-wrap items-start justify-between gap-2"
+            className="rounded-lg border bg-[var(--card-bg)] px-3 py-3 flex flex-wrap items-start justify-between gap-2"
             style={{ borderColor: lmfitTokens.border }}
           >
             <div>

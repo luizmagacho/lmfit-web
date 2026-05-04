@@ -69,7 +69,7 @@ export function InvoicesClient() {
           <label className="flex flex-col gap-1 text-sm shrink-0" style={{ color: lmfitTokens.textMuted }}>
             Filtrar por status
             <select
-              className="min-h-11 border rounded-md px-3 py-2 bg-white min-w-[10rem]"
+              className="min-h-11 border rounded-md px-3 py-2 bg-[var(--card-bg)] min-w-[10rem]"
               style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

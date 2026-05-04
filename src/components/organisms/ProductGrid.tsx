@@ -85,7 +85,7 @@ export function ProductGrid({
         {Array.from({ length: 8 }).map((_, i) => (
           <article
             key={i}
-            className="rounded-lg border bg-white overflow-hidden"
+            className="rounded-lg border bg-[var(--card-bg)] overflow-hidden"
             style={{ borderColor: lmfitTokens.border }}
           >
             <Skeleton className="w-full" style={{ aspectRatio: "1 / 1" }} />
@@ -102,7 +102,7 @@ export function ProductGrid({
   if (filtered.length === 0) {
     return (
       <div
-        className="rounded-lg border bg-white p-6 text-center text-sm"
+        className="rounded-lg border bg-[var(--card-bg)] p-6 text-center text-sm"
         style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}
       >
         Nenhum produto encontrado com os filtros atuais.
@@ -122,7 +122,7 @@ export function ProductGrid({
         return (
           <article
             key={id || String(p.name)}
-            className="rounded-lg border bg-white overflow-hidden flex flex-col"
+            className="rounded-lg border bg-[var(--card-bg)] overflow-hidden flex flex-col"
             style={{ borderColor: lmfitTokens.border }}
           >
             <div className="relative w-full bg-neutral-100" style={{ aspectRatio: "1 / 1" }}>

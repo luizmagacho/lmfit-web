@@ -20,13 +20,13 @@ export function CatalogFilters() {
           type="search"
           inputMode="search"
           placeholder="Buscar produto…"
-          className="w-full min-h-10 border rounded-md pl-7 pr-3 text-sm bg-white"
+          className="w-full min-h-10 border rounded-md pl-7 pr-3 text-sm bg-[var(--card-bg)]"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={search}
           onChange={(e) => setFilter({ search: e.target.value })}
         />
       </div>
-      <label className="inline-flex items-center gap-2 min-h-10 px-3 text-sm rounded-md border bg-white"
+      <label className="inline-flex items-center gap-2 min-h-10 px-3 text-sm rounded-md border bg-[var(--card-bg)]"
         style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>
         <input
           type="checkbox"
@@ -36,7 +36,7 @@ export function CatalogFilters() {
         />
         Estoque disponível
       </label>
-      <label className="inline-flex items-center gap-2 min-h-10 px-3 text-sm rounded-md border bg-white"
+      <label className="inline-flex items-center gap-2 min-h-10 px-3 text-sm rounded-md border bg-[var(--card-bg)]"
         style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>
         <input
           type="checkbox"

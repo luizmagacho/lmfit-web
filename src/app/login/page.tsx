@@ -57,7 +57,7 @@ function LoginForm() {
     >
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm space-y-4 bg-white p-6 rounded-lg shadow-sm border"
+        className="w-full max-w-sm space-y-4 bg-[var(--card-bg)] p-6 rounded-lg shadow-sm border"
         style={{ borderColor: lmfitTokens.border }}
       >
         <div className="flex flex-col items-center gap-2">

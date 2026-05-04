@@ -130,7 +130,7 @@ export function PdvClient() {
       const order = await createOrder({
         customerId: snap.customer.id,
         channel: "in_person",
-        status: "paid",
+        status: "completed",
         notes: "PDV mobile",
         lines: snap.lines.map((l) => ({
           variantId: l.variantId,
@@ -170,7 +170,7 @@ export function PdvClient() {
           type="search"
           inputMode="search"
           placeholder="Nome ou SKU…"
-          className="w-full border rounded-md py-2 pr-3 text-sm min-h-10 bg-white"
+          className="w-full border rounded-md py-2 pr-3 text-sm min-h-10 bg-[var(--card-bg)]"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
           value={pdv.search}
           onChange={(e) => pdv.setSearch(e.target.value)}
@@ -197,7 +197,7 @@ export function PdvClient() {
       {orderWarnings.length ? <OrderWarningsPanel warnings={orderWarnings} /> : null}
 
       <div
-        className="flex flex-col gap-2 rounded-md border bg-white px-3 py-2"
+        className="flex flex-col gap-2 rounded-md border bg-[var(--card-bg)] px-3 py-2"
         style={{ borderColor: lmfitTokens.border }}
       >
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -216,14 +216,14 @@ export function PdvClient() {
             />
             {customerResults.length ? (
               <ul
-                className="absolute z-10 left-0 right-0 top-full mt-1 rounded-md border bg-white shadow"
+                className="absolute z-10 left-0 right-0 top-full mt-1 rounded-md border bg-[var(--card-bg)] shadow"
                 style={{ borderColor: lmfitTokens.border }}
               >
                 {customerResults.map((c) => (
                   <li key={c.id} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
                     <button
                       type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-50"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--hover-bg)]"
                       onClick={() => {
                         cart.setCustomer({ id: c.id, name: c.name });
                         setCustomerResults([]);
@@ -263,7 +263,7 @@ export function PdvClient() {
 
       {term.length >= 2 ? (
         <div
-          className="rounded-lg border bg-white overflow-hidden"
+          className="rounded-lg border bg-[var(--card-bg)] overflow-hidden"
           style={{ borderColor: lmfitTokens.border }}
         >
           {searching ? (
@@ -284,7 +284,7 @@ export function PdvClient() {
                   <li key={id || productSku(p)} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
                     <button
                       type="button"
-                      className="w-full text-left px-3 py-2 hover:bg-neutral-50 min-h-11"
+                      className="w-full text-left px-3 py-2 hover:bg-[var(--hover-bg)] min-h-11"
                       onClick={() => pickProduct(p)}
                     >
                       <span className="font-medium text-sm" style={{ color: lmfitTokens.text }}>

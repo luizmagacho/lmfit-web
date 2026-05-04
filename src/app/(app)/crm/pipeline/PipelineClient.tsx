@@ -135,7 +135,7 @@ export function PipelineClient() {
         </p>
       ) : null}
 
-      <div className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <h2 className="font-medium text-sm" style={{ color: lmfitTokens.text }}>
           Nova oportunidade (modo local)
         </h2>
@@ -178,7 +178,7 @@ export function PipelineClient() {
           {STAGES.map((col) => (
             <div
               key={col.id}
-              className="flex-1 min-w-[10rem] rounded-lg border bg-white p-2 space-y-2"
+              className="flex-1 min-w-[10rem] rounded-lg border bg-[var(--card-bg)] p-2 space-y-2"
               style={{ borderColor: lmfitTokens.border }}
             >
               <h3 className="text-xs font-semibold uppercase tracking-wide px-1" style={{ color: lmfitTokens.accentBlue }}>

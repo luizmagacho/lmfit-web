@@ -14,8 +14,8 @@ export function IconButton({ children, label, variant = "ghost", className, styl
     variant === "primary"
       ? { backgroundColor: lmfitTokens.primary, color: "#fff", borderColor: lmfitTokens.primary }
       : variant === "danger"
-        ? { backgroundColor: "#fff", color: lmfitTokens.error, borderColor: lmfitTokens.border }
-        : { backgroundColor: "#fff", color: lmfitTokens.text, borderColor: lmfitTokens.border };
+        ? { backgroundColor: "var(--card-bg)", color: lmfitTokens.error, borderColor: lmfitTokens.border }
+        : { backgroundColor: "var(--card-bg)", color: lmfitTokens.text, borderColor: lmfitTokens.border };
   return (
     <button
       type="button"

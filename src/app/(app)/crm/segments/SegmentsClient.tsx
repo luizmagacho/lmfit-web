@@ -121,7 +121,7 @@ export function SegmentsClient() {
         {filtered.length} cliente(s) no segmento.
       </p>
 
-      <div className="overflow-x-auto rounded-lg border bg-white" style={{ borderColor: lmfitTokens.border }}>
+      <div className="overflow-x-auto rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>

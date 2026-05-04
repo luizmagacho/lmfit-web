@@ -18,7 +18,7 @@ export function PdvTemplate({
   return (
     <div className="min-h-screen flex flex-col bg-[var(--lmfit-surface,#f6f6f6)]">
       <header
-        className="sticky top-0 z-40 border-b bg-white flex items-center gap-3 px-3 py-2"
+        className="sticky top-0 z-40 border-b bg-[var(--card-bg)] flex items-center gap-3 px-3 py-2"
         style={{ borderColor: lmfitTokens.border }}
       >
         <Link

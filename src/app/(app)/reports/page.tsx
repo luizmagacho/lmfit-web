@@ -67,7 +67,7 @@ export default function ReportsPage() {
         <label className="flex flex-col text-sm gap-1" style={{ color: lmfitTokens.textMuted }}>
           Período (dias)
           <select
-            className="border rounded-md px-3 py-2 min-h-11 bg-white"
+            className="border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
@@ -103,7 +103,7 @@ export default function ReportsPage() {
             <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
               Top SKUs por receita
             </h2>
-            <div className="rounded-lg border bg-white p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+            <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
               {data.topVariants.length === 0 ? (
                 <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
                   Sem linhas de pedido no período.
@@ -120,7 +120,7 @@ export default function ReportsPage() {
                       </span>
                     </div>
                     <div
-                      className="h-2 rounded-full bg-black/5 overflow-hidden"
+                      className="h-2 rounded-full bg-[var(--chart-track)] overflow-hidden"
                       aria-hidden
                     >
                       <div
@@ -154,7 +154,7 @@ function StatCard({
   return (
     <div
       className="rounded-lg border p-4 space-y-1"
-      style={{ borderColor: lmfitTokens.border, backgroundColor: "#fff" }}
+      style={{ borderColor: lmfitTokens.border, backgroundColor: "var(--card-bg)" }}
     >
       <div className="text-sm" style={{ color: lmfitTokens.textMuted }}>
         {title}

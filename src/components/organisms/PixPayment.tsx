@@ -49,7 +49,7 @@ export function PixPayment() {
 
   return (
     <div
-      className="rounded-lg border bg-white p-4 space-y-3"
+      className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3"
       style={{ borderColor: lmfitTokens.border }}
     >
       <div className="flex items-center justify-between">
@@ -81,7 +81,7 @@ export function PixPayment() {
           <textarea
             readOnly
             value={pix.qrCode}
-            className="flex-1 text-xs font-mono border rounded px-2 py-1.5 bg-white"
+            className="flex-1 text-xs font-mono border rounded px-2 py-1.5 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, minHeight: 64 }}
           />
           <button

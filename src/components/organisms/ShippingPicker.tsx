@@ -49,10 +49,10 @@ export function ShippingPicker() {
             <button
               type="button"
               onClick={() => setShipping(m.id)}
-              className="w-full text-left border rounded-lg p-3 flex items-start gap-3 bg-white"
+              className="w-full text-left border rounded-lg p-3 flex items-start gap-3 bg-[var(--card-bg)]"
               style={{
                 borderColor: active ? lmfitTokens.primary : lmfitTokens.border,
-                boxShadow: active ? `0 0 0 2px ${lmfitTokens.primary}33` : undefined,
+                boxShadow: active ? `0 0 0 2px color-mix(in srgb, ${lmfitTokens.primary} 33%, transparent)` : undefined,
               }}
               aria-pressed={active}
             >
