@@ -34,7 +34,7 @@ function shortDate(iso: string) {
 }
 
 export function DashboardClient() {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const user = useAuthStore((s) => s.user);
   const [days, setDays] = useState(30);
   const [summary, setSummary] = useState<ReportSummary | null>(null);

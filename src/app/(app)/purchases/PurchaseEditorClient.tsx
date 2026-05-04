@@ -161,7 +161,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
     return () => {
       cancelled = true;
     };
-  }, [purchaseId, presetVariantId]);
+  }, [purchaseId, presetVariantId, nextKey]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -8,7 +8,7 @@ import { Moon, Sun, Monitor, Languages } from "lucide-react";
 
 export function SettingsClient() {
   const { theme, setTheme } = useTheme();
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -17,7 +17,6 @@ export function SettingsClient() {
 
   if (!mounted) return null;
 
-  const isDark = theme === "dark";
 
   return (
     <div className="max-w-3xl space-y-8">

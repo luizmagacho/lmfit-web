@@ -190,6 +190,7 @@ function PreviewModal({
   onConfirm: (analyzeAi: boolean, selectedTxs: ParsedTransaction[]) => void;
   onCancel: () => void;
   loading: boolean;
+  lang: string;
 }) {
   const [selected, setSelected] = useState<Set<number>>(() => new Set(report.transactions.map((_, i) => i)));
 
@@ -284,7 +285,7 @@ function PreviewModal({
                   </td>
                   <td className="py-1.5 pr-2">
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={txTypeBadgeStyle(tx.type)}>
-                      {txTypeLabel(tx.type)}
+                      {txTypeLabel(tx.type, lang)}
                     </span>
                   </td>
                   <td className="py-1.5 pr-2 max-w-[150px] truncate" style={{ color: lmfitTokens.text }}>{tx.name}</td>
@@ -550,8 +551,8 @@ export function FinancialClient() {
                             {new Date(entry.date).toLocaleDateString(language === "en" ? "en-US" : "pt-BR", { timeZone: "UTC" })} {entry.hour}
                           </td>
                           <td className="py-2.5 px-2">
-                            <span className="px-2 py-0.5 rounded text-xs font-medium" style={txTypeBadgeStyle(entry.type)}>
-                              {txTypeLabel(entry.type)}
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={txTypeBadgeStyle(entry.type)}>
+                              {txTypeLabel(entry.type, language)}
                             </span>
                           </td>
                           <td className="py-2.5 px-2 max-w-[180px] truncate" style={{ color: lmfitTokens.text }}>
@@ -642,6 +643,7 @@ export function FinancialClient() {
           onConfirm={handleImport}
           onCancel={() => setPreview(null)}
           loading={importing}
+          lang={language}
         />
       )}
     </div>

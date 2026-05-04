@@ -24,7 +24,6 @@ import {
   FileText, 
   DollarSign, 
   BarChart, 
-  Edit3, 
   MessageSquare, 
   User, 
   Settings 
@@ -151,37 +150,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function NavLink({
-  href,
-  label,
-  onNavigate,
-}: {
-  href: string;
-  label: string;
-  onNavigate?: () => void;
-}) {
-  const pathname = usePathname();
-  const active = pathname === href || pathname.startsWith(href + "/");
-  return (
-    <Link
-      href={href}
-      onClick={onNavigate}
-      className={`min-h-11 flex items-center px-3 py-2 rounded-md text-sm ${
-        active ? "font-medium" : "text-[var(--lmfit-muted)] hover:bg-[var(--chart-track)]"
-      }`}
-      style={
-        active
-          ? {
-              backgroundColor: lmfitTokens.surface,
-              color: lmfitTokens.accentBlue,
-            }
-          : { color: lmfitTokens.textMuted }
-      }
-    >
-      {label}
-    </Link>
-  );
-}
 
 function UserMenu() {
   const user = useAuthStore((s) => s.user);

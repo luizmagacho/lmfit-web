@@ -206,7 +206,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
     return () => {
       cancelled = true;
     };
-  }, [orderId, presetVariantId, presetCustomerId]);
+  }, [orderId, presetVariantId, presetCustomerId, nextKey]);
 
   useEffect(() => {
     if (!presetVariantId || orderId || !variantOpts.length) return;
