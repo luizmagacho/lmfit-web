@@ -14,10 +14,10 @@ export function CustomersPageClient() {
       columns={[
         { key: "_id", label: "ID", editable: false, hideInForm: true },
         { key: "name", label: "Nome" },
-        { key: "email", label: "E-mail" },
-        { key: "phone", label: "Telefone" },
+        { key: "email", label: "E-mail", hiddenOnMobile: true },
+        { key: "phone", label: "Telefone", hiddenOnMobile: true },
         { key: "whatsappWaId", label: "WhatsApp" },
-        { key: "legalName", label: "Razão social" },
+        { key: "legalName", label: "Razão social", hiddenOnMobile: true },
       ]}
       tableColumns={["name", "email", "phone", "whatsappWaId", "legalName"]}
     />

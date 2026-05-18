@@ -18,9 +18,9 @@ function parseBrlAmount(str: string): number {
   return parseFloat(cleaned);
 }
 
-function classifyType(tipoTx: string, detalhe: string): TransactionType {
-  const t = tipoTx.toLowerCase();
-  const d = detalhe.toLowerCase();
+function classifyType(transactionType: string, detail: string): TransactionType {
+  const t = transactionType.toLowerCase();
+  const d = detail.toLowerCase();
   if (t.includes('depósito de vendas') || t.includes('deposito de vendas') || d.includes('depósito infinitepay') || d.includes('deposito infinitepay')) {
     return 'deposit_sales';
   }
@@ -95,7 +95,7 @@ export async function parseInfinitePayPdf(file: File): Promise<InfinitepayReport
 
   let currentDate: string | null = null;
   const timeRegex = /^\d{2}:\d{2}$/;
-  const amountRegex = /^[+-][\d.,]+$/;
+  const amountRegex = /^[+-]?(?:r\$)?\s*[\d.,]+$/i;
   const dateHeaderRegex = /^\d{1,2}\s+\w+,\s+\d{4}$/i;
 
   // Build a cursor-based state machine over the flat line list
@@ -114,23 +114,23 @@ export async function parseInfinitePayPdf(file: File): Promise<InfinitepayReport
     // Detect transaction: starts with a time (HH:MM)
     if (timeRegex.test(line) && currentDate) {
       const hour = line;
-      const tipo = allLines[i + 1] ?? '';
-      const nome = allLines[i + 2] ?? '';
-      const detalhe = allLines[i + 3] ?? '';
+      const typeStr = allLines[i + 1] ?? '';
+      const nameStr = allLines[i + 2] ?? '';
+      const detailStr = allLines[i + 3] ?? '';
       const rawAmount = allLines[i + 4] ?? '';
 
       // Validate amount field
-      if (amountRegex.test(rawAmount.replace(/\s/g, ''))) {
-        const amountRaw = rawAmount.replace(/\s/g, '');
-        const amount = parseBrlAmount(amountRaw);
-        const type = classifyType(tipo, detalhe);
+      const cleanRawAmount = rawAmount.replace(/\s/g, '').toLowerCase().replace('r$', '');
+      if (amountRegex.test(cleanRawAmount)) {
+        const amount = parseBrlAmount(cleanRawAmount);
+        const type = classifyType(typeStr, detailStr);
 
         transactions.push({
           date: currentDate,
           hour,
           type,
-          name: nome.trim() || undefined,
-          detail: detalhe.trim() || undefined,
+          name: nameStr.trim() || undefined,
+          detail: detailStr.trim() || undefined,
           amount,
         });
         i += 5;

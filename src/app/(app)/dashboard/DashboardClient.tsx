@@ -229,7 +229,11 @@ export function DashboardClient() {
         <KpiCard
           title={language === "en" ? "Inventory Value" : "Valor em estoque"}
           value={summary ? formatBRL(summary.stockValue.totalRetail) : "—"}
-          subtitle={summary?.stockValue.note ?? (language === "en" ? "Retail" : "Varejo")}
+          subtitle={
+            summary?.stockValue.note === "quantityOnHand * variant.price"
+              ? (language === "en" ? "qty on hand × variant price" : "qtd em estoque × preço da variante")
+              : (summary?.stockValue.note ?? (language === "en" ? "Retail" : "Varejo"))
+          }
           footer={
             <div className="flex flex-wrap gap-x-2 gap-y-1 text-sm pt-1">
               <Link className="underline" href="/inventory">
@@ -250,36 +254,38 @@ export function DashboardClient() {
             {language === "en" ? "Daily Purchases" : "Compras por dia"}
           </h2>
           {purchasesDaily?.points?.length ? (
-            <div className="flex items-end gap-1 h-36 px-1">
-              {purchasesDaily.points.map((p) => (
-                <div
-                  key={p.date}
-                  className="flex-1 min-w-0 flex flex-col items-center gap-1"
-                  title={`${p.date}: ${p.purchaseCount} purchase(s)`}
-                >
+            <div className="overflow-x-auto pb-2">
+              <div className="flex items-end gap-1 h-36 px-1 min-w-[500px] sm:min-w-0">
+                {purchasesDaily.points.map((p) => (
                   <div
-                    className="w-full max-w-[2.5rem] mx-auto rounded-t bg-[var(--chart-track)] relative overflow-hidden"
-                    style={{ height: "7rem" }}
+                    key={p.date}
+                    className="flex-1 min-w-0 flex flex-col items-center gap-1"
+                    title={`${p.date}: ${p.purchaseCount} purchase(s)`}
                   >
                     <div
-                      className="absolute bottom-0 left-0 right-0 rounded-t transition-all"
-                      style={{
-                        height: `${Math.max(8, (p.purchaseCount / maxPurchases) * 100)}%`,
-                        backgroundColor: lmfitTokens.primary,
-                      }}
-                    />
+                      className="w-full max-w-[2.5rem] mx-auto rounded-t bg-[var(--chart-track)] relative overflow-hidden"
+                      style={{ height: "7rem" }}
+                    >
+                      <div
+                        className="absolute bottom-0 left-0 right-0 rounded-t transition-all"
+                        style={{
+                          height: `${Math.max(8, (p.purchaseCount / maxPurchases) * 100)}%`,
+                          backgroundColor: lmfitTokens.primary,
+                        }}
+                      />
+                    </div>
+                    <span
+                      className="text-[10px] leading-tight text-center truncate w-full"
+                      style={{ color: lmfitTokens.textMuted }}
+                    >
+                      {shortDate(p.date)}
+                    </span>
+                    <span className="text-xs font-semibold tabular-nums" style={{ color: lmfitTokens.text }}>
+                      {p.purchaseCount}
+                    </span>
                   </div>
-                  <span
-                    className="text-[10px] leading-tight text-center truncate w-full"
-                    style={{ color: lmfitTokens.textMuted }}
-                  >
-                    {shortDate(p.date)}
-                  </span>
-                  <span className="text-xs font-semibold tabular-nums" style={{ color: lmfitTokens.text }}>
-                    {p.purchaseCount}
-                  </span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
@@ -461,7 +467,7 @@ function KpiCard({
       <div className="text-sm" style={{ color: lmfitTokens.textMuted }}>
         {title}
       </div>
-      <div className="text-xl font-semibold tabular-nums" style={{ color: lmfitTokens.text }}>
+      <div className="text-xl sm:text-2xl font-semibold tabular-nums" style={{ color: lmfitTokens.text }}>
         {value}
       </div>
       <div className="text-xs" style={{ color: lmfitTokens.textMuted }}>

@@ -5,6 +5,8 @@ import { http } from "@/lib/http";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
 import type { InfinitepayReport, ParsedTransaction } from "@/lib/infinitepay/types";
+import { fetchDre, type DreResponse } from "@/lib/production/productionApi";
+import { rangeIso } from "@/lib/dashboardApi";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -100,7 +102,7 @@ function DailyChart({ data, lang }: { data: { date: string; in: number; out: num
                   backgroundColor: lmfitTokens.primary,
                   minHeight: d.in > 0 ? 3 : 0,
                 }}
-                title={`Incomes: ${formatBRL(d.in)}`}
+                title={lang === "en" ? `Incomes: ${formatBRL(d.in)}` : `Entradas: ${formatBRL(d.in)}`}
               />
               <div
                 className="flex-1 rounded-sm transition-all shadow-sm"
@@ -109,7 +111,7 @@ function DailyChart({ data, lang }: { data: { date: string; in: number; out: num
                   backgroundColor: "#ef4444",
                   minHeight: d.out > 0 ? 3 : 0,
                 }}
-                title={`Expenses: ${formatBRL(d.out)}`}
+                title={lang === "en" ? `Expenses: ${formatBRL(d.out)}` : `Saídas: ${formatBRL(d.out)}`}
               />
             </div>
             <span className="text-[10px] tabular-nums font-semibold" style={{ color: lmfitTokens.text }}>
@@ -135,6 +137,7 @@ function DailyChart({ data, lang }: { data: { date: string; in: number; out: num
 // ─── Upload Zone ─────────────────────────────────────────────────────────────
 
 function UploadZone({ onFile }: { onFile: (f: File) => void }) {
+  const { language } = useLanguage();
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -162,10 +165,10 @@ function UploadZone({ onFile }: { onFile: (f: File) => void }) {
     >
       <div className="text-4xl mb-3">📄</div>
       <p className="font-medium" style={{ color: lmfitTokens.text }}>
-        Drag and drop InfinitePay PDF here
+        {language === "en" ? "Drag and drop InfinitePay PDF here" : "Arraste e solte o PDF da InfinitePay aqui"}
       </p>
       <p className="text-sm mt-1" style={{ color: lmfitTokens.textMuted }}>
-        or click to select file
+        {language === "en" ? "or click to select file" : "ou clique para selecionar o arquivo"}
       </p>
       <input
         ref={inputRef}
@@ -217,7 +220,7 @@ function PreviewModal({
         <div className="p-6 border-b flex justify-between items-start" style={{ borderColor: lmfitTokens.border }}>
           <div>
             <h2 className="text-xl font-semibold" style={{ color: lmfitTokens.text }}>
-              Statement Preview
+              {lang === "en" ? "Statement Preview" : "Pré-visualização do Extrato"}
             </h2>
             <p className="text-sm mt-0.5" style={{ color: lmfitTokens.textMuted }}>
               {report.companyName} · {report.periodFrom} → {report.periodTo}
@@ -228,22 +231,30 @@ function PreviewModal({
 
         <div className="grid grid-cols-3 gap-4 p-6 border-b" style={{ borderColor: lmfitTokens.border }}>
           <div className="text-center">
-            <p className="text-xs mb-1" style={{ color: lmfitTokens.textMuted }}>Incomes</p>
+            <p className="text-xs mb-1" style={{ color: lmfitTokens.textMuted }}>
+              {lang === "en" ? "Incomes" : "Entradas"}
+            </p>
             <p className="text-lg font-bold" style={{ color: "#065f46" }}>{formatBRL(totalIn)}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs mb-1" style={{ color: lmfitTokens.textMuted }}>Expenses</p>
+            <p className="text-xs mb-1" style={{ color: lmfitTokens.textMuted }}>
+              {lang === "en" ? "Expenses" : "Saídas"}
+            </p>
             <p className="text-lg font-bold" style={{ color: "#991b1b" }}>{formatBRL(totalOut)}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs mb-1" style={{ color: lmfitTokens.textMuted }}>Balance</p>
+            <p className="text-xs mb-1" style={{ color: lmfitTokens.textMuted }}>
+              {lang === "en" ? "Balance" : "Saldo"}
+            </p>
             <p className="text-lg font-bold" style={{ color: lmfitTokens.text }}>{formatBRL(balance)}</p>
           </div>
         </div>
 
         <div className="overflow-y-auto flex-1 p-4">
           <p className="text-xs mb-2" style={{ color: lmfitTokens.textMuted }}>
-            {selected.size} of {report.transactions.length} transactions selected
+            {lang === "en"
+              ? `${selected.size} of ${report.transactions.length} transactions selected`
+              : `${selected.size} de ${report.transactions.length} transações selecionadas`}
           </p>
           <table className="w-full text-xs">
             <thead>
@@ -256,10 +267,10 @@ function PreviewModal({
                     className="rounded border-gray-300"
                   />
                 </th>
-                <th className="py-1 pr-2">Date</th>
-                <th className="py-1 pr-2">Type</th>
-                <th className="py-1 pr-2">Name</th>
-                <th className="py-1 text-right">Value</th>
+                <th className="py-1 pr-2">{lang === "en" ? "Date" : "Data"}</th>
+                <th className="py-1 pr-2">{lang === "en" ? "Type" : "Tipo"}</th>
+                <th className="py-1 pr-2">{lang === "en" ? "Name" : "Nome"}</th>
+                <th className="py-1 text-right">{lang === "en" ? "Value" : "Valor"}</th>
               </tr>
             </thead>
             <tbody>
@@ -301,7 +312,7 @@ function PreviewModal({
 
         <div className="p-6 border-t flex flex-wrap gap-3 justify-end" style={{ borderColor: lmfitTokens.border }}>
           <button onClick={onCancel} disabled={loading} className="px-4 py-2 rounded-lg border text-sm" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>
-            Cancel
+            {lang === "en" ? "Cancel" : "Cancelar"}
           </button>
           <button
             onClick={() => onConfirm(false, selectedTxs)}
@@ -309,7 +320,7 @@ function PreviewModal({
             className="px-4 py-2 rounded-lg text-sm font-medium border disabled:opacity-50"
             style={{ borderColor: lmfitTokens.primary, color: lmfitTokens.primary }}
           >
-            {loading ? "Importing…" : "Import"}
+            {loading ? (lang === "en" ? "Importing…" : "Importando…") : (lang === "en" ? "Import" : "Importar")}
           </button>
           <button
             onClick={() => onConfirm(true, selectedTxs)}
@@ -317,9 +328,111 @@ function PreviewModal({
             className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
             style={{ backgroundColor: lmfitTokens.primary }}
           >
-            {loading ? "Importing…" : "✨ Import + AI Analysis"}
+            {loading ? (lang === "en" ? "Importing…" : "Importando…") : (lang === "en" ? "✨ Import + AI Analysis" : "✨ Importar + Análise com IA")}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Manual Entry Modal ──────────────────────────────────────────────────────────
+
+function ManualEntryModal({
+  entry,
+  onClose,
+  onSave,
+  lang,
+}: {
+  entry?: Partial<ApiEntry> | null;
+  onClose: () => void;
+  onSave: (data: Partial<ApiEntry>) => Promise<void>;
+  lang: string;
+}) {
+  const [form, setForm] = useState({
+    date: entry?.date ? entry.date.split("T")[0] : new Date().toISOString().split("T")[0],
+    hour: entry?.hour || "12:00",
+    type: entry?.type || "deposit_sales",
+    name: entry?.name || "",
+    detail: entry?.detail || "",
+    amount: entry?.amount ? Math.abs(entry.amount).toString() : "",
+    isExpense: entry?.amount ? entry.amount < 0 : false,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const amountNum = parseFloat(form.amount.replace(",", ".")) || 0;
+      await onSave({
+        date: new Date(form.date).toISOString(),
+        hour: form.hour,
+        type: form.type,
+        name: form.name,
+        detail: form.detail,
+        amount: form.isExpense ? -Math.abs(amountNum) : Math.abs(amountNum),
+      });
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-[var(--card-bg)] rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+        <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: lmfitTokens.border }}>
+          <h2 className="text-lg font-semibold" style={{ color: lmfitTokens.text }}>
+            {entry?._id ? (lang === "en" ? "Edit Entry" : "Editar Lançamento") : (lang === "en" ? "New Entry" : "Novo Lançamento")}
+          </h2>
+          <button onClick={onClose} className="text-xl" style={{ color: lmfitTokens.textMuted }}>×</button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Date" : "Data"}</label>
+              <input required type="date" lang={lang === "en" ? "en" : "pt-BR"} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Time" : "Hora"}</label>
+              <input required type="time" lang={lang === "en" ? "en" : "pt-BR"} value={form.hour} onChange={e => setForm({ ...form, hour: e.target.value })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Type" : "Tipo"}</label>
+            <select required value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>
+              <option value="deposit_sales">{lang === "en" ? "Card Sale" : "Venda Cartão"}</option>
+              <option value="pix_received">{lang === "en" ? "Pix Received" : "Pix Recebido"}</option>
+              <option value="pix_sent">{lang === "en" ? "Pix Sent" : "Pix Enviado"}</option>
+              <option value="other">{lang === "en" ? "Other" : "Outro"}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Name" : "Nome"}</label>
+            <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Detail" : "Detalhe"}</label>
+            <input type="text" value={form.detail} onChange={e => setForm({ ...form, detail: e.target.value })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
+          </div>
+          <div className="flex gap-4 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Amount (R$)" : "Valor (R$)"}</label>
+              <input required type="number" step="0.01" min="0" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
+            </div>
+            <label className="flex items-center gap-2 mb-2 text-sm cursor-pointer" style={{ color: lmfitTokens.text }}>
+              <input type="checkbox" checked={form.isExpense} onChange={e => setForm({ ...form, isExpense: e.target.checked })} />
+              {lang === "en" ? "Is Expense" : "É Saída"}
+            </label>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t mt-4" style={{ borderColor: lmfitTokens.border }}>
+            <button type="button" onClick={onClose} className="px-4 py-1.5 rounded-md border text-sm" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>{lang === "en" ? "Cancel" : "Cancelar"}</button>
+            <button type="submit" disabled={saving} className="px-4 py-1.5 rounded-md text-sm text-white" style={{ backgroundColor: lmfitTokens.primary }}>{saving ? (lang === "en" ? "Saving..." : "Salvando...") : (lang === "en" ? "Save" : "Salvar")}</button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -329,7 +442,11 @@ function PreviewModal({
 
 export function FinancialClient() {
   const { language } = useLanguage();
-  const [tab, setTab] = useState<"dashboard" | "history">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "history" | "dre">("dashboard");
+  const [dreDays, setDreDays] = useState(30);
+  const [taxRate, setTaxRate] = useState(6);
+  const [dre, setDre] = useState<DreResponse | null>(null);
+  const [dreLoading, setDreLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [preview, setPreview] = useState<InfinitepayReport | null>(null);
   const [importing, setImporting] = useState(false);
@@ -340,6 +457,8 @@ export function FinancialClient() {
   const [filterType, setFilterType] = useState("");
   const [loadingData, setLoadingData] = useState(true);
   const [analyzingBatch, setAnalyzingBatch] = useState<string | null>(null);
+  const [manualEntryOpen, setManualEntryOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<Partial<ApiEntry> | null>(null);
 
   const loadData = useCallback(async () => {
     setLoadingData(true);
@@ -361,6 +480,16 @@ export function FinancialClient() {
 
   useEffect(() => { void loadData(); }, [loadData]);
 
+  useEffect(() => {
+    if (tab !== "dre") return;
+    const { from, to } = rangeIso(dreDays);
+    setDreLoading(true);
+    fetchDre(from, to, taxRate)
+      .then(setDre)
+      .catch(() => setDre(null))
+      .finally(() => setDreLoading(false));
+  }, [tab, dreDays, taxRate]);
+
   const handleFile = useCallback(async (file: File) => {
     setParsing(true);
     setImportMsg(null);
@@ -369,12 +498,16 @@ export function FinancialClient() {
       const report = await parseInfinitePayPdf(file);
       setPreview(report);
     } catch (e) {
-      setImportMsg("Error reading PDF. Verify it is a valid InfinitePay report.");
+      setImportMsg(
+        language === "en"
+          ? "Error reading PDF. Verify it is a valid InfinitePay report."
+          : "Erro ao ler o PDF. Verifique se é um relatório válido da InfinitePay."
+      );
       console.error(e);
     } finally {
       setParsing(false);
     }
-  }, []);
+  }, [language]);
 
   const handleImport = useCallback(
     async (analyzeWithAi: boolean, selectedTxs: ParsedTransaction[]) => {
@@ -389,26 +522,32 @@ export function FinancialClient() {
           analyzeWithAi,
         });
         setImportMsg(
-          `✅ ${data.count} transactions imported!${analyzeWithAi ? " AI is analyzing in the background." : ""}`,
+          language === "en"
+            ? `✅ ${data.count} transactions imported!${analyzeWithAi ? " AI is analyzing in the background." : ""}`
+            : `✅ ${data.count} transações importadas!${analyzeWithAi ? " A IA está analisando em segundo plano." : ""}`
         );
         setPreview(null);
         await loadData();
       } catch {
-        setImportMsg("Error importing. Try again.");
+        setImportMsg(
+          language === "en"
+            ? "Error importing. Try again."
+            : "Erro ao importar. Tente novamente."
+        );
       } finally {
         setImporting(false);
       }
     },
-    [preview, loadData],
+    [preview, loadData, language],
   );
 
   const handleDeleteBatch = useCallback(
     async (batchId: string) => {
-      if (!confirm("Remove this import batch?")) return;
+      if (!confirm(language === "en" ? "Remove this import batch?" : "Remover este lote importado?")) return;
       await http.delete(`/cashflow/batches/${batchId}`);
       await loadData();
     },
-    [loadData],
+    [loadData, language],
   );
 
   const handleAnalyzeBatch = useCallback(
@@ -416,10 +555,37 @@ export function FinancialClient() {
       setAnalyzingBatch(batchId);
       await http.post(`/cashflow/batches/${batchId}/analyze`);
       setAnalyzingBatch(null);
-      setImportMsg("✨ AI analysis started in the background!");
+      setImportMsg(
+        language === "en"
+          ? "✨ AI analysis started in the background!"
+          : "✨ Análise com IA iniciada em segundo plano!"
+      );
     },
-    [],
+    [language],
   );
+
+  const handleSaveEntry = async (data: Partial<ApiEntry>) => {
+    try {
+      if (editingEntry?._id) {
+        await http.patch(`/cashflow/${editingEntry._id}`, data);
+      } else {
+        await http.post("/cashflow", data);
+      }
+      await loadData();
+    } catch {
+      alert(language === "en" ? "Error saving entry" : "Erro ao salvar lançamento");
+    }
+  };
+
+  const handleRemoveEntry = async (id: string) => {
+    if (!confirm(language === "en" ? "Remove this entry?" : "Remover este lançamento?")) return;
+    try {
+      await http.delete(`/cashflow/${id}`);
+      await loadData();
+    } catch {
+      alert(language === "en" ? "Error removing entry" : "Erro ao remover lançamento");
+    }
+  };
 
   const filteredEntries = filterType
     ? entries.filter((e) => e.type === filterType)
@@ -437,6 +603,16 @@ export function FinancialClient() {
             {language === "en" ? "InfinitePay Movements · Batch history and AI analysis" : "Movimentações InfinitePay · Histórico e análise com IA"}
           </p>
         </div>
+        <button
+          onClick={() => {
+            setEditingEntry(null);
+            setManualEntryOpen(true);
+          }}
+          className="px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm"
+          style={{ backgroundColor: lmfitTokens.primary }}
+        >
+          {language === "en" ? "+ Manual Entry" : "+ Lançamento Manual"}
+        </button>
       </div>
 
       {/* Upload Zone */}
@@ -467,7 +643,7 @@ export function FinancialClient() {
 
       {/* Tabs */}
       <div className="flex gap-2 border-b" style={{ borderColor: lmfitTokens.border }}>
-        {(["dashboard", "history"] as const).map((t) => (
+        {(["dashboard", "history", "dre"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -477,7 +653,9 @@ export function FinancialClient() {
               color: tab === t ? lmfitTokens.primary : lmfitTokens.textMuted,
             }}
           >
-            {t === "dashboard" ? (language === "en" ? "📊 Dashboard" : "📊 Início") : (language === "en" ? "📋 Batch History" : "📋 Histórico de Lotes")}
+            {t === "dashboard" ? (language === "en" ? "📊 Dashboard" : "📊 Início")
+              : t === "history" ? (language === "en" ? "📋 Batch History" : "📋 Histórico de Lotes")
+              : "📈 Resultado (DRE)"}
           </button>
         ))}
       </div>
@@ -486,10 +664,14 @@ export function FinancialClient() {
       {tab === "dashboard" && (
         <div className="space-y-6">
           {loadingData ? (
-            <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>Loading…</p>
+            <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
+              {language === "en" ? "Loading…" : "Carregando…"}
+            </p>
           ) : !summary || summary.count === 0 ? (
             <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
-              No transactions imported yet. Drag a PDF above to start.
+              {language === "en"
+                ? "No transactions imported yet. Drag a PDF above to start."
+                : "Nenhuma transação importada ainda. Arraste um PDF acima para começar."}
             </p>
           ) : (
             <>
@@ -521,28 +703,31 @@ export function FinancialClient() {
               {/* Transaction table */}
               <div className="rounded-xl border bg-[var(--card-bg)] overflow-hidden" style={{ borderColor: lmfitTokens.border }}>
                 <div className="flex items-center justify-between p-4 border-b gap-3" style={{ borderColor: lmfitTokens.border }}>
-                  <h2 className="text-sm font-medium" style={{ color: lmfitTokens.text }}>Transactions</h2>
+                  <h2 className="text-sm font-medium" style={{ color: lmfitTokens.text }}>
+                    {language === "en" ? "Transactions" : "Transações"}
+                  </h2>
                   <select
                     className="border rounded-lg px-3 py-1.5 text-sm"
                     style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                     value={filterType}
                     onChange={(e) => setFilterType(e.target.value)}
                   >
-                    <option value="">All types</option>
-                    <option value="deposit_sales">Card Sale</option>
-                    <option value="pix_received">Pix Received</option>
-                    <option value="pix_sent">Pix Sent</option>
+                    <option value="">{language === "en" ? "All types" : "Todos os tipos"}</option>
+                    <option value="deposit_sales">{language === "en" ? "Card Sale" : "Venda Cartão"}</option>
+                    <option value="pix_received">{language === "en" ? "Pix Received" : "Pix Recebido"}</option>
+                    <option value="pix_sent">{language === "en" ? "Pix Sent" : "Pix Enviado"}</option>
                   </select>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-xs border-b" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}>
-                        <th className="py-2 px-4">Date</th>
-                        <th className="py-2 px-2">Type</th>
-                        <th className="py-2 px-2">Name</th>
-                        <th className="py-2 px-2">AI</th>
-                        <th className="py-2 px-4 text-right">Value</th>
+                        <th className="py-2 px-4">{language === "en" ? "Date" : "Data"}</th>
+                        <th className="py-2 px-2">{language === "en" ? "Type" : "Tipo"}</th>
+                        <th className="py-2 px-2">{language === "en" ? "Name" : "Nome"}</th>
+                        <th className="py-2 px-2">{language === "en" ? "AI" : "IA"}</th>
+                        <th className="py-2 px-4 text-right">{language === "en" ? "Value" : "Valor"}</th>
+                        <th className="py-2 px-4 text-right">{language === "en" ? "Actions" : "Ações"}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -579,6 +764,25 @@ export function FinancialClient() {
                           <td className="py-2.5 px-4 text-right tabular-nums font-medium" style={{ color: getRawNumber(entry.amount) >= 0 ? "#065f46" : "#991b1b" }}>
                             {getRawNumber(entry.amount) >= 0 ? "+" : ""}{formatBRL(entry.amount)}
                           </td>
+                          <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => {
+                                setEditingEntry(entry);
+                                setManualEntryOpen(true);
+                              }}
+                              className="text-xs px-2 py-1 mr-2 rounded border transition-colors"
+                              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                            >
+                              {language === "en" ? "Edit" : "Editar"}
+                            </button>
+                            <button
+                              onClick={() => void handleRemoveEntry(entry._id)}
+                              className="text-xs px-2 py-1 rounded border transition-colors"
+                              style={{ borderColor: "#fecaca", color: "#dc2626" }}
+                            >
+                              {language === "en" ? "Delete" : "Excluir"}
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -594,20 +798,22 @@ export function FinancialClient() {
       {tab === "history" && (
         <div className="space-y-3">
           {batches.length === 0 ? (
-            <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>No batches imported.</p>
+            <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
+              {language === "en" ? "No batches imported." : "Nenhum lote importado."}
+            </p>
           ) : (
             batches.map((b) => (
               <div key={b._id} className="rounded-xl border bg-[var(--card-bg)] p-4 flex flex-wrap items-center gap-4" style={{ borderColor: lmfitTokens.border }}>
                 <div className="flex-1 min-w-[200px]">
                   <p className="text-xs font-medium" style={{ color: lmfitTokens.textMuted }}>
-                    {b.source.toUpperCase()} · {b.count} transactions
+                    {b.source.toUpperCase()} · {b.count} {language === "en" ? "transactions" : "transações"}
                   </p>
                   <p className="text-sm" style={{ color: lmfitTokens.text }}>
-                    {b.periodFrom ? new Date(b.periodFrom).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "?"} →{" "}
-                    {b.periodTo ? new Date(b.periodTo).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "?"}
+                    {b.periodFrom ? new Date(b.periodFrom).toLocaleDateString(language === "en" ? "en-US" : "pt-BR", { timeZone: "UTC" }) : "?"} →{" "}
+                    {b.periodTo ? new Date(b.periodTo).toLocaleDateString(language === "en" ? "en-US" : "pt-BR", { timeZone: "UTC" }) : "?"}
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: lmfitTokens.textMuted }}>
-                    Imported on {new Date(b.importedAt).toLocaleString("pt-BR")}
+                    {language === "en" ? "Imported on" : "Importado em"} {new Date(b.importedAt).toLocaleString(language === "en" ? "en-US" : "pt-BR")}
                   </p>
                 </div>
                 <div className="flex gap-4 text-sm">
@@ -637,6 +843,158 @@ export function FinancialClient() {
         </div>
       )}
 
+      {/* DRE Tab */}
+      {tab === "dre" && (
+        <div className="space-y-6">
+          {/* Controls */}
+          <div className="flex flex-wrap gap-3 items-end">
+            <label className="flex flex-col text-xs gap-1" style={{ color: lmfitTokens.textMuted }}>
+              {language === "en" ? "Period" : "Período"}
+              <select value={dreDays} onChange={e => setDreDays(Number(e.target.value))}
+                className="border rounded-md px-3 py-2 text-sm bg-[var(--card-bg)]"
+                style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>
+                {[7, 30, 90, 365].map(d => (
+                  <option key={d} value={d}>
+                    {language === "en" ? `Last ${d} days` : `Últimos {d} dias`.replace("{d}", String(d))}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col text-xs gap-1" style={{ color: lmfitTokens.textMuted }}>
+              {language === "en" ? "Tax Rate (Simples Nacional) %" : "Imposto (Simples Nacional) %"}
+              <div className="flex items-center gap-1">
+                <input type="number" min={0} max={100} step={0.1} value={taxRate}
+                  onChange={e => setTaxRate(Number(e.target.value))}
+                  className="w-24 border rounded-md px-3 py-2 text-sm bg-[var(--card-bg)]"
+                  style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
+                <span className="text-sm" style={{ color: lmfitTokens.textMuted }}>%</span>
+              </div>
+            </label>
+          </div>
+
+          {dreLoading ? (
+            <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
+              {language === "en" ? "Loading DRE..." : "Carregando DRE…"}
+            </p>
+          ) : !dre ? (
+            <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
+              {language === "en"
+                ? "No data for the period. Register production batches and sales."
+                : "Sem dados para o período. Cadastre lotes de produção e vendas."}
+            </p>
+          ) : (
+            <>
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  {
+                    label: language === "en" ? "Gross Revenue" : "Faturamento Bruto",
+                    value: dre.revenue.grossRevenue,
+                    sub: language === "en" ? `${dre.revenue.orderCount} orders` : `${dre.revenue.orderCount} pedidos`,
+                    color: "#3b82f6"
+                  },
+                  {
+                    label: language === "en" ? "Net Revenue" : "Receita Líquida",
+                    value: dre.revenue.netRevenue,
+                    sub: language === "en" ? `Returns: R$ ${dre.revenue.returns.toFixed(2)}` : `Devol: R$ ${dre.revenue.returns.toFixed(2)}`,
+                    color: lmfitTokens.primary
+                  },
+                  {
+                    label: language === "en" ? "COGS (Production Cost)" : "CMV (Custo de Produção)",
+                    value: dre.cmv.total,
+                    sub: language === "en"
+                      ? `${dre.cmv.batchCount} batches · ${dre.cmv.producedUnits} pcs`
+                      : `${dre.cmv.batchCount} lotes · ${dre.cmv.producedUnits} pç`,
+                    color: "#f59e0b"
+                  },
+                  {
+                    label: language === "en" ? "Gross Profit" : "Lucro Bruto",
+                    value: dre.grossProfit,
+                    sub: language === "en" ? `Margin: ${dre.grossMarginPercent.toFixed(1)}%` : `Margem: ${dre.grossMarginPercent.toFixed(1)}%`,
+                    color: dre.grossProfit >= 0 ? "#10b981" : "#ef4444"
+                  },
+                  {
+                    label: language === "en" ? "Net Profit" : "Lucro Líquido",
+                    value: dre.netProfit,
+                    sub: language === "en" ? `Margin: ${dre.netMarginPercent.toFixed(1)}%` : `Margem: ${dre.netMarginPercent.toFixed(1)}%`,
+                    color: dre.netProfit >= 0 ? "#10b981" : "#ef4444"
+                  },
+                  {
+                    label: language === "en" ? "Average Cost/Piece" : "Custo Médio/Peça",
+                    value: dre.cmv.avgCostPerUnit,
+                    sub: language === "en" ? `${dre.cmv.producedUnits} pieces produced` : `${dre.cmv.producedUnits} peças produzidas`,
+                    color: "#8b5cf6"
+                  },
+                ].map(k => (
+                  <div key={k.label} className="rounded-xl border p-4" style={{ borderColor: lmfitTokens.border, backgroundColor: k.color + "11" }}>
+                    <p className="text-xs mb-1" style={{ color: k.color + "cc" }}>{k.label}</p>
+                    <p className="text-2xl font-bold tabular-nums" style={{ color: k.color }}>
+                      {k.value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: lmfitTokens.textMuted }}>{k.sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* DRE Table */}
+              <div className="rounded-xl border bg-[var(--card-bg)] overflow-hidden" style={{ borderColor: lmfitTokens.border }}>
+                <div className="p-4 border-b" style={{ borderColor: lmfitTokens.border }}>
+                  <h2 className="text-sm font-semibold" style={{ color: lmfitTokens.text }}>
+                    {language === "en" ? "Simplified Income Statement" : "DRE Simplificado"}
+                  </h2>
+                  <p className="text-xs mt-0.5" style={{ color: lmfitTokens.textMuted }}>
+                    {language === "en" ? "Simplified Income Statement for the period" : "Demonstrativo de Resultado do Exercício"}
+                  </p>
+                </div>
+                <div className="p-4 space-y-1.5">
+                  {[
+                    { label: language === "en" ? "(+) Gross Revenue" : "(+) Faturamento Bruto", value: dre.revenue.grossRevenue, style: "normal" },
+                    { label: language === "en" ? "(–) Returns / Cancellations" : "(–) Devoluções / Cancelamentos", value: -dre.revenue.returns, style: "deduction" },
+                    { label: language === "en" ? "= Net Revenue" : "= Receita Líquida", value: dre.revenue.netRevenue, style: "subtotal" },
+                    { label: language === "en" ? "(–) COGS — Cost of Goods Sold" : "(–) CMV — Custo de Mercadoria Vendida", value: -dre.cmv.total, style: "deduction" },
+                    { label: language === "en" ? "= Gross Profit" : "= Lucro Bruto", value: dre.grossProfit, style: "subtotal" },
+                    { label: language === "en" ? "    Gross Margin" : "    Margem Bruta", value: undefined, extra: `${dre.grossMarginPercent.toFixed(1)}%`, style: "percent" },
+                    { label: language === "en" ? "(–) Operating Expenses" : "(–) Despesas Operacionais", value: -dre.operationalExpenses, style: "deduction" },
+                    { label: language === "en" ? "= EBITDA" : "= EBITDA", value: dre.ebitda, style: "subtotal" },
+                    { label: language === "en" ? `(–) Taxes (Simples ${dre.taxRatePercent}%)` : `(–) Impostos (Simples ${dre.taxRatePercent}%)`, value: -dre.taxes, style: "deduction" },
+                    { label: language === "en" ? "= Net Profit" : "= Lucro Líquido", value: dre.netProfit, style: "result" },
+                    { label: language === "en" ? "    Net Margin" : "    Margem Líquida", value: undefined, extra: `${dre.netMarginPercent.toFixed(1)}%`, style: "percent" },
+                  ].map((row, i) => (
+                    <div key={i} className={`flex justify-between items-center py-1.5 ${
+                      row.style === "subtotal" || row.style === "result" ? "border-t border-b" : ""
+                    }`} style={{
+                      borderColor: lmfitTokens.border,
+                      backgroundColor: row.style === "result" ? lmfitTokens.primary + "11" : undefined,
+                      borderRadius: row.style === "result" ? "0.5rem" : undefined,
+                      padding: row.style === "result" ? "0.5rem 0.75rem" : undefined,
+                    }}>
+                      <span className={`text-sm ${
+                        row.style === "result" ? "font-bold" : row.style === "subtotal" ? "font-semibold" : "font-normal"
+                      }`} style={{ color: row.style === "percent" ? lmfitTokens.textMuted : lmfitTokens.text }}>
+                        {row.label}
+                      </span>
+                      {row.extra !== undefined ? (
+                        <span className="text-sm font-semibold tabular-nums" style={{ color: lmfitTokens.textMuted }}>{row.extra}</span>
+                      ) : (
+                        <span className={`text-sm tabular-nums ${
+                          row.style === "result" || row.style === "subtotal" ? "font-bold" : "font-normal"
+                        }`} style={{
+                          color: (row.value ?? 0) >= 0
+                            ? (row.style === "result" ? lmfitTokens.primary : lmfitTokens.text)
+                            : "#ef4444",
+                        }}>
+                          {(row.value ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Preview Modal */}
       {preview && (
         <PreviewModal
@@ -644,6 +1002,19 @@ export function FinancialClient() {
           onConfirm={handleImport}
           onCancel={() => setPreview(null)}
           loading={importing}
+          lang={language}
+        />
+      )}
+
+      {/* Manual Entry Modal */}
+      {manualEntryOpen && (
+        <ManualEntryModal
+          entry={editingEntry}
+          onClose={() => {
+            setManualEntryOpen(false);
+            setEditingEntry(null);
+          }}
+          onSave={handleSaveEntry}
           lang={language}
         />
       )}
