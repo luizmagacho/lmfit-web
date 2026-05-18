@@ -183,7 +183,7 @@ export function OrdersClient() {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>
-              <th className="px-3 py-2 font-medium w-16" style={{ color: lmfitTokens.accentBlue }}>
+              <th className="px-3 py-2 font-medium w-16 hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
                 {t("orders.id", "ID")}
               </th>
               <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
@@ -192,7 +192,7 @@ export function OrdersClient() {
               <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
                 {t("orders.customer", "Cliente")}
               </th>
-              <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
+              <th className="px-3 py-2 font-medium hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
                 {t("orders.channel", "Canal")}
               </th>
               <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
@@ -201,7 +201,7 @@ export function OrdersClient() {
               <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
                 {t("orders.total", "Total")}
               </th>
-              <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
+              <th className="px-3 py-2 font-medium hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
                 {t("orders.date", "Data")}
               </th>
               <th className="px-3 py-2 font-medium w-28" style={{ color: lmfitTokens.accentBlue }}>
@@ -223,7 +223,7 @@ export function OrdersClient() {
               const created = row.createdAt ? new Date(String(row.createdAt)) : null;
               return (
                 <tr key={id || `row-${rowIdx}`} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
-                  <td className="px-3 py-2 align-top font-medium tabular-nums" style={{ color: lmfitTokens.text }}>
+                  <td className="px-3 py-2 align-top font-medium tabular-nums hidden md:table-cell" style={{ color: lmfitTokens.text }}>
                     #{row.number ?? "—"}
                   </td>
                   <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
@@ -232,7 +232,7 @@ export function OrdersClient() {
                   <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
                     {cid ? customerById[cid] ?? cid : "—"}
                   </td>
-                  <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
+                  <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.text }}>
                     {t(`channel.${row.channel}`, orderChannelLabel(row.channel as string))}
                   </td>
                   <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
@@ -241,7 +241,7 @@ export function OrdersClient() {
                   <td className="px-3 py-2 align-top tabular-nums" style={{ color: lmfitTokens.text }}>
                     {typeof row.total === "number" && Number.isFinite(row.total) ? formatBRL(row.total) : "—"}
                   </td>
-                  <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.textMuted }}>
+                  <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.textMuted }}>
                     {created && !Number.isNaN(created.getTime())
                       ? created.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
                       : "—"}

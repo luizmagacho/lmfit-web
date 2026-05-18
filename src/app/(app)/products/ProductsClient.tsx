@@ -2,7 +2,7 @@
 
 import { useRef, useState, useMemo } from "react";
 import { ProductImageCell } from "@/components/ProductImageCell";
-import { ProductVariantsEditor } from "@/components/ProductVariantsEditor";
+import { ProductVariantsEditor, generateSkuSuggestion } from "@/components/ProductVariantsEditor";
 import { ResourceList, type ResourceColumn } from "@/components/ResourceList";
 import { formatBRL } from "@/lib/formatMoney";
 import {
@@ -37,7 +37,7 @@ function variantSummaryCell(row: Row): string {
 
 /** All form columns — the modal shows everything */
 const columns: ResourceColumn[] = [
-  { key: "_id", label: "ID", editable: false },
+  { key: "_id", label: "ID", editable: false, hiddenOnMobile: true },
   {
     key: "images",
     label: "Imagens",
@@ -52,7 +52,7 @@ const columns: ResourceColumn[] = [
     },
   },
   { key: "name", label: "Nome", required: true, placeholder: "Nome do produto" },
-  { key: "variants", label: "Variações", editable: false, excel: false },
+  { key: "variants", label: "Variações", editable: false, excel: false, hiddenOnMobile: true },
   {
     key: "sku",
     label: "SKU (1ª var.)",
@@ -73,6 +73,7 @@ const columns: ResourceColumn[] = [
     label: "Preço comparado",
     fieldType: "number",
     numberStep: "0.01",
+    placeholder: "Preço original antes do desconto (opcional)",
   },
   {
     key: "category",
@@ -166,6 +167,7 @@ export function ProductsClient() {
         <ProductVariantsEditor
           resetKey={ctx.formResetKey}
           productRow={ctx.modal === "edit" ? ctx.editingRow : null}
+          productName={ctx.formValues.name || ""}
           onDraftsChange={(d) => {
             variantsRef.current = d;
             const f = d[0];
@@ -179,7 +181,16 @@ export function ProductsClient() {
           }}
         />
       )}
-      validateBeforeSubmit={() => validateVariantDrafts(variantsRef.current)}
+      validateBeforeSubmit={(ctx) => {
+        const productName = ctx.formValues.name || "";
+        const drafts = variantsRef.current;
+        for (const d of drafts) {
+          if (!d.sku.trim()) {
+            d.sku = generateSkuSuggestion(productName, d.color, d.size);
+          }
+        }
+        return validateVariantDrafts(drafts);
+      }}
       mergeSubmitPayload={(body) => {
         const drafts = variantsRef.current;
         const first = drafts[0];
@@ -221,11 +232,10 @@ export function ProductsClient() {
           const count = Array.isArray(row.variants) ? row.variants.length : 0;
           return (
             <span
-              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border"
+              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-gray-50 dark:bg-white/10"
               style={{
                 borderColor: lmfitTokens.border,
                 color: lmfitTokens.textMuted,
-                backgroundColor: "#f9fafb",
               }}
             >
               {count > 1 ? `${count} var.` : variantSummaryCell(row)}

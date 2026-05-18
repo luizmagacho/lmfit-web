@@ -91,12 +91,12 @@ export default function ReportsPage() {
             <StatCard
               title="Receita (pedidos pagos/entregues)"
               value={formatMoney(data.revenue.total)}
-              subtitle={`${data.revenue.orderCount} pedidos · ${data.revenue.source}`}
+              subtitle={`${data.revenue.orderCount} pedidos · ${data.revenue.source === 'orders_paid_or_fulfilled' ? 'pedidos pagos ou entregues' : data.revenue.source}`}
             />
             <StatCard
               title="Valor em estoque (varejo)"
               value={formatMoney(data.stockValue.totalRetail)}
-              subtitle={data.stockValue.note ?? ""}
+              subtitle={data.stockValue.note === 'quantityOnHand * variant.price' ? 'qtd em estoque × preço da variante' : (data.stockValue.note ?? "")}
             />
           </div>
           <section className="space-y-2">

@@ -36,7 +36,7 @@ export function ImageGalleryGrid({ urls, onRemoveIndex, className }: Props) {
     <>
       <div
         className={[
-          "max-h-[min(22rem,50vh)] w-full overflow-y-auto rounded-lg border bg-neutral-50/60 p-3 sm:p-4",
+          "max-h-[min(22rem,50vh)] w-full overflow-y-auto rounded-lg border bg-neutral-50/60 dark:bg-white/5 p-3 sm:p-4",
           className,
         ]
           .filter(Boolean)

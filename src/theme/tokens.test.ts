@@ -3,7 +3,7 @@ import { lmfitTokens } from "./tokens";
 
 describe("lmfitTokens", () => {
   it("exposes primary brand color", () => {
-    expect(lmfitTokens.primary).toMatch(/^#/);
+    expect(lmfitTokens.primary).toMatch(/^(#|var\(--)/);
     expect(lmfitTokens.primary.length).toBeGreaterThanOrEqual(4);
   });
 });

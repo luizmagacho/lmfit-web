@@ -76,6 +76,8 @@ export type ResourceColumn = {
     syncPrimaryKey?: string;
   };
   placeholder?: string;
+  /** Hide in the table on small screens (mobile). */
+  hiddenOnMobile?: boolean;
 };
 
 function defaultNumberStep(c: ResourceColumn): string {
@@ -932,7 +934,14 @@ export function ResourceList({
           <thead>
             <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>
               {visibleTableColumns.map((c) => (
-                <th key={c.key} className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
+                <th
+                  key={c.key}
+                  className={[
+                    "px-3 py-2 font-medium",
+                    c.hiddenOnMobile ? "hidden md:table-cell" : "",
+                  ].join(" ")}
+                  style={{ color: lmfitTokens.accentBlue }}
+                >
                   {c.label}
                 </th>
               ))}
@@ -960,11 +969,18 @@ export function ResourceList({
               return (
                 <tr
                   key={id ?? `row-${i}`}
-                  className="border-b last:border-0 hover:bg-neutral-50/60 transition-colors"
+                  className="border-b last:border-0 hover:bg-neutral-50/60 dark:hover:bg-white/5 transition-colors"
                   style={{ borderColor: lmfitTokens.border }}
                 >
                   {visibleTableColumns.map((c) => (
-                    <td key={c.key} className="px-3 py-2 align-middle" style={{ color: lmfitTokens.text }}>
+                    <td
+                      key={c.key}
+                      className={[
+                        "px-3 py-2 align-middle",
+                        c.hiddenOnMobile ? "hidden md:table-cell" : "",
+                      ].join(" ")}
+                      style={{ color: lmfitTokens.text }}
+                    >
                       {cellRender?.[c.key] ? cellRender[c.key]!(row) : formatCell(row[c.key], c.key)}
                     </td>
                   ))}
@@ -1057,7 +1073,7 @@ export function ResourceList({
                 <label className="block text-sm shrink-0 mt-2">
                   <span style={{ color: lmfitTokens.textMuted }}>{columns.find((c) => c.key === idKey)?.label ?? "ID"}</span>
                   <input
-                    className="mt-1 w-full border rounded px-3 py-2 bg-neutral-100 cursor-not-allowed"
+                    className="mt-1 w-full border rounded px-3 py-2 bg-neutral-100 dark:bg-white/5 cursor-not-allowed"
                     style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}
                     readOnly
                     value={formValues[idKey] ?? ""}
@@ -1126,7 +1142,7 @@ export function ResourceList({
                               tabIndex={0}
                               className={[
                                 "relative w-full min-h-32 rounded-lg border-2 border-dashed outline-none transition-colors",
-                                dropActive ? "bg-orange-50/60" : "bg-neutral-50/50",
+                                dropActive ? "bg-orange-50/60 dark:bg-orange-500/10" : "bg-neutral-50/50 dark:bg-white/5",
                               ]
                                 .filter(Boolean)
                                 .join(" ")}
