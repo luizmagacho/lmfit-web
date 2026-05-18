@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { http } from "@/lib/http";
 import { lmfitTokens } from "@/theme/tokens";
 import type { PurchaseRecord } from "@/lib/purchases/types";
 import { formatBRL } from "@/lib/formatMoney";
@@ -93,8 +92,8 @@ export function PurchasesKanban({
                   <div className="text-sm font-semibold mb-1" style={{ color: lmfitTokens.text }}>
                     {(() => {
                       const sidRaw = item.supplierId;
-                      const sidStr = sidRaw && typeof sidRaw === 'object' && '_id' in sidRaw ? String((sidRaw as any)._id) : String(sidRaw ?? "");
-                      const supplierName = sidRaw && typeof sidRaw === 'object' && 'name' in sidRaw ? String((sidRaw as any).name) : (suppliers[sidStr] ?? sidStr);
+                      const sidStr = sidRaw && typeof sidRaw === 'object' && '_id' in sidRaw ? String((sidRaw as Record<string, unknown>)._id) : String(sidRaw ?? "");
+                      const supplierName = sidRaw && typeof sidRaw === 'object' && 'name' in sidRaw ? String((sidRaw as Record<string, unknown>).name) : (suppliers[sidStr] ?? sidStr);
                       return supplierName || (lang === "en" ? "No supplier" : "Sem fornecedor");
                     })()}
                   </div>

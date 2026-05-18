@@ -235,8 +235,8 @@ export function PurchasesListClient() {
               {rows.map((row, rowIdx) => {
                 const id = String(row._id ?? "");
                 const sidRaw = row.supplierId;
-                const sidStr = sidRaw && typeof sidRaw === 'object' && '_id' in sidRaw ? String((sidRaw as any)._id) : String(sidRaw ?? "");
-                const supplierName = sidRaw && typeof sidRaw === 'object' && 'name' in sidRaw ? String((sidRaw as any).name) : (supplierById[sidStr] ?? sidStr);
+                const sidStr = sidRaw && typeof sidRaw === 'object' && '_id' in sidRaw ? String((sidRaw as Record<string, unknown>)._id) : String(sidRaw ?? "");
+                const supplierName = sidRaw && typeof sidRaw === 'object' && 'name' in sidRaw ? String((sidRaw as Record<string, unknown>).name) : (supplierById[sidStr] ?? sidStr);
                 const lineCount = Array.isArray(row.lines) ? row.lines.length : 0;
                 return (
                   <tr key={id || `row-${rowIdx}`} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>

@@ -572,7 +572,7 @@ export function FinancialClient() {
         await http.post("/cashflow", data);
       }
       await loadData();
-    } catch (err) {
+    } catch {
       alert(language === "en" ? "Error saving entry" : "Erro ao salvar lançamento");
     }
   };
@@ -582,7 +582,7 @@ export function FinancialClient() {
     try {
       await http.delete(`/cashflow/${id}`);
       await loadData();
-    } catch (err) {
+    } catch {
       alert(language === "en" ? "Error removing entry" : "Erro ao remover lançamento");
     }
   };
