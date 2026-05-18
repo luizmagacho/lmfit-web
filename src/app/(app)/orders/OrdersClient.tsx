@@ -10,12 +10,13 @@ import { slugifyFileBase } from "@/lib/slugifyFileBase";
 import { orderChannelLabel, ORDER_CHANNELS } from "@/lib/orders/orderChannel";
 import type { OrderChannel, OrderWithWarnings } from "@/lib/orders/types";
 import { orderStatusLabel } from "@/lib/orders/orderStatus";
-import { listOrders, ordersExportParams } from "@/lib/orders/ordersApi";
+import { listOrders, updateOrder, ordersExportParams } from "@/lib/orders/ordersApi";
+import { OrdersKanban } from "./OrdersKanban";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
 
 export function OrdersClient() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [channel, setChannel] = useState<OrderChannel | "">("");
@@ -24,8 +25,18 @@ export function OrdersClient() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [customerById, setCustomerById] = useState<Record<string, string>>({});
+  const [view, setView] = useState<"list" | "kanban">("list");
 
   const limit = 20;
+
+  const handleUpdateStatus = async (id: string, status: string) => {
+    try {
+      await updateOrder(id, { status });
+      setRows((prev) => prev.map((o) => (o._id === id ? { ...o, status } : o)));
+    } catch {
+      alert("Erro ao atualizar status");
+    }
+  };
 
   const loadCustomers = useCallback(async () => {
     try {
@@ -171,6 +182,30 @@ export function OrdersClient() {
             ))}
           </select>
         </label>
+        <div className="flex items-end">
+          <div className="flex p-1 rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
+            <button
+              onClick={() => setView("list")}
+              className="px-4 py-2 text-sm font-medium rounded-md transition-colors"
+              style={{
+                backgroundColor: view === "list" ? "rgba(0,0,0,0.05)" : "transparent",
+                color: view === "list" ? lmfitTokens.text : lmfitTokens.textMuted,
+              }}
+            >
+              Lista
+            </button>
+            <button
+              onClick={() => setView("kanban")}
+              className="px-4 py-2 text-sm font-medium rounded-md transition-colors"
+              style={{
+                backgroundColor: view === "kanban" ? "rgba(0,0,0,0.05)" : "transparent",
+                color: view === "kanban" ? lmfitTokens.text : lmfitTokens.textMuted,
+              }}
+            >
+              Kanban
+            </button>
+          </div>
+        </div>
       </div>
 
       {err ? (
@@ -179,90 +214,99 @@ export function OrdersClient() {
         </p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>
-              <th className="px-3 py-2 font-medium w-16 hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
-                {t("orders.id", "ID")}
-              </th>
-              <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                {t("orders.reference", "Referência")}
-              </th>
-              <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                {t("orders.customer", "Cliente")}
-              </th>
-              <th className="px-3 py-2 font-medium hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
-                {t("orders.channel", "Canal")}
-              </th>
-              <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                {t("orders.status", "Status")}
-              </th>
-              <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                {t("orders.total", "Total")}
-              </th>
-              <th className="px-3 py-2 font-medium hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
-                {t("orders.date", "Data")}
-              </th>
-              <th className="px-3 py-2 font-medium w-28" style={{ color: lmfitTokens.accentBlue }}>
-                {t("orders.actions", "Ações")}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && rows.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-3 py-8 text-center" style={{ color: lmfitTokens.textMuted }}>
-                  Nenhum pedido encontrado.
-                </td>
+      {view === "kanban" ? (
+        <OrdersKanban
+          orders={rows}
+          customers={customerById}
+          onUpdateStatus={handleUpdateStatus}
+          lang={language}
+        />
+      ) : (
+        <div className="overflow-x-auto rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>
+                <th className="px-3 py-2 font-medium w-16 hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
+                  {t("orders.id", "ID")}
+                </th>
+                <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
+                  {t("orders.reference", "Referência")}
+                </th>
+                <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
+                  {t("orders.customer", "Cliente")}
+                </th>
+                <th className="px-3 py-2 font-medium hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
+                  {t("orders.channel", "Canal")}
+                </th>
+                <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
+                  {t("orders.status", "Status")}
+                </th>
+                <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
+                  {t("orders.total", "Total")}
+                </th>
+                <th className="px-3 py-2 font-medium hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
+                  {t("orders.date", "Data")}
+                </th>
+                <th className="px-3 py-2 font-medium w-28" style={{ color: lmfitTokens.accentBlue }}>
+                  {t("orders.actions", "Ações")}
+                </th>
               </tr>
-            ) : null}
-            {rows.map((row, rowIdx) => {
-              const id = String(row._id ?? "");
-              const cid = row.customerId ? String(row.customerId) : "";
-              const created = row.createdAt ? new Date(String(row.createdAt)) : null;
-              return (
-                <tr key={id || `row-${rowIdx}`} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
-                  <td className="px-3 py-2 align-top font-medium tabular-nums hidden md:table-cell" style={{ color: lmfitTokens.text }}>
-                    #{row.number ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
-                    {row.reference != null && String(row.reference) !== "" ? String(row.reference) : "—"}
-                  </td>
-                  <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
-                    {cid ? customerById[cid] ?? cid : "—"}
-                  </td>
-                  <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.text }}>
-                    {t(`channel.${row.channel}`, orderChannelLabel(row.channel as string))}
-                  </td>
-                  <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
-                    {t(`status.${row.status}`, orderStatusLabel(row.status as string))}
-                  </td>
-                  <td className="px-3 py-2 align-top tabular-nums" style={{ color: lmfitTokens.text }}>
-                    {typeof row.total === "number" && Number.isFinite(row.total) ? formatBRL(row.total) : "—"}
-                  </td>
-                  <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.textMuted }}>
-                    {created && !Number.isNaN(created.getTime())
-                      ? created.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
-                      : "—"}
-                  </td>
-                  <td className="px-3 py-2 align-top">
-                    {id ? (
-                      <Link
-                        href={`/orders/${encodeURIComponent(id)}`}
-                        className="text-xs min-h-9 inline-flex items-center px-2 rounded border touch-manipulation"
-                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-                      >
-                        Abrir
-                      </Link>
-                    ) : null}
+            </thead>
+            <tbody>
+              {!loading && rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-3 py-8 text-center" style={{ color: lmfitTokens.textMuted }}>
+                    Nenhum pedido encontrado.
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ) : null}
+              {rows.map((row, rowIdx) => {
+                const id = String(row._id ?? "");
+                const cid = row.customerId ? String(row.customerId) : "";
+                const created = row.createdAt ? new Date(String(row.createdAt)) : null;
+                return (
+                  <tr key={id || `row-${rowIdx}`} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
+                    <td className="px-3 py-2 align-top font-medium tabular-nums hidden md:table-cell" style={{ color: lmfitTokens.text }}>
+                      #{row.number ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
+                      {row.reference != null && String(row.reference) !== "" ? String(row.reference) : "—"}
+                    </td>
+                    <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
+                      {cid ? customerById[cid] ?? cid : "—"}
+                    </td>
+                    <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.text }}>
+                      {t(`channel.${row.channel}`, orderChannelLabel(row.channel as string))}
+                    </td>
+                    <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
+                      {t(`status.${row.status}`, orderStatusLabel(row.status as string))}
+                    </td>
+                    <td className="px-3 py-2 align-top tabular-nums" style={{ color: lmfitTokens.text }}>
+                      {typeof row.total === "number" && Number.isFinite(row.total) ? formatBRL(row.total) : "—"}
+                    </td>
+                    <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.textMuted }}>
+                      {created && !Number.isNaN(created.getTime())
+                        ? created.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2 align-top">
+                      {id ? (
+                        <Link
+                          href={`/orders/${encodeURIComponent(id)}`}
+                          className="text-xs min-h-9 inline-flex items-center px-2 rounded border touch-manipulation"
+                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                        >
+                          Abrir
+                        </Link>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {totalPages > 1 ? (
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm" style={{ color: lmfitTokens.text }}>

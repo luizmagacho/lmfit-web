@@ -2,28 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { lmfitTokens } from "@/theme/tokens";
-import type { PurchaseRecord } from "@/lib/purchases/types";
+import type { OrderWithWarnings } from "@/lib/orders/types";
 import { formatBRL } from "@/lib/formatMoney";
+import { orderChannelLabel } from "@/lib/orders/orderChannel";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 
-const DEFAULT_STATUSES = ["interest", "order_reserved", "in_transit", "received", "cancelled"];
+const DEFAULT_STATUSES = ["open", "picking", "shipped", "completed", "cancelled"];
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#64748b",        // Slate
-  interest: "#6366f1",       // Indigo
-  order_reserved: "#f59e0b", // Amber
-  in_transit: "#3b82f6",     // Blue
-  received: "#10b981",       // Emerald
-  cancelled: "#ef4444",      // Red
+  open: "#6366f1",       // Indigo
+  picking: "#f59e0b",    // Amber
+  shipped: "#3b82f6",    // Blue
+  completed: "#10b981",  // Emerald
+  cancelled: "#ef4444",  // Red
 };
 
 const STATUS_LABELS: Record<string, Record<string, string>> = {
-  pending: { "pt-BR": "Pendente", en: "Pending" },
-  interest: { "pt-BR": "Interesse", en: "Interest" },
-  order_reserved: { "pt-BR": "Reserva de Pedido", en: "Order Reserved" },
-  in_transit: { "pt-BR": "Em Trânsito", en: "In Transit" },
-  received: { "pt-BR": "Recebido", en: "Received" },
+  open: { "pt-BR": "Em aberto", en: "Open" },
+  picking: { "pt-BR": "Em separação", en: "Picking" },
+  shipped: { "pt-BR": "Enviado", en: "Shipped" },
+  completed: { "pt-BR": "Concluído", en: "Completed" },
   cancelled: { "pt-BR": "Cancelado", en: "Cancelled" },
 };
 
@@ -31,9 +30,9 @@ function getStatusColor(status: string) {
   return STATUS_COLORS[status] ?? lmfitTokens.primary;
 }
 
-function PurchaseKanbanCard({
+function OrderKanbanCard({
   item,
-  suppliers,
+  customers,
   onMove,
   statuses,
   updating,
@@ -41,20 +40,19 @@ function PurchaseKanbanCard({
   handleDragStart,
   language,
 }: {
-  item: PurchaseRecord;
-  suppliers: Record<string, string>;
+  item: OrderWithWarnings;
+  customers: Record<string, string>;
   onMove: (status: string) => void;
   statuses: string[];
   updating: string | null;
-  draggedItem: PurchaseRecord | null;
-  handleDragStart: (e: React.DragEvent, purchase: PurchaseRecord) => void;
+  draggedItem: OrderWithWarnings | null;
+  handleDragStart: (e: React.DragEvent, order: OrderWithWarnings) => void;
   language: string;
 }) {
   const isEn = language === "en";
-  const sidRaw = item.supplierId;
-  const sidStr = sidRaw && typeof sidRaw === 'object' && '_id' in sidRaw ? String((sidRaw as Record<string, unknown>)._id) : String(sidRaw ?? "");
-  const supplierName = sidRaw && typeof sidRaw === 'object' && 'name' in sidRaw ? String((sidRaw as Record<string, unknown>).name) : (suppliers[sidStr] ?? sidStr);
-  const displayName = supplierName || (isEn ? "No supplier" : "Sem fornecedor");
+  const cid = item.customerId ? String(item.customerId) : "";
+  const customerName = cid ? customers[cid] ?? cid : (isEn ? "No customer" : "Sem cliente");
+  const channelName = orderChannelLabel(item.channel as string);
 
   return (
     <div
@@ -66,7 +64,7 @@ function PurchaseKanbanCard({
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="min-w-0">
           <span className="text-xs font-semibold truncate block" style={{ color: lmfitTokens.textMuted }}>
-            {item.reference || (isEn ? "No Ref." : "Sem Ref.")}
+            #{item.number ?? "—"} {item.reference && `(${item.reference})`}
           </span>
         </div>
         <select
@@ -85,21 +83,40 @@ function PurchaseKanbanCard({
       </div>
 
       <div className="text-sm font-bold mb-1 line-clamp-1" style={{ color: lmfitTokens.text }}>
-        {displayName}
+        {customerName}
       </div>
 
-      <div className="flex justify-between items-center mt-3">
+      {item.channel && (
+        <span
+          className="inline-block text-[9px] font-medium px-2 py-0.5 rounded-full mb-2"
+          style={{ backgroundColor: "var(--chart-track)", color: lmfitTokens.textMuted }}
+        >
+          {channelName}
+        </span>
+      )}
+
+      {/* Warnings & Alertas */}
+      {item.warnings && item.warnings.length > 0 && (
+        <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-2 flex items-center gap-1">
+          <span>⚠️</span>
+          <span>{item.warnings.length} {isEn ? "warning(s)" : "alerta(s)"}</span>
+        </div>
+      )}
+
+      <div className="flex justify-between items-center mt-2 pt-2 border-t" style={{ borderColor: lmfitTokens.border }}>
         <div className="text-xs font-bold tabular-nums" style={{ color: lmfitTokens.primary }}>
           {formatBRL(item.total || 0)}
         </div>
         <div className="text-[10px]" style={{ color: lmfitTokens.textMuted }}>
-          {Array.isArray(item.lines) ? item.lines.length : 0} {isEn ? "lines" : "linhas"}
+          {item.createdAt
+            ? new Date(item.createdAt).toLocaleDateString("pt-BR", { dateStyle: "short" })
+            : "—"}
         </div>
       </div>
 
-      <div className="flex gap-2 pt-2 mt-2 border-t" style={{ borderColor: lmfitTokens.border }}>
+      <div className="flex gap-2 pt-2 mt-2">
         <Link
-          href={`/purchases/${encodeURIComponent(item._id)}`}
+          href={`/orders/${encodeURIComponent(item._id)}`}
           className="flex-1 text-[10px] py-1 rounded-md border text-center font-medium block hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
         >
@@ -126,7 +143,7 @@ function AddColumnModal({ onAdd, onClose }: { onAdd: (name: string) => void; onC
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) { onAdd(name.trim()); onClose(); } }}
-          placeholder={isEn ? "Ex: Review" : "Ex: Revisão"}
+          placeholder={isEn ? "Ex: Awaiting Payment" : "Ex: Aguardando Pagamento"}
           className="w-full border rounded-lg px-3 py-2 text-sm bg-transparent"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
         />
@@ -148,14 +165,14 @@ function AddColumnModal({ onAdd, onClose }: { onAdd: (name: string) => void; onC
   );
 }
 
-export function PurchasesKanban({
-  purchases,
-  suppliers,
+export function OrdersKanban({
+  orders,
+  customers,
   onUpdateStatus,
   lang,
 }: {
-  purchases: PurchaseRecord[];
-  suppliers: Record<string, string>;
+  orders: OrderWithWarnings[];
+  customers: Record<string, string>;
   onUpdateStatus: (id: string, newStatus: string) => Promise<void>;
   lang?: string;
 }) {
@@ -165,12 +182,12 @@ export function PurchasesKanban({
 
   const [columns, setColumns] = useState<string[]>(DEFAULT_STATUSES);
   const [addColOpen, setAddColOpen] = useState(false);
-  const [draggedItem, setDraggedItem] = useState<PurchaseRecord | null>(null);
+  const [draggedItem, setDraggedItem] = useState<OrderWithWarnings | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
 
   // Dynamic status recovery from loaded items
   useEffect(() => {
-    const itemStatuses = Array.from(new Set(purchases.map((p) => p.status || ""))).filter(Boolean);
+    const itemStatuses = Array.from(new Set(orders.map((o) => o.status || ""))).filter(Boolean);
     setColumns((prev) => {
       const merged = [...prev];
       for (const s of itemStatuses) {
@@ -178,10 +195,10 @@ export function PurchasesKanban({
       }
       return merged;
     });
-  }, [purchases]);
+  }, [orders]);
 
-  const handleDragStart = (e: React.DragEvent, purchase: PurchaseRecord) => {
-    setDraggedItem(purchase);
+  const handleDragStart = (e: React.DragEvent, order: OrderWithWarnings) => {
+    setDraggedItem(order);
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -213,11 +230,11 @@ export function PurchasesKanban({
   };
 
   const handleRemoveColumn = (col: string) => {
-    const itemsInCol = purchases.filter((p) => p.status === col);
+    const itemsInCol = orders.filter((o) => o.status === col);
     if (itemsInCol.length > 0) {
       alert(isEn
-        ? `Move the ${itemsInCol.length} purchase(s) from this column before removing it.`
-        : `Mova as ${itemsInCol.length} compra(s) desta coluna antes de removê-la.`
+        ? `Move the ${itemsInCol.length} order(s) from this column before removing it.`
+        : `Mova os ${itemsInCol.length} pedido(s) desta coluna antes de removê-la.`
       );
       return;
     }
@@ -244,7 +261,7 @@ export function PurchasesKanban({
       <div className="flex gap-4 overflow-x-auto pb-4 items-start" style={{ minHeight: "60vh" }}>
         {columns.map((col) => {
           const colColor = getStatusColor(col);
-          const colItems = purchases.filter((p) => p.status === col);
+          const colItems = orders.filter((o) => o.status === col);
 
           return (
             <div
@@ -286,10 +303,10 @@ export function PurchasesKanban({
                 }}
               >
                 {colItems.map((item) => (
-                  <PurchaseKanbanCard
+                  <OrderKanbanCard
                     key={item._id}
                     item={item}
-                    suppliers={suppliers}
+                    customers={customers}
                     statuses={columns}
                     updating={updating}
                     draggedItem={draggedItem}
@@ -301,7 +318,7 @@ export function PurchasesKanban({
                 {colItems.length === 0 && (
                   <div className="flex items-center justify-center h-24">
                     <p className="text-xs text-center" style={{ color: lmfitTokens.textMuted }}>
-                      {isEn ? "No purchases" : "Nenhuma compra"}
+                      {isEn ? "No orders" : "Nenhum pedido"}
                     </p>
                   </div>
                 )}
