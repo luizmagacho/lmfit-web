@@ -88,23 +88,25 @@ export function ProductVariantsEditor({
   );
 
   const prevNameRef = useRef(productName);
+  const draftsRef = useRef(drafts);
+  draftsRef.current = drafts;
+
   useEffect(() => {
     if (prevNameRef.current !== productName) {
       const prevName = prevNameRef.current;
       prevNameRef.current = productName;
 
-      setDrafts((prev) => {
-        const next = prev.map((d) => {
-          const prevSuggestion = generateSkuSuggestion(prevName, d.color, d.size);
-          const isAuto = !d.sku.trim() || d.sku === prevSuggestion;
-          if (isAuto) {
-            return { ...d, sku: generateSkuSuggestion(productName, d.color, d.size) };
-          }
-          return d;
-        });
-        onDraftsChange(next);
-        return next;
+      const next = draftsRef.current.map((d) => {
+        const prevSuggestion = generateSkuSuggestion(prevName, d.color, d.size);
+        const isAuto = !d.sku.trim() || d.sku === prevSuggestion;
+        if (isAuto) {
+          return { ...d, sku: generateSkuSuggestion(productName, d.color, d.size) };
+        }
+        return d;
       });
+
+      setDrafts(next);
+      onDraftsChange(next);
     }
   }, [productName, onDraftsChange]);
 
