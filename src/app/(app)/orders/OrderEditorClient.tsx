@@ -49,8 +49,8 @@ function linesToLocal(
   return lines.map((l) => {
     const v = variantById?.get(l.variantId);
     const batchCost = v ? skuToCost?.get(v.sku) : undefined;
-    const prodPrice = (l as any).productionPrice != null
-      ? String((l as any).productionPrice)
+    const prodPrice = l.productionPrice != null
+      ? String(l.productionPrice)
       : (batchCost != null ? String(batchCost) : "0");
 
     return {
@@ -77,7 +77,7 @@ function parseLinesPayload(rows: LocalLine[]): OrderLineInput[] | undefined {
       unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
       productionPrice: Number.isFinite(productionPrice) ? productionPrice : 0,
       description: r.description.trim() === "" ? null : r.description.trim(),
-    } as any);
+    });
   }
   return out;
 }
@@ -768,7 +768,7 @@ function ReadOnlyLinesTable({
                     {formatBRL(l.unitPrice)}
                   </td>
                   <td className="py-2 pr-2 tabular-nums" style={{ color: lmfitTokens.text }}>
-                    {formatBRL((l as any).productionPrice || 0)}
+                    {formatBRL(l.productionPrice || 0)}
                   </td>
                   <td className="py-2 pr-2" style={{ color: lmfitTokens.textMuted }}>
                     {l.description ?? "—"}

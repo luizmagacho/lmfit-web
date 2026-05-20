@@ -8,14 +8,12 @@ import { isAxiosError } from "axios";
 import { http } from "@/lib/http";
 import { getOrder } from "@/lib/orders/ordersApi";
 import { fetchCustomerById } from "@/lib/crm/customer360";
-import { collectVariantOptionsFromProducts, extractListItems } from "@/lib/normalizeApiList";
+import { collectVariantOptionsFromProducts, extractListItems, type VariantOptionRow } from "@/lib/normalizeApiList";
 import { formatBRL } from "@/lib/formatMoney";
 import { orderChannelLabel } from "@/lib/orders/orderChannel";
 import { lmfitLogoSrc, lmfitTokens } from "@/theme/tokens";
-import type { OrderWithWarnings, OrderLineInput } from "@/lib/orders/types";
+import type { OrderWithWarnings } from "@/lib/orders/types";
 import { parseBRLToNumber } from "@/lib/orders/normalizeLines";
-
-const ReactRef = React;
 
 type VariantOpt = { id: string; label: string; sku: string; price: number; imageUrl?: string };
 
@@ -23,6 +21,7 @@ export function PrintOrderClient({ orderId }: { orderId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<OrderWithWarnings | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [customer, setCustomer] = useState<Record<string, any> | null>(null);
   const [variantOpts, setVariantOpts] = useState<VariantOpt[]>([]);
 
@@ -60,7 +59,7 @@ export function PrintOrderClient({ orderId }: { orderId: string }) {
       const items = extractListItems(prodData);
       const rows = collectVariantOptionsFromProducts(items);
       setVariantOpts(
-        rows.map((r: any) => ({
+        rows.map((r: VariantOptionRow) => ({
           id: r.id,
           sku: r.sku,
           price: r.price,
@@ -84,8 +83,9 @@ export function PrintOrderClient({ orderId }: { orderId: string }) {
     if (!order?.lines) return [];
     const linesArray = Array.isArray(order.lines) ? order.lines : [];
 
-    return linesArray.map((line: any) => {
-      const variantId = line.variantId;
+    return linesArray.map((rawLine) => {
+      const line = rawLine as Record<string, unknown>;
+      const variantId = typeof line.variantId === "string" ? line.variantId : "";
       const quantity = Number(line.quantity || 0);
       const unitPrice = parseBRLToNumber(line.unitPrice);
       
@@ -95,8 +95,8 @@ export function PrintOrderClient({ orderId }: { orderId: string }) {
         variantId,
         quantity,
         unitPrice,
-        description: line.description || catalogInfo?.label || "Produto Desconhecido",
-        sku: catalogInfo?.sku || line.sku || "—",
+        description: (line.description as string | undefined) || catalogInfo?.label || "Produto Desconhecido",
+        sku: (line.sku as string | undefined) || catalogInfo?.sku || "—",
         imageUrl: catalogInfo?.imageUrl || null,
         total: quantity * unitPrice,
       };
@@ -118,6 +118,7 @@ export function PrintOrderClient({ orderId }: { orderId: string }) {
     window.print();
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getFormattedAddress = (c: any) => {
     if (!c) return null;
     const cep = c.cep || c.zipCode || c.postalCode || "";

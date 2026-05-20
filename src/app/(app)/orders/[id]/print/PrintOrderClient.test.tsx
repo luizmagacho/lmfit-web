@@ -6,8 +6,8 @@ import * as React from "react";
 // Mock next/link to render a plain <a> tag
 vi.mock("next/link", () => {
   return {
-    default: ({ children, href, ...props }: any) => (
-      <a href={href} {...props}>
+    default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
+      <a href={href} {...props as Record<string, unknown>}>
         {children}
       </a>
     ),
@@ -17,9 +17,9 @@ vi.mock("next/link", () => {
 // Mock next/image to render a plain <img> tag
 vi.mock("next/image", () => {
   return {
-    default: ({ src, alt, ...props }: any) => {
+    default: ({ src, alt, ...props }: { src: string; alt: string; [key: string]: unknown }) => {
       // eslint-disable-next-line @next/next/no-img-element
-      return <img src={src} alt={alt} {...props} />;
+      return <img src={src} alt={alt} {...props as Record<string, unknown>} />;
     },
   };
 });

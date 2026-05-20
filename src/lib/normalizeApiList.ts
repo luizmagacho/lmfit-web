@@ -45,11 +45,11 @@ export function collectVariantOptionsFromProducts(products: unknown[]): VariantO
   return opts;
 }
 
-function extractVariantImageUrl(v: Record<string, any>, p: Record<string, any>): string | undefined {
+function extractVariantImageUrl(v: Record<string, unknown>, p: Record<string, unknown>): string | undefined {
   if (Array.isArray(v.images) && v.images.length > 0) {
     const firstImg = v.images[0];
-    if (firstImg && typeof firstImg === "object" && firstImg.url) {
-      return String(firstImg.url);
+    if (firstImg && typeof firstImg === "object" && firstImg !== null && "url" in firstImg) {
+      return String((firstImg as { url: unknown }).url);
     }
     if (typeof firstImg === "string") {
       return firstImg;
