@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 
+export const metadata: Metadata = {
+  title: "LM Fit - Catálogo",
+  description: "Catálogo de produtos LM Fit",
+};
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[var(--lmfit-surface)] text-[var(--foreground)] pb-28">
