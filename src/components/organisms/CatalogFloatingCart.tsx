@@ -23,11 +23,10 @@ export function CatalogFloatingCart() {
     let text = "Olá! Gostaria de finalizar meu pedido com os itens do catálogo:\n\n";
     lines.forEach((l) => {
       text += `🛍️ *${l.quantity}x ${l.productName}*\n`;
-      text += `   ↳ SKU: ${l.sku}\n`;
       if (l.color || l.size) {
-        text += `   ↳ Variação: ${[l.color, l.size].filter(Boolean).join(" / ")}\n`;
+        text += `   • Variação: ${[l.color, l.size].filter(Boolean).join(" / ")}\n`;
       }
-      text += `   ↳ Preço unit.: ${formatBRL(l.unitPrice)}\n\n`;
+      text += `   • Preço unit.: ${formatBRL(l.unitPrice)}\n\n`;
     });
     text += `💰 *Subtotal: ${formatBRL(subtotal)}*\n\n`;
     text += "Aguardo retorno para finalizar o pagamento e combinar a entrega/retirada!";
