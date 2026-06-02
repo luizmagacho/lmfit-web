@@ -13,16 +13,26 @@ import { lmfitTokens } from "@/theme/tokens";
 
 type Product = Record<string, unknown>;
 
+function extractPrice(val: unknown): number {
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const parsed = parseFloat(val.replace(/\./g, '').replace(',', '.'));
+    if (!isNaN(parsed)) return parsed;
+  }
+  return 0;
+}
+
 function productPriceRetail(p: Product): number {
-  const anyp = p as { priceRetail?: number; price?: number };
-  if (typeof anyp.priceRetail === "number") return anyp.priceRetail;
-  if (typeof anyp.price === "number") return anyp.price;
+  const anyp = p as { priceRetail?: unknown; price?: unknown };
+  if (anyp.priceRetail !== undefined && anyp.priceRetail !== null) return extractPrice(anyp.priceRetail);
+  if (anyp.price !== undefined && anyp.price !== null) return extractPrice(anyp.price);
   return 0;
 }
 
 function productPriceWholesale(p: Product): number | null {
-  const anyp = p as { priceWholesale?: number };
-  return typeof anyp.priceWholesale === "number" ? anyp.priceWholesale : null;
+  const anyp = p as { priceWholesale?: unknown };
+  if (anyp.priceWholesale === undefined || anyp.priceWholesale === null || anyp.priceWholesale === '') return null;
+  return extractPrice(anyp.priceWholesale);
 }
 
 function productMinWholesale(p: Product): number {
@@ -52,7 +62,8 @@ export function VariantGrid({
     const minQty = productMinWholesale(product);
     return drafts.map((d, i) => {
       const vid = d.serverId || d.clientKey || `row-${i}`;
-      const variantRetail = d.price && d.price > 0 ? d.price : retail;
+      const dPrice = extractPrice(d.price);
+      const variantRetail = dPrice > 0 ? dPrice : retail;
       const variantWholesale = wholesale ?? variantRetail;
       const { price } = resolveUnitPrice(
         {

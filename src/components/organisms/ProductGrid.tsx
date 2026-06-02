@@ -46,12 +46,21 @@ function productIsNew(p: CatalogProduct): boolean {
   return Date.now() - t <= NEW_WINDOW_MS;
 }
 
+function extractPrice(val: unknown): number {
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const parsed = parseFloat(val.replace(/\./g, '').replace(',', '.'));
+    if (!isNaN(parsed)) return parsed;
+  }
+  return 0;
+}
+
 function retailPrice(p: CatalogProduct): number {
-  if (typeof p.priceRetail === "number") return p.priceRetail;
-  if (typeof p.price === "number") return p.price;
-  if (Array.isArray(p.variants)) {
-    const v = p.variants[0] as { price?: number } | undefined;
-    if (v && typeof v.price === "number") return v.price;
+  if (p.priceRetail !== undefined && p.priceRetail !== null) return extractPrice(p.priceRetail);
+  if (p.price !== undefined && p.price !== null) return extractPrice(p.price);
+  if (Array.isArray(p.variants) && p.variants.length > 0) {
+    const v = p.variants[0] as { price?: unknown };
+    if (v && v.price !== undefined && v.price !== null) return extractPrice(v.price);
   }
   return 0;
 }
