@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo } from "react";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Badge } from "@/components/atoms/Badge";
@@ -114,47 +115,53 @@ export function ProductGrid({
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
       {filtered.map((p) => {
         const id = documentId(p) || String(p.slug ?? "");
+        const slug = p.slug ? String(p.slug) : id;
         const img = resolvePrimaryImageUrl(p);
         const price = retailPrice(p);
         const compareAt = typeof p.compareAtPrice === "number" ? p.compareAtPrice : null;
         const isNew = productIsNew(p);
         const inStock = productInStock(p);
         return (
-          <article
+          <Link
+            href={`/catalogo/p/${slug}`}
             key={id || String(p.name)}
-            className="rounded-lg border bg-[var(--card-bg)] overflow-hidden flex flex-col"
+            className="rounded-lg border bg-[var(--card-bg)] overflow-hidden flex flex-col hover:border-[var(--primary)] transition-colors active:scale-[0.98]"
             style={{ borderColor: lmfitTokens.border }}
           >
-            <div className="relative w-full bg-neutral-100" style={{ aspectRatio: "1 / 1" }}>
-              {img ? (
-                <Image
-                  src={img}
-                  alt={String(p.name ?? "Produto")}
-                  fill
-                  sizes="(min-width: 768px) 25vw, 50vw"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full" aria-hidden />
-              )}
-              <div className="absolute top-2 left-2 flex flex-col gap-1">
-                {isNew ? <Badge variant="lancamento" size="xs">Lançamento</Badge> : null}
-                {!inStock ? <Badge variant="estornado" size="xs">Esgotado</Badge> : null}
+            <article className="flex flex-col h-full">
+              <div className="relative w-full bg-neutral-100" style={{ aspectRatio: "1 / 1" }}>
+                {img ? (
+                  <Image
+                    src={img}
+                    alt={String(p.name ?? "Produto")}
+                    fill
+                    sizes="(min-width: 768px) 25vw, 50vw"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-neutral-400" aria-hidden>
+                    Sem foto
+                  </div>
+                )}
+                <div className="absolute top-2 left-2 flex flex-col gap-1">
+                  {isNew ? <Badge variant="lancamento" size="xs">Lançamento</Badge> : null}
+                  {!inStock ? <Badge variant="estornado" size="xs">Esgotado</Badge> : null}
+                </div>
               </div>
-            </div>
-            <div className="p-2 space-y-1.5 flex-1 flex flex-col">
-              <h3
-                className="text-sm font-medium line-clamp-2"
-                style={{ color: lmfitTokens.text }}
-                title={String(p.name ?? "")}
-              >
-                {String(p.name ?? "Produto")}
-              </h3>
-              <div className="mt-auto">
-                <PriceTag price={price} compareAt={compareAt} mode={mode} />
+              <div className="p-2 space-y-1.5 flex-1 flex flex-col">
+                <h3
+                  className="text-sm font-medium line-clamp-2"
+                  style={{ color: lmfitTokens.text }}
+                  title={String(p.name ?? "")}
+                >
+                  {String(p.name ?? "Produto")}
+                </h3>
+                <div className="mt-auto">
+                  <PriceTag price={price} compareAt={compareAt} mode={mode} />
+                </div>
               </div>
-            </div>
-          </article>
+            </article>
+          </Link>
         );
       })}
     </div>
