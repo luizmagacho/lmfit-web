@@ -37,7 +37,7 @@ function variantSummaryCell(row: Row): string {
 
 /** All form columns — the modal shows everything */
 const columns: ResourceColumn[] = [
-  { key: "_id", label: "ID", editable: false, hiddenOnMobile: true },
+  { key: "_id", label: "ID", editable: false, hiddenOnMobile: true, hideInForm: true },
   {
     key: "images",
     label: "Imagens",
@@ -243,21 +243,27 @@ export function ProductsClient() {
           );
         },
 
-        price: (row: Row) => (
-          <div className="tabular-nums">
-            <span className="font-medium" style={{ color: lmfitTokens.text }}>
-              {formatPriceCell(row.price)}
-            </span>
-            {row.compareAtPrice ? (
-              <p
-                className="text-xs line-through mt-0.5"
-                style={{ color: lmfitTokens.textMuted }}
+        price: (row: Row) => {
+          const currentPrice = row.priceRetail ?? row.price;
+          return (
+            <div className="tabular-nums flex flex-col justify-center">
+              {row.compareAtPrice ? (
+                <span
+                  className="text-[11px] line-through leading-none mb-0.5"
+                  style={{ color: lmfitTokens.textMuted }}
+                >
+                  {formatPriceCell(row.compareAtPrice)}
+                </span>
+              ) : null}
+              <span 
+                className={`font-semibold ${row.compareAtPrice ? 'text-sm' : 'text-sm'}`} 
+                style={{ color: row.compareAtPrice ? lmfitTokens.success : lmfitTokens.text }}
               >
-                {formatPriceCell(row.compareAtPrice)}
-              </p>
-            ) : null}
-          </div>
-        ),
+                {formatPriceCell(currentPrice)}
+              </span>
+            </div>
+          );
+        },
 
         active: (row: Row) => {
           const isActive = row.active === true || row.active === "true" || row.active === 1;

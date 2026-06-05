@@ -26,6 +26,7 @@ export type OrderLineInput = {
   variantId: string;
   quantity: number;
   unitPrice: number;
+  productionPrice?: number;
   description?: string | null;
 };
 

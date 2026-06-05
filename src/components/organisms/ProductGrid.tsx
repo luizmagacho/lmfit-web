@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo } from "react";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Badge } from "@/components/atoms/Badge";
@@ -45,12 +46,21 @@ function productIsNew(p: CatalogProduct): boolean {
   return Date.now() - t <= NEW_WINDOW_MS;
 }
 
+function extractPrice(val: unknown): number {
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const parsed = parseFloat(val.replace(/\./g, '').replace(',', '.'));
+    if (!isNaN(parsed)) return parsed;
+  }
+  return 0;
+}
+
 function retailPrice(p: CatalogProduct): number {
-  if (typeof p.priceRetail === "number") return p.priceRetail;
-  if (typeof p.price === "number") return p.price;
-  if (Array.isArray(p.variants)) {
-    const v = p.variants[0] as { price?: number } | undefined;
-    if (v && typeof v.price === "number") return v.price;
+  if (p.priceRetail !== undefined && p.priceRetail !== null) return extractPrice(p.priceRetail);
+  if (p.price !== undefined && p.price !== null) return extractPrice(p.price);
+  if (Array.isArray(p.variants) && p.variants.length > 0) {
+    const v = p.variants[0] as { price?: unknown };
+    if (v && v.price !== undefined && v.price !== null) return extractPrice(v.price);
   }
   return 0;
 }
@@ -68,13 +78,22 @@ export function ProductGrid({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return items.filter((p) => {
+    const result = items.filter((p) => {
       if (onlyInStock && !productInStock(p)) return false;
       if (onlyNew && !productIsNew(p)) return false;
       if (!q) return true;
       const hay = [p.name, p.sku, p.category].filter(Boolean).join(" ").toLowerCase();
       return hay.includes(q);
     });
+    // Coloca peças com estoque primeiro
+    result.sort((a, b) => {
+      const aStock = productInStock(a);
+      const bStock = productInStock(b);
+      if (aStock && !bStock) return -1;
+      if (!aStock && bStock) return 1;
+      return 0;
+    });
+    return result;
   }, [items, search, onlyInStock, onlyNew]);
 
   const mode = inferModeForUser(role);
@@ -114,47 +133,53 @@ export function ProductGrid({
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
       {filtered.map((p) => {
         const id = documentId(p) || String(p.slug ?? "");
+        const slug = p.slug ? String(p.slug) : id;
         const img = resolvePrimaryImageUrl(p);
         const price = retailPrice(p);
         const compareAt = typeof p.compareAtPrice === "number" ? p.compareAtPrice : null;
         const isNew = productIsNew(p);
         const inStock = productInStock(p);
         return (
-          <article
+          <Link
+            href={`/catalogo/p/${slug}`}
             key={id || String(p.name)}
-            className="rounded-lg border bg-[var(--card-bg)] overflow-hidden flex flex-col"
+            className="rounded-lg border bg-[var(--card-bg)] overflow-hidden flex flex-col hover:border-[var(--primary)] transition-colors active:scale-[0.98]"
             style={{ borderColor: lmfitTokens.border }}
           >
-            <div className="relative w-full bg-neutral-100" style={{ aspectRatio: "1 / 1" }}>
-              {img ? (
-                <Image
-                  src={img}
-                  alt={String(p.name ?? "Produto")}
-                  fill
-                  sizes="(min-width: 768px) 25vw, 50vw"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full" aria-hidden />
-              )}
-              <div className="absolute top-2 left-2 flex flex-col gap-1">
-                {isNew ? <Badge variant="lancamento" size="xs">Lançamento</Badge> : null}
-                {!inStock ? <Badge variant="estornado" size="xs">Esgotado</Badge> : null}
+            <article className="flex flex-col h-full">
+              <div className="relative w-full bg-neutral-100" style={{ aspectRatio: "1 / 1" }}>
+                {img ? (
+                  <Image
+                    src={img}
+                    alt={String(p.name ?? "Produto")}
+                    fill
+                    sizes="(min-width: 768px) 25vw, 50vw"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-neutral-400" aria-hidden>
+                    Sem foto
+                  </div>
+                )}
+                <div className="absolute top-2 left-2 flex flex-col gap-1">
+                  {isNew ? <Badge variant="lancamento" size="xs">Lançamento</Badge> : null}
+                  {!inStock ? <Badge variant="estornado" size="xs">Esgotado</Badge> : null}
+                </div>
               </div>
-            </div>
-            <div className="p-2 space-y-1.5 flex-1 flex flex-col">
-              <h3
-                className="text-sm font-medium line-clamp-2"
-                style={{ color: lmfitTokens.text }}
-                title={String(p.name ?? "")}
-              >
-                {String(p.name ?? "Produto")}
-              </h3>
-              <div className="mt-auto">
-                <PriceTag price={price} compareAt={compareAt} mode={mode} />
+              <div className="p-2 space-y-1.5 flex-1 flex flex-col">
+                <h3
+                  className="text-sm font-medium line-clamp-2"
+                  style={{ color: lmfitTokens.text }}
+                  title={String(p.name ?? "")}
+                >
+                  {String(p.name ?? "Produto")}
+                </h3>
+                <div className="mt-auto">
+                  <PriceTag price={price} compareAt={compareAt} mode={mode} />
+                </div>
               </div>
-            </div>
-          </article>
+            </article>
+          </Link>
         );
       })}
     </div>

@@ -21,6 +21,7 @@ import { ORDER_STATUSES } from "@/lib/orders/orderStatus";
 import type { OrderChannel, OrderLineInput, OrderStatus, OrderWarning, StockConflict } from "@/lib/orders/types";
 import { isLinesLockedStatus } from "@/lib/orders/types";
 import { lmfitTokens } from "@/theme/tokens";
+import { formatBRLInputDisplay, parseBRLMoneyInput } from "@/lib/inputMasks";
 
 type CustomerRow = { _id: string; name?: string };
 type VariantOpt = { id: string; label: string; sku: string; price: number };
@@ -30,22 +31,37 @@ type LocalLine = {
   variantId: string;
   quantity: string;
   unitPrice: string;
+  productionPrice: string;
   description: string;
 };
 
 function emptyLine(key: string): LocalLine {
-  return { key, variantId: "", quantity: "1", unitPrice: "0", description: "" };
+  return { key, variantId: "", quantity: "1", unitPrice: "0", productionPrice: "0", description: "" };
 }
 
-function linesToLocal(lines: OrderLineInput[], nextKey: () => string): LocalLine[] {
+function linesToLocal(
+  lines: OrderLineInput[],
+  nextKey: () => string,
+  skuToCost?: Map<string, number>,
+  variantById?: Map<string, VariantOpt>
+): LocalLine[] {
   if (!lines.length) return [emptyLine(nextKey())];
-  return lines.map((l) => ({
-    key: nextKey(),
-    variantId: l.variantId,
-    quantity: String(l.quantity),
-    unitPrice: String(l.unitPrice),
-    description: l.description ? String(l.description) : "",
-  }));
+  return lines.map((l) => {
+    const v = variantById?.get(l.variantId);
+    const batchCost = v ? skuToCost?.get(v.sku) : undefined;
+    const prodPrice = l.productionPrice != null
+      ? String(l.productionPrice)
+      : (batchCost != null ? String(batchCost) : "0");
+
+    return {
+      key: nextKey(),
+      variantId: l.variantId,
+      quantity: String(l.quantity),
+      unitPrice: String(l.unitPrice),
+      productionPrice: prodPrice,
+      description: l.description ? String(l.description) : "",
+    };
+  });
 }
 
 function parseLinesPayload(rows: LocalLine[]): OrderLineInput[] | undefined {
@@ -54,10 +70,12 @@ function parseLinesPayload(rows: LocalLine[]): OrderLineInput[] | undefined {
     if (!r.variantId.trim()) continue;
     const quantity = Number(String(r.quantity).replace(",", "."));
     const unitPrice = Number(String(r.unitPrice).replace(",", "."));
+    const productionPrice = Number(String(r.productionPrice).replace(",", "."));
     out.push({
       variantId: r.variantId.trim(),
       quantity: Number.isFinite(quantity) ? quantity : 0,
       unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
+      productionPrice: Number.isFinite(productionPrice) ? productionPrice : 0,
       description: r.description.trim() === "" ? null : r.description.trim(),
     });
   }
@@ -78,6 +96,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [variantOpts, setVariantOpts] = useState<VariantOpt[]>([]);
+  const [skuToProductionCost, setSkuToProductionCost] = useState<Map<string, number>>(new Map());
   const [customersLoadErr, setCustomersLoadErr] = useState<string | null>(null);
   const [catalogLoadErr, setCatalogLoadErr] = useState<string | null>(null);
   const [variantFilter, setVariantFilter] = useState("");
@@ -159,10 +178,32 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
     }
   }, []);
 
+  const loadProductionCosts = useCallback(async () => {
+    try {
+      const { data } = await http.get<unknown>("/production/batches", { params: { limit: 100 } });
+      const items = extractListItems(data);
+      const costMap = new Map<string, number>();
+      for (const item of items) {
+        if (item && typeof item === "object") {
+          const b = item as Record<string, unknown>;
+          const sku = b.sku != null ? String(b.sku).trim() : "";
+          const cost = Number(b.costPerUnit);
+          if (sku && Number.isFinite(cost)) {
+            costMap.set(sku, cost);
+          }
+        }
+      }
+      setSkuToProductionCost(costMap);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
     void loadCatalog();
     void loadCustomers();
-  }, [loadCatalog, loadCustomers]);
+    void loadProductionCosts();
+  }, [loadCatalog, loadCustomers, loadProductionCosts]);
 
   useEffect(() => {
     if (!orderId) {
@@ -174,6 +215,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
             variantId: presetVariantId,
             quantity: "1",
             unitPrice: "0",
+            productionPrice: "0",
             description: "",
           },
         ]);
@@ -195,7 +237,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         setReference(o.reference != null ? String(o.reference) : "");
         setNotes(o.notes != null ? String(o.notes) : "");
         const normalized = normalizeOrderLines(o.lines);
-        setLines(linesToLocal(normalized, nextKey));
+        setLines(linesToLocal(normalized, nextKey, skuToProductionCost, variantById));
         setWarnings(Array.isArray(o.warnings) ? o.warnings : []);
       } catch (e) {
         if (!cancelled) setLoadErr(axiosErrorMessage(e));
@@ -206,7 +248,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
     return () => {
       cancelled = true;
     };
-  }, [orderId, presetVariantId, presetCustomerId, nextKey]);
+  }, [orderId, presetVariantId, presetCustomerId, nextKey, skuToProductionCost, variantById]);
 
   useEffect(() => {
     if (!presetVariantId || orderId || !variantOpts.length) return;
@@ -214,14 +256,22 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
       if (prev.length === 1 && prev[0].variantId === presetVariantId && Number(prev[0].unitPrice) === 0) {
         const v = variantOpts.find((x) => x.id === presetVariantId);
         if (!v) return prev;
-        return [{ ...prev[0], unitPrice: String(v.price) }];
+        const batchCost = skuToProductionCost.get(v.sku);
+        return [
+          {
+            ...prev[0],
+            unitPrice: String(v.price),
+            productionPrice: batchCost != null ? String(batchCost) : String((v.price * 0.4).toFixed(2)),
+          },
+        ];
       }
       return prev;
     });
-  }, [presetVariantId, orderId, variantOpts]);
+  }, [presetVariantId, orderId, variantOpts, skuToProductionCost]);
 
   function onVariantPick(rowKey: string, variantId: string) {
     const v = variantById.get(variantId);
+    const batchCost = v ? skuToProductionCost.get(v.sku) : undefined;
     setLines((prev) =>
       prev.map((row) =>
         row.key === rowKey
@@ -229,6 +279,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
               ...row,
               variantId,
               unitPrice: v ? String(v.price) : row.unitPrice,
+              productionPrice: batchCost != null ? String(batchCost) : (v ? String((v.price * 0.4).toFixed(2)) : "0"),
             }
           : row,
       ),
@@ -325,13 +376,24 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         <h1 className="text-2xl font-semibold tracking-tight" style={{ color: lmfitTokens.text }}>
           {orderId ? (orderNumber ? `Pedido #${orderNumber}` : "Editar pedido") : "Novo pedido"}
         </h1>
-        <Link
-          href={!orderId && presetCustomerId ? `/customers/${encodeURIComponent(presetCustomerId)}` : "/orders"}
-          className="text-sm min-h-11 inline-flex items-center px-3 rounded-md border touch-manipulation"
-          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-        >
-          {!orderId && presetCustomerId ? "Voltar ao cliente" : "Voltar à lista"}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {orderId ? (
+            <Link
+              href={`/orders/${encodeURIComponent(orderId)}/print`}
+              className="text-sm min-h-11 inline-flex items-center px-3 rounded-md font-medium text-white touch-manipulation hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: lmfitTokens.primary }}
+            >
+              Imprimir Resumo
+            </Link>
+          ) : null}
+          <Link
+            href={!orderId && presetCustomerId ? `/customers/${encodeURIComponent(presetCustomerId)}` : "/orders"}
+            className="text-sm min-h-11 inline-flex items-center px-3 rounded-md border touch-manipulation"
+            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+          >
+            {!orderId && presetCustomerId ? "Voltar ao cliente" : "Voltar à lista"}
+          </Link>
+        </div>
       </div>
 
       {successMsg ? (
@@ -514,6 +576,9 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
                     <th className="py-2 pr-2 font-medium w-36" style={{ color: lmfitTokens.accentBlue }}>
                       Preço unit.
                     </th>
+                    <th className="py-2 pr-2 font-medium w-36" style={{ color: lmfitTokens.accentBlue }}>
+                      Preço de prod.
+                    </th>
                     <th className="py-2 pr-2 font-medium min-w-[8rem]" style={{ color: lmfitTokens.accentBlue }}>
                       Descrição
                     </th>
@@ -521,76 +586,105 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {lines.map((row) => (
-                    <tr key={row.key} className="border-b align-top" style={{ borderColor: lmfitTokens.border }}>
-                      <td className="py-2 pr-2">
-                        <select
-                          className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-[var(--card-bg)]"
-                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-                          value={row.variantId}
-                          onChange={(e) => onVariantPick(row.key, e.target.value)}
-                        >
-                          <option value="">Selecione…</option>
-                          {filteredVariants.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {v.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-2 pr-2">
-                        <input
-                          inputMode="decimal"
-                          className="w-full border rounded-md px-2 py-2 min-h-11 tabular-nums"
-                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-                          value={row.quantity}
-                          onChange={(e) =>
-                            setLines((prev) =>
-                              prev.map((l) => (l.key === row.key ? { ...l, quantity: e.target.value } : l)),
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="py-2 pr-2">
-                        <input
-                          inputMode="decimal"
-                          className="w-full border rounded-md px-2 py-2 min-h-11 tabular-nums"
-                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-                          value={row.unitPrice}
-                          onChange={(e) =>
-                            setLines((prev) =>
-                              prev.map((l) => (l.key === row.key ? { ...l, unitPrice: e.target.value } : l)),
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="py-2 pr-2">
-                        <input
-                          className="w-full border rounded-md px-2 py-2 min-h-11"
-                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-                          value={row.description}
-                          onChange={(e) =>
-                            setLines((prev) =>
-                              prev.map((l) => (l.key === row.key ? { ...l, description: e.target.value } : l)),
-                            )
-                          }
-                          placeholder="Opcional"
-                        />
-                      </td>
-                      <td className="py-2">
-                        <button
-                          type="button"
-                          className="text-xs min-h-9 px-2 rounded border touch-manipulation"
-                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.error }}
-                          onClick={() =>
-                            setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.key !== row.key)))
-                          }
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {lines.map((row) => {
+                    const v = variantById.get(row.variantId);
+                    const matchedBatchCost = v ? skuToProductionCost.get(v.sku) : undefined;
+
+                    return (
+                      <tr key={row.key} className="border-b align-top" style={{ borderColor: lmfitTokens.border }}>
+                        <td className="py-2 pr-2">
+                          <select
+                            className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-[var(--card-bg)]"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                            value={row.variantId}
+                            onChange={(e) => onVariantPick(row.key, e.target.value)}
+                          >
+                            <option value="">Selecione…</option>
+                            {filteredVariants.map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            inputMode="decimal"
+                            className="w-full border rounded-md px-2 py-2 min-h-11 tabular-nums"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                            value={row.quantity}
+                            onChange={(e) =>
+                              setLines((prev) =>
+                                prev.map((l) => (l.key === row.key ? { ...l, quantity: e.target.value } : l)),
+                              )
+                            }
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            inputMode="decimal"
+                            className="w-full border rounded-md px-2 py-2 min-h-11 tabular-nums"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                            value={formatBRLInputDisplay(row.unitPrice)}
+                            onChange={(e) => {
+                              const raw = parseBRLMoneyInput(e.target.value);
+                              setLines((prev) =>
+                                prev.map((l) => (l.key === row.key ? { ...l, unitPrice: raw } : l)),
+                              );
+                            }}
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            inputMode="decimal"
+                            className="w-full border rounded-md px-2 py-2 min-h-11 tabular-nums"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                            value={formatBRLInputDisplay(row.productionPrice)}
+                            onChange={(e) => {
+                              const raw = parseBRLMoneyInput(e.target.value);
+                              setLines((prev) =>
+                                prev.map((l) => (l.key === row.key ? { ...l, productionPrice: raw } : l)),
+                              );
+                            }}
+                          />
+                          {matchedBatchCost != null ? (
+                            <span className="text-[10px] text-green-600 block mt-1 font-medium">
+                              ✨ Prod: {formatBRL(matchedBatchCost)}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-neutral-400 block mt-1">
+                              Manual / Sem lote
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            className="w-full border rounded-md px-2 py-2 min-h-11"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                            value={row.description}
+                            onChange={(e) =>
+                              setLines((prev) =>
+                                prev.map((l) => (l.key === row.key ? { ...l, description: e.target.value } : l)),
+                              )
+                            }
+                            placeholder="Opcional"
+                          />
+                        </td>
+                        <td className="py-2">
+                          <button
+                            type="button"
+                            className="text-xs min-h-9 px-2 rounded border touch-manipulation"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.error }}
+                            onClick={() =>
+                              setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.key !== row.key)))
+                            }
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -645,6 +739,9 @@ function ReadOnlyLinesTable({
               Preço unit.
             </th>
             <th className="py-2 pr-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
+              Preço de prod.
+            </th>
+            <th className="py-2 pr-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
               Descrição
             </th>
           </tr>
@@ -652,7 +749,7 @@ function ReadOnlyLinesTable({
         <tbody>
           {lines.length === 0 ? (
             <tr>
-              <td colSpan={4} className="py-4" style={{ color: lmfitTokens.textMuted }}>
+              <td colSpan={5} className="py-4" style={{ color: lmfitTokens.textMuted }}>
                 Sem linhas.
               </td>
             </tr>
@@ -669,6 +766,9 @@ function ReadOnlyLinesTable({
                   </td>
                   <td className="py-2 pr-2 tabular-nums" style={{ color: lmfitTokens.text }}>
                     {formatBRL(l.unitPrice)}
+                  </td>
+                  <td className="py-2 pr-2 tabular-nums" style={{ color: lmfitTokens.text }}>
+                    {formatBRL(l.productionPrice || 0)}
                   </td>
                   <td className="py-2 pr-2" style={{ color: lmfitTokens.textMuted }}>
                     {l.description ?? "—"}

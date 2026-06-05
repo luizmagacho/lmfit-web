@@ -31,7 +31,7 @@ export function documentId(row: unknown): string {
   return String(id);
 }
 
-export type VariantOptionRow = { id: string; sku: string; price: number; label: string };
+export type VariantOptionRow = { id: string; sku: string; price: number; label: string; imageUrl?: string };
 
 /** Monta opções de variante para pedidos: `variants[]` ou produto flat (sku/preço no pai). */
 export function collectVariantOptionsFromProducts(products: unknown[]): VariantOptionRow[] {
@@ -45,6 +45,27 @@ export function collectVariantOptionsFromProducts(products: unknown[]): VariantO
   return opts;
 }
 
+function extractVariantImageUrl(v: Record<string, unknown>, p: Record<string, unknown>): string | undefined {
+  if (Array.isArray(v.images) && v.images.length > 0) {
+    const firstImg = v.images[0];
+    if (firstImg && typeof firstImg === "object" && firstImg !== null && "url" in firstImg) {
+      return String((firstImg as { url: unknown }).url);
+    }
+    if (typeof firstImg === "string") {
+      return firstImg;
+    }
+  }
+  if (p.primaryImageUrl && typeof p.primaryImageUrl === "string") {
+    return p.primaryImageUrl;
+  }
+  if (Array.isArray(p.images) && p.images.length > 0) {
+    if (typeof p.images[0] === "string") {
+      return p.images[0];
+    }
+  }
+  return undefined;
+}
+
 function variantOptionsForOneProduct(p: Record<string, unknown>, productName: string): VariantOptionRow[] {
   const variants = p.variants;
   if (Array.isArray(variants) && variants.length > 0) {
@@ -56,7 +77,8 @@ function variantOptionsForOneProduct(p: Record<string, unknown>, productName: st
       if (!id) continue;
       const sku = String(v.sku ?? id);
       const price = typeof v.price === "number" ? v.price : Number(v.price) || 0;
-      out.push({ id, sku, price, label: `${productName} — ${sku}` });
+      const imageUrl = extractVariantImageUrl(v, p);
+      out.push({ id, sku, price, label: `${productName} — ${sku}`, imageUrl });
     }
     return out;
   }
@@ -64,7 +86,10 @@ function variantOptionsForOneProduct(p: Record<string, unknown>, productName: st
   const sku = String(p.sku ?? "").trim();
   if (pid && sku) {
     const price = typeof p.price === "number" ? p.price : Number(p.price) || 0;
-    return [{ id: pid, sku, price, label: `${productName} — ${sku}` }];
+    const imageUrl = p.primaryImageUrl && typeof p.primaryImageUrl === "string"
+      ? p.primaryImageUrl
+      : (Array.isArray(p.images) && p.images.length > 0 && typeof p.images[0] === "string" ? p.images[0] : undefined);
+    return [{ id: pid, sku, price, label: `${productName} — ${sku}`, imageUrl }];
   }
   return [];
 }
