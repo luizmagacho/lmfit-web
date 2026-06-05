@@ -78,13 +78,22 @@ export function ProductGrid({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return items.filter((p) => {
+    const result = items.filter((p) => {
       if (onlyInStock && !productInStock(p)) return false;
       if (onlyNew && !productIsNew(p)) return false;
       if (!q) return true;
       const hay = [p.name, p.sku, p.category].filter(Boolean).join(" ").toLowerCase();
       return hay.includes(q);
     });
+    // Coloca peças com estoque primeiro
+    result.sort((a, b) => {
+      const aStock = productInStock(a);
+      const bStock = productInStock(b);
+      if (aStock && !bStock) return -1;
+      if (!aStock && bStock) return 1;
+      return 0;
+    });
+    return result;
   }, [items, search, onlyInStock, onlyNew]);
 
   const mode = inferModeForUser(role);
