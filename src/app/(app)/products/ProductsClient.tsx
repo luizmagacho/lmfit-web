@@ -37,7 +37,7 @@ function variantSummaryCell(row: Row): string {
 
 /** All form columns — the modal shows everything */
 const columns: ResourceColumn[] = [
-  { key: "_id", label: "ID", editable: false, hiddenOnMobile: true },
+  { key: "_id", label: "ID", editable: false, hiddenOnMobile: true, hideInForm: true },
   {
     key: "images",
     label: "Imagens",
