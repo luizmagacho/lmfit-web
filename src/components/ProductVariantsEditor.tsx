@@ -144,22 +144,25 @@ export function ProductVariantsEditor({
       </div>
 
       {drafts.length <= 1 && drafts[0]?.sku === "" && drafts[0]?.color === "Único" && (
-        <div className="p-3 rounded-lg border bg-gray-50 flex flex-col gap-2" style={{ borderColor: lmfitTokens.border }}>
-          <p className="text-xs font-medium text-gray-700">Gerar Variações Automaticamente</p>
+        <div className="p-3 rounded-lg border flex flex-col gap-2" style={{ borderColor: lmfitTokens.border, backgroundColor: 'rgba(128, 128, 128, 0.05)' }}>
+          <p className="text-xs font-medium" style={{ color: lmfitTokens.text }}>Gerar Variações Automaticamente</p>
           <div className="flex flex-col sm:flex-row gap-2">
             <input 
               id="auto-colors"
               placeholder="Cores (ex: Preto, Branco)" 
-              className="border rounded px-2 py-1 text-sm flex-1"
+              className="border rounded px-2 py-1 text-sm flex-1 bg-transparent"
+              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             />
             <input 
               id="auto-sizes"
               placeholder="Tamanhos (ex: P, M, G)" 
-              className="border rounded px-2 py-1 text-sm flex-1"
+              className="border rounded px-2 py-1 text-sm flex-1 bg-transparent"
+              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             />
             <button
               type="button"
-              className="px-3 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+              className="px-3 py-1 rounded text-white text-sm transition-colors hover:opacity-80"
+              style={{ backgroundColor: lmfitTokens.primary }}
               onClick={() => {
                 const colorStr = (document.getElementById("auto-colors") as HTMLInputElement)?.value || "";
                 const sizeStr = (document.getElementById("auto-sizes") as HTMLInputElement)?.value || "";
@@ -210,7 +213,8 @@ export function ProductVariantsEditor({
                   <button
                     type="button"
                     title="Sugerir SKUs automaticamente para todas as variações vazias"
-                    className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all font-semibold cursor-pointer animate-pulse"
+                    className="text-[10px] font-sans px-1.5 py-0.5 rounded border transition-all font-semibold cursor-pointer animate-pulse hover:opacity-80"
+                    style={{ color: lmfitTokens.primary, borderColor: lmfitTokens.primary, backgroundColor: 'transparent' }}
                     onClick={() => {
                       const next = drafts.map(x => ({
                         ...x,
