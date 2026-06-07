@@ -1,35 +1,216 @@
 "use client";
 
-import "../landing.css";
+import "./landing.css";
+
+// Minimalist SVG Icons
+const LogoIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ marginRight: "8px", verticalAlign: "middle" }}
+  >
+    <polygon points="12 2 22 8.5 12 15 2 8.5 12 2" />
+    <polyline points="2 12.5 12 19 22 12.5" />
+  </svg>
+);
+
+const CatalogIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#a78bfa"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <path d="M16 10a4 4 0 0 1-8 0" />
+  </svg>
+);
+
+const WhatsAppIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#a78bfa"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+  </svg>
+);
+
+const StockIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#a78bfa"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+    <line x1="12" y1="22.08" x2="12" y2="12" />
+  </svg>
+);
+
+const ChatbotIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#a78bfa"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 8V4H8" />
+    <rect width="16" height="12" x="4" y="8" rx="2" />
+    <path d="M2 14h2" />
+    <path d="M20 14h2" />
+    <path d="M15 13v2" />
+    <path d="M9 13v2" />
+  </svg>
+);
+
+const CheckoutIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#a78bfa"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect width="20" height="14" x="2" y="5" rx="2" />
+    <line x1="2" y1="10" x2="22" y2="10" />
+  </svg>
+);
+
+const ReportsIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#a78bfa"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+);
+
+const ClothesIcon1 = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="32"
+    height="32"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#22d3ee"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ opacity: 0.8 }}
+  >
+    <path d="M20.38 3.46L16 7.83V5c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2.83L3.62 3.46a1 1 0 0 0-1.41 0 1 1 0 0 0 0 1.41L7 9.66V20c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V9.66l4.79-4.79a1 1 0 0 0 0-1.41c-.39-.39-1.02-.39-1.41 0z" />
+  </svg>
+);
+
+const ClothesIcon2 = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="32"
+    height="32"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#22d3ee"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ opacity: 0.8 }}
+  >
+    <path d="M4 3h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-3v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V9H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+    <path d="M12 3v6" />
+  </svg>
+);
+
+const ClothesIcon3 = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="32"
+    height="32"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#22d3ee"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ opacity: 0.8 }}
+  >
+    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4H6z" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <path d="M16 10a4 4 0 0 1-8 0" />
+  </svg>
+);
 
 const FEATURES = [
   {
-    icon: "📦",
+    icon: <CatalogIcon />,
     title: "Catálogo Profissional",
     desc: "Seus produtos com fotos, variações de cor e tamanho, preços e estoque. Tudo com a sua marca.",
   },
   {
-    icon: "💬",
+    icon: <WhatsAppIcon />,
     title: "Pedido via WhatsApp",
     desc: "Suas clientes montam o carrinho no catálogo e enviam o pedido formatado direto no seu WhatsApp.",
   },
   {
-    icon: "📊",
+    icon: <StockIcon />,
     title: "Controle de Estoque",
     desc: "Gerencie quantidades por variação, receba alertas de estoque baixo e nunca perca uma venda.",
   },
   {
-    icon: "🤖",
+    icon: <ChatbotIcon />,
     title: "Chatbot IA",
     desc: "Atendimento automático 24/7 no WhatsApp. Responde perguntas, organiza pedidos e calcula totais.",
   },
   {
-    icon: "💳",
+    icon: <CheckoutIcon />,
     title: "Checkout no App",
     desc: "Receba pagamentos direto pela loja com PIX, Stripe e Mercado Pago. Sem redirecionar a cliente.",
   },
   {
-    icon: "📈",
+    icon: <ReportsIcon />,
     title: "Relatórios Inteligentes",
     desc: "Dashboard com vendas do dia, curva ABC de produtos, receita por período e muito mais.",
   },
@@ -131,9 +312,9 @@ const PLANS: Plan[] = [
 ];
 
 const MOCK_PRODUCTS = [
-  { name: "Conjunto Flow", price: "R$ 70,00", emoji: "👗" },
-  { name: "Jaqueta Dry Fit", price: "R$ 40,00", emoji: "🧥" },
-  { name: "Legging Premium", price: "R$ 55,00", emoji: "👖" },
+  { name: "Conjunto Flow", price: "R$ 70,00", icon: <ClothesIcon1 /> },
+  { name: "Jaqueta Dry Fit", price: "R$ 40,00", icon: <ClothesIcon2 /> },
+  { name: "Legging Premium", price: "R$ 55,00", icon: <ClothesIcon3 /> },
 ];
 
 export default function KivoLandingPage() {
@@ -144,7 +325,10 @@ export default function KivoLandingPage() {
 
       {/* Navbar */}
       <nav className="kivo-nav">
-        <div className="kivo-nav-logo">◆ Kivo</div>
+        <div className="kivo-nav-logo">
+          <LogoIcon />
+          Kivo
+        </div>
         <div className="kivo-nav-links">
           <a href="#features">Recursos</a>
           <a href="#como-funciona">Como funciona</a>
@@ -198,7 +382,7 @@ export default function KivoLandingPage() {
           <div className="kivo-browser-content">
             {MOCK_PRODUCTS.map((p) => (
               <div key={p.name} className="kivo-mock-product">
-                <div className="kivo-mock-product-img">{p.emoji}</div>
+                <div className="kivo-mock-product-img">{p.icon}</div>
                 <div className="kivo-mock-product-info">
                   <div className="kivo-mock-product-name">{p.name}</div>
                   <div className="kivo-mock-product-price">{p.price}</div>
@@ -299,7 +483,12 @@ export default function KivoLandingPage() {
             Comece agora com o plano grátis. Sem cartão de crédito, sem compromisso.
             Sua loja online em minutos.
           </p>
-          <a href="https://wa.me/5541996770521?text=Oi!%20Quero%20criar%20minha%20loja%20no%20Kivo" className="kivo-btn" target="_blank" rel="noopener noreferrer">
+          <a
+            href="https://wa.me/5541996770521?text=Oi!%20Quero%20criar%20minha%20loja%20no%20Kivo"
+            className="kivo-btn"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Falar no WhatsApp →
           </a>
         </div>
@@ -307,7 +496,10 @@ export default function KivoLandingPage() {
 
       {/* Footer */}
       <footer className="kivo-footer">
-        <div className="kivo-footer-logo">◆ Kivo</div>
+        <div className="kivo-footer-logo">
+          <LogoIcon />
+          Kivo
+        </div>
         <p>© {new Date().getFullYear()} Kivo. Todos os direitos reservados.</p>
       </footer>
     </div>
