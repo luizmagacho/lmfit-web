@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { CreditCard, MessageSquare } from "lucide-react";
 import { AddressForm } from "@/components/organisms/AddressForm";
 import { ShippingPicker, shippingCost } from "@/components/organisms/ShippingPicker";
 import { PixPayment } from "@/components/organisms/PixPayment";
@@ -180,45 +182,75 @@ export function CheckoutClient() {
 
           {tenant?.infinitePayTag ? (
             <section
-              className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3"
+              className="rounded-2xl border bg-[var(--card-bg)] p-5 space-y-4 shadow-sm"
               style={{ borderColor: lmfitTokens.border }}
             >
-              <h2 className="text-base font-semibold" style={{ color: lmfitTokens.text }}>
-                Forma de Pagamento
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold" style={{ color: lmfitTokens.text }}>
+                  Forma de Pagamento
+                </h2>
+                <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 select-none">
+                  <span>Processado por</span>
+                  <div className="bg-black px-1.5 py-0.5 rounded flex items-center">
+                    <Image
+                      src="/kivo-logo.png"
+                      alt="Kivo"
+                      width={38}
+                      height={12}
+                      className="h-3 w-auto object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("infinitepay")}
-                  className="flex flex-col text-left p-4 rounded-xl border transition-all cursor-pointer select-none gap-1 focus:outline-none"
+                  className="group relative flex items-start gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer select-none text-left focus:outline-none hover:shadow-md hover:-translate-y-0.5"
                   style={{
                     borderColor: paymentMethod === "infinitepay" ? lmfitTokens.primary : lmfitTokens.border,
-                    backgroundColor: paymentMethod === "infinitepay" ? `color-mix(in srgb, ${lmfitTokens.primary} 5%, var(--card-bg))` : "transparent",
+                    backgroundColor: paymentMethod === "infinitepay" ? `color-mix(in srgb, ${lmfitTokens.primary} 4%, var(--card-bg))` : "transparent",
                   }}
                 >
-                  <span className="font-semibold text-sm" style={{ color: lmfitTokens.text }}>
-                    Cartão de Crédito / Pix (Online)
-                  </span>
-                  <span className="text-xs" style={{ color: lmfitTokens.textMuted }}>
-                    Pague de forma segura online via InfinitePay.
-                  </span>
+                  <div className="flex items-center justify-center p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+                    <CreditCard size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="font-semibold text-sm block" style={{ color: lmfitTokens.text }}>
+                      Cartão de Crédito / Pix (Online)
+                    </span>
+                    <span className="text-xs leading-normal block" style={{ color: lmfitTokens.textMuted }}>
+                      Pague online de forma segura com InfinitePay.
+                    </span>
+                  </div>
+                  {paymentMethod === "infinitepay" && (
+                    <div className="absolute top-3 right-3 w-2 h-2 rounded-full" style={{ backgroundColor: lmfitTokens.primary }} />
+                  )}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("manual")}
-                  className="flex flex-col text-left p-4 rounded-xl border transition-all cursor-pointer select-none gap-1 focus:outline-none"
+                  className="group relative flex items-start gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer select-none text-left focus:outline-none hover:shadow-md hover:-translate-y-0.5"
                   style={{
                     borderColor: paymentMethod === "manual" ? lmfitTokens.primary : lmfitTokens.border,
-                    backgroundColor: paymentMethod === "manual" ? `color-mix(in srgb, ${lmfitTokens.primary} 5%, var(--card-bg))` : "transparent",
+                    backgroundColor: paymentMethod === "manual" ? `color-mix(in srgb, ${lmfitTokens.primary} 4%, var(--card-bg))` : "transparent",
                   }}
                 >
-                  <span className="font-semibold text-sm" style={{ color: lmfitTokens.text }}>
-                    Combinar no WhatsApp (Manual)
-                  </span>
-                  <span className="text-xs" style={{ color: lmfitTokens.textMuted }}>
-                    Envie o pedido para finalizar o pagamento direto com a loja.
-                  </span>
+                  <div className="flex items-center justify-center p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+                    <MessageSquare size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="font-semibold text-sm block" style={{ color: lmfitTokens.text }}>
+                      Combinar no WhatsApp (Manual)
+                    </span>
+                    <span className="text-xs leading-normal block" style={{ color: lmfitTokens.textMuted }}>
+                      Finalize os detalhes de pagamento direto com a loja.
+                    </span>
+                  </div>
+                  {paymentMethod === "manual" && (
+                    <div className="absolute top-3 right-3 w-2 h-2 rounded-full" style={{ backgroundColor: lmfitTokens.primary }} />
+                  )}
                 </button>
               </div>
             </section>
