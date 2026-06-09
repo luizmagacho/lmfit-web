@@ -9,6 +9,21 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
       {
+        protocol: "https",
+        hostname: "api.lmfit.com.br",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.lmfit.com.br",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.kivo.app",
+        pathname: "/**",
+      },
+      {
         protocol: "http",
         hostname: "localhost",
         port: "4000",
