@@ -17,6 +17,14 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Extract tenant-slug cookie and set header
+  if (typeof window !== "undefined") {
+    const match = document.cookie.match(/(^|;)\s*tenant-slug\s*=\s*([^;]+)/);
+    const slug = match ? match[2] : "lmfit";
+    config.headers["X-Tenant-Slug"] = slug;
+  } else {
+    config.headers["X-Tenant-Slug"] = "lmfit";
+  }
   // For FormData, remove the preset Content-Type so axios auto-sets
   // "multipart/form-data; boundary=..." with the correct boundary.
   if (config.data instanceof FormData) {

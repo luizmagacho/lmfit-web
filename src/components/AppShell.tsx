@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { RequireAuth } from "@/components/RequireAuth";
 import { lmfitLogoSrc, lmfitTokens } from "@/theme/tokens";
 import { useLanguage } from "@/context/LanguageContext";
+import { useTenant } from "@/context/TenantContext";
 
 import { 
   LayoutDashboard, 
@@ -55,6 +56,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
+  const { tenant, slug } = useTenant();
+
+  const logoUrl = tenant?.branding?.logoUrl || (slug === "lmfit" ? lmfitLogoSrc : "/kivo-logo.png");
+  const storeName = tenant?.name || (slug === "lmfit" ? "LM FIT" : "Kivo");
+  const isDefaultLogo = logoUrl === lmfitLogoSrc || logoUrl === "/kivo-logo.png";
 
   useEffect(() => {
     setMenuOpen(false);
@@ -86,12 +92,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-between gap-2 px-4 py-3 md:block">
             <Link
               href="/dashboard"
-              className="inline-flex rounded-md bg-black px-2.5 py-2 md:mx-0"
+              className={isDefaultLogo ? "inline-flex rounded-md bg-black px-2.5 py-2 md:mx-0" : "inline-flex py-1.5 md:mx-0"}
               onClick={() => setMenuOpen(false)}
             >
               <Image
-                src={lmfitLogoSrc}
-                alt="LM FIT"
+                src={logoUrl}
+                alt={storeName}
                 width={132}
                 height={44}
                 className="h-9 w-auto max-w-[9.5rem] object-contain object-left"

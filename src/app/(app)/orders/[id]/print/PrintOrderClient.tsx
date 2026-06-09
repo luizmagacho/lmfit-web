@@ -13,11 +13,16 @@ import { formatBRL } from "@/lib/formatMoney";
 import { orderChannelLabel } from "@/lib/orders/orderChannel";
 import { lmfitLogoSrc, lmfitTokens } from "@/theme/tokens";
 import type { OrderWithWarnings } from "@/lib/orders/types";
+import { useTenant } from "@/context/TenantContext";
 import { parseBRLToNumber } from "@/lib/orders/normalizeLines";
 
 type VariantOpt = { id: string; label: string; sku: string; price: number; imageUrl?: string };
 
 export function PrintOrderClient({ orderId }: { orderId: string }) {
+  const { tenant, slug } = useTenant();
+  const logoUrl = tenant?.branding?.logoUrl || (slug === "lmfit" ? lmfitLogoSrc : "/kivo-logo.png");
+  const storeName = tenant?.name || (slug === "lmfit" ? "LMFIT" : "Kivo");
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<OrderWithWarnings | null>(null);
@@ -431,8 +436,8 @@ export function PrintOrderClient({ orderId }: { orderId: string }) {
               </div>
               <div className="relative w-20 h-20 shrink-0">
                 <Image
-                  src={lmfitLogoSrc}
-                  alt="LMFIT"
+                  src={logoUrl}
+                  alt={storeName}
                   fill
                   sizes="80px"
                   className="object-contain object-right"
@@ -609,7 +614,7 @@ export function PrintOrderClient({ orderId }: { orderId: string }) {
                     Remetente:
                   </span>
                   <div className="text-black space-y-0.5">
-                    <p className="font-bold text-sm">LMFIT</p>
+                    <p className="font-bold text-sm">{storeName}</p>
                     <p className="text-neutral-700 leading-normal">Rua Bernadelle 193 Vila Talarico</p>
                     <p className="text-neutral-700 leading-normal">CASA 16</p>
                     <p className="text-neutral-700 leading-normal">São Paulo, São Paulo, 03533030</p>

@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { lmfitLogoSrc, lmfitTokens } from "@/theme/tokens";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { useTenant } from "@/context/TenantContext";
 
 function safeInternalNext(raw: string | null): string | null {
   if (!raw) return null;
@@ -14,21 +15,29 @@ function safeInternalNext(raw: string | null): string | null {
 }
 
 function LoginForm() {
-  const { user, loading, login } = useAuth();
+  const { user, loading: authLoading, login } = useAuth();
+  const { tenant, slug, loading: tenantLoading } = useTenant();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextRaw = searchParams.get("next");
   const nextPath = useMemo(() => safeInternalNext(nextRaw), [nextRaw]);
 
-  const [email, setEmail] = useState("admin@lmfit.local");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Set default admin email when slug changes
   useEffect(() => {
-    if (!loading && user) router.replace(nextPath ?? "/dashboard");
-  }, [loading, user, router, nextPath]);
+    if (slug) {
+      setEmail(`admin@${slug}.local`);
+    }
+  }, [slug]);
+
+  useEffect(() => {
+    if (!authLoading && user) router.replace(nextPath ?? "/dashboard");
+  }, [authLoading, user, router, nextPath]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -44,7 +53,11 @@ function LoginForm() {
     }
   }
 
-  if (loading) {
+  const logoUrl = tenant?.branding?.logoUrl || (slug === "lmfit" ? lmfitLogoSrc : "/kivo-logo.png");
+  const storeName = tenant?.name || (slug === "lmfit" ? "LM FIT" : "Kivo");
+  const isDefaultLogo = logoUrl === lmfitLogoSrc || logoUrl === "/kivo-logo.png";
+
+  if (authLoading || tenantLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">…</div>
     );
@@ -61,18 +74,18 @@ function LoginForm() {
         style={{ borderColor: lmfitTokens.border }}
       >
         <div className="flex flex-col items-center gap-2">
-          <div className="rounded-md bg-black px-4 py-3">
+          <div className={isDefaultLogo ? "rounded-md bg-black px-4 py-3" : "py-2 w-full flex justify-center"}>
             <Image
-              src={lmfitLogoSrc}
-              alt="LM FIT"
+              src={logoUrl}
+              alt={storeName}
               width={160}
               height={56}
-              className="h-11 w-auto max-w-[200px] object-contain object-left"
+              className="h-12 w-auto max-w-[200px] object-contain"
               priority
             />
           </div>
-          <p className="text-sm font-medium" style={{ color: lmfitTokens.textMuted }}>
-            Painel
+          <p className="text-sm font-medium text-center" style={{ color: lmfitTokens.textMuted }}>
+            Painel de Controle — {storeName}
           </p>
         </div>
         {error && (
