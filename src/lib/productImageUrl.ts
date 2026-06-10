@@ -1,10 +1,22 @@
 type Row = Record<string, unknown>;
 
 export function coerceImageUrlEntry(item: unknown): string | null {
-  if (typeof item === "string" && item.trim()) return item.trim();
+  if (typeof item === "string" && item.trim()) {
+    let url = item.trim();
+    if (url.startsWith("http://localhost:4000") && typeof window !== "undefined" && window.location.hostname !== "localhost") {
+      url = url.replace("http://localhost:4000", `http://${window.location.hostname}:4000`);
+    }
+    return url;
+  }
   if (item && typeof item === "object" && "url" in item) {
     const u = (item as { url: unknown }).url;
-    if (typeof u === "string" && u.trim()) return u.trim();
+    if (typeof u === "string" && u.trim()) {
+      let url = u.trim();
+      if (url.startsWith("http://localhost:4000") && typeof window !== "undefined" && window.location.hostname !== "localhost") {
+        url = url.replace("http://localhost:4000", `http://${window.location.hostname}:4000`);
+      }
+      return url;
+    }
   }
   return null;
 }

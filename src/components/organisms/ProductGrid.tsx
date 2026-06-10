@@ -155,6 +155,7 @@ export function ProductGrid({
                     fill
                     sizes="(min-width: 768px) 25vw, 50vw"
                     className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs text-neutral-400" aria-hidden>
