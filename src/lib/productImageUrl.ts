@@ -1,21 +1,28 @@
 type Row = Record<string, unknown>;
 
+function rewriteUrl(url: string): string {
+  if (url.startsWith("http://localhost:4000")) {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL;
+    // Se temos um endpoint da API configurado e não é o localhost, usa ele
+    if (apiBase && !apiBase.includes("localhost")) {
+      return url.replace("http://localhost:4000", apiBase);
+    }
+    // Se estamos no navegador testando pelo IP da rede local
+    if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
+      return url.replace("http://localhost:4000", `http://${window.location.hostname}:4000`);
+    }
+  }
+  return url;
+}
+
 export function coerceImageUrlEntry(item: unknown): string | null {
   if (typeof item === "string" && item.trim()) {
-    let url = item.trim();
-    if (url.startsWith("http://localhost:4000") && typeof window !== "undefined" && window.location.hostname !== "localhost") {
-      url = url.replace("http://localhost:4000", `http://${window.location.hostname}:4000`);
-    }
-    return url;
+    return rewriteUrl(item.trim());
   }
   if (item && typeof item === "object" && "url" in item) {
     const u = (item as { url: unknown }).url;
     if (typeof u === "string" && u.trim()) {
-      let url = u.trim();
-      if (url.startsWith("http://localhost:4000") && typeof window !== "undefined" && window.location.hostname !== "localhost") {
-        url = url.replace("http://localhost:4000", `http://${window.location.hostname}:4000`);
-      }
-      return url;
+      return rewriteUrl(u.trim());
     }
   }
   return null;
@@ -38,7 +45,7 @@ export function resolveProductImageUrls(row: Row): string[] {
 
   const primary =
     row.primaryImageUrl ?? row.imageUrl ?? row.thumbnailUrl ?? row.coverImageUrl;
-  if (typeof primary === "string" && primary.trim()) add(primary.trim());
+  if (typeof primary === "string" && primary.trim()) add(rewriteUrl(primary.trim()));
 
   const imgs = row.images;
   if (Array.isArray(imgs)) {
