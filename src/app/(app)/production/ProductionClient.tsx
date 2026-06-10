@@ -66,14 +66,20 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
     setSaving(true);
     try {
       const payload = {
-        name, sku, batchQty, status, inputs: inputs.map(i => ({ ...i, totalCost: i.quantity * i.unitPrice })),
+        name, sku, batchQty, status, 
+        inputs: inputs
+          .filter(i => i.description.trim() !== "")
+          .map(i => ({ ...i, totalCost: i.quantity * i.unitPrice })),
         cuttingCost, sewingCost, overheadPercent, targetMarginPercent, notes,
       };
       if (batch?._id) await updateBatch(batch._id, payload);
       else await createBatch(payload);
       onSaved();
       onClose();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Erro ao salvar o lote.");
+    }
     finally { setSaving(false); }
   };
 
