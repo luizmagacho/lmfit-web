@@ -15,6 +15,15 @@ import { ProductionKanbanClient } from "./ProductionKanbanClient";
 
 const EMPTY_INPUT: InputItem = { description: "", inputType: "fabric", unit: "kg", quantity: 0, unitPrice: 0, totalCost: 0 };
 
+function parseBrlMoney(val: string): number {
+  const d = val.replace(/\D/g, "");
+  return d ? parseInt(d, 10) / 100 : 0;
+}
+
+function formatBrlMoney(num: number): string {
+  return (num || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function computeCosts(
   inputs: InputItem[], cuttingCost: number, sewingCost: number,
   overheadPercent: number, batchQty: number, targetMarginPercent: number
@@ -178,8 +187,8 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
                           {(Object.keys(UNIT_LABELS) as Unit[]).map(k => <option key={k} value={k}>{UNIT_LABELS[k]}</option>)}
                         </select>
                       </td>
-                      <td className="p-1.5"><input type="number" min={0} step="0.001" value={inp.quantity} onChange={e => handleInputChange(idx, "quantity", Number(e.target.value))} className="w-20 border rounded px-2 py-1 bg-transparent text-xs text-right" style={fieldStyle} /></td>
-                      <td className="p-1.5"><input type="number" min={0} step="0.01" value={inp.unitPrice} onChange={e => handleInputChange(idx, "unitPrice", Number(e.target.value))} className="w-24 border rounded px-2 py-1 bg-transparent text-xs text-right" style={fieldStyle} /></td>
+                      <td className="p-1.5"><input type="number" min={0} step="0.001" value={inp.quantity || ""} onChange={e => handleInputChange(idx, "quantity", Number(e.target.value))} className="w-20 border rounded px-2 py-1 bg-transparent text-xs text-right" style={fieldStyle} /></td>
+                      <td className="p-1.5"><input type="text" value={formatBrlMoney(inp.unitPrice)} onChange={e => handleInputChange(idx, "unitPrice", parseBrlMoney(e.target.value))} className="w-24 border rounded px-2 py-1 bg-transparent text-xs text-right" style={fieldStyle} /></td>
                       <td className="p-1.5 text-right font-semibold tabular-nums" style={{ color: lmfitTokens.text }}>{formatBRL(inp.quantity * inp.unitPrice)}</td>
                       <td className="p-1.5 text-center"><button type="button" onClick={() => setInputs(p => p.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600 text-base leading-none">×</button></td>
                     </tr>
@@ -195,13 +204,13 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
                 {isEn ? "Cutting Cost (batch) R$" : "Custo de Corte (lote) R$"}
               </label>
-              <input type="number" min={0} step="0.01" value={cuttingCost} onChange={e => setCuttingCost(Number(e.target.value))} className={fieldCls} style={fieldStyle} />
+              <input type="text" value={formatBrlMoney(cuttingCost)} onChange={e => setCuttingCost(parseBrlMoney(e.target.value))} className={fieldCls} style={fieldStyle} />
             </div>
             <div>
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
                 {isEn ? "Sewing Cost (batch) R$" : "Custo de Costura (lote) R$"}
               </label>
-              <input type="number" min={0} step="0.01" value={sewingCost} onChange={e => setSewingCost(Number(e.target.value))} className={fieldCls} style={fieldStyle} />
+              <input type="text" value={formatBrlMoney(sewingCost)} onChange={e => setSewingCost(parseBrlMoney(e.target.value))} className={fieldCls} style={fieldStyle} />
             </div>
             <div>
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
