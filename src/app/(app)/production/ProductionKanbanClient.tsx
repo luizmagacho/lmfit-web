@@ -43,7 +43,12 @@ function KanbanCard({
 
   return (
     <div
-      className="rounded-xl border p-3 space-y-2 bg-[var(--card-bg)] shadow-sm hover:shadow-md transition-shadow"
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", batch._id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      className="rounded-xl border p-3 space-y-2 bg-[var(--card-bg)] shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
       style={{ borderColor: lmfitTokens.border }}
     >
       <div className="flex items-start justify-between gap-2">
@@ -176,6 +181,7 @@ export function ProductionKanbanClient({
   const [columns, setColumns] = useState<string[]>(DEFAULT_STATUSES);
   const [addColOpen, setAddColOpen] = useState(false);
   const [kanban, setKanban] = useState<KanbanData>({});
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   const loadKanban = useCallback(async () => {
     try {
@@ -196,9 +202,30 @@ export function ProductionKanbanClient({
   useEffect(() => { void loadKanban(); }, [loadKanban, batches]);
 
   const handleMove = async (id: string, status: string) => {
+    // Optimistic UI update
+    setKanban(prev => {
+      const next = { ...prev };
+      // Remove from old column
+      for (const col of Object.keys(next)) {
+        next[col] = next[col].filter(b => b._id !== id);
+      }
+      // Since we don't have the full batch object here, we rely on the API to update it
+      // But we can just refetch immediately which loadKanban does.
+      return next;
+    });
+
     await onStatusChange(id, status);
     void loadKanban();
     onRefresh();
+  };
+
+  const handleDrop = (e: React.DragEvent, col: string) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    const batchId = e.dataTransfer.getData("text/plain");
+    if (batchId) {
+      void handleMove(batchId, col);
+    }
   };
 
   const handleAddColumn = (name: string) => {
@@ -239,7 +266,27 @@ export function ProductionKanbanClient({
           const cards = kanban[col] ?? [];
           const colColor = getStatusColor(col);
           return (
-            <div key={col} className="shrink-0 w-72 flex flex-col" style={{ minWidth: 256 }}>
+            <div 
+              key={col} 
+              className="kanban-col-container shrink-0 w-72 flex flex-col transition-all duration-200" 
+              style={{ minWidth: 256 }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setDragOverCol(col);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                // Only clear if we actually leave the column (not moving to children)
+                if ((e.relatedTarget as HTMLElement)?.closest('.kanban-col-container') !== e.currentTarget) {
+                  setDragOverCol(null);
+                }
+              }}
+              onDrop={(e) => handleDrop(e, col)}
+            >
               {/* Column header */}
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
@@ -261,7 +308,14 @@ export function ProductionKanbanClient({
               </div>
 
               {/* Cards */}
-              <div className="flex-1 rounded-xl p-3 space-y-3" style={{ backgroundColor: "var(--chart-track)", minHeight: 200 }}>
+              <div 
+                className={`flex-1 rounded-xl p-3 space-y-3 transition-colors border-2 ${dragOverCol === col ? 'border-dashed' : 'border-transparent'}`} 
+                style={{ 
+                  backgroundColor: dragOverCol === col ? colColor + "11" : "var(--chart-track)", 
+                  borderColor: dragOverCol === col ? colColor : "transparent",
+                  minHeight: 200 
+                }}
+              >
                 {cards.map((batch) => (
                   <KanbanCard
                     key={batch._id}
