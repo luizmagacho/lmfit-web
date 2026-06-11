@@ -25,6 +25,11 @@ export function SettingsClient() {
   const [faviconUrl, setFaviconUrl] = useState("");
   const [infinitePayTag, setInfinitePayTag] = useState("");
   const [infinitePayApiKey, setInfinitePayApiKey] = useState("");
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [metaAppSecret, setMetaAppSecret] = useState("");
+  const [metaWhatsappVerifyToken, setMetaWhatsappVerifyToken] = useState("");
+  const [metaWhatsappPhoneNumberId, setMetaWhatsappPhoneNumberId] = useState("");
+  const [metaWhatsappAccessToken, setMetaWhatsappAccessToken] = useState("");
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
@@ -58,6 +63,11 @@ export function SettingsClient() {
             setFaviconUrl(data.branding?.faviconUrl || "");
             setInfinitePayTag(data.infinitePayTag || "");
             setInfinitePayApiKey(data.infinitePayApiKey || "");
+            setGeminiApiKey(data.geminiApiKey || "");
+            setMetaAppSecret(data.metaAppSecret || "");
+            setMetaWhatsappVerifyToken(data.metaWhatsappVerifyToken || "");
+            setMetaWhatsappPhoneNumberId(data.metaWhatsappPhoneNumberId || "");
+            setMetaWhatsappAccessToken(data.metaWhatsappAccessToken || "");
           }
         })
         .catch((err) => {
@@ -122,6 +132,11 @@ export function SettingsClient() {
         faviconUrl: faviconUrl.trim() || undefined,
         infinitePayTag: infinitePayTag.trim() || undefined,
         infinitePayApiKey: infinitePayApiKey.trim() || undefined,
+        geminiApiKey: geminiApiKey.trim() || undefined,
+        metaAppSecret: metaAppSecret.trim() || undefined,
+        metaWhatsappVerifyToken: metaWhatsappVerifyToken.trim() || undefined,
+        metaWhatsappPhoneNumberId: metaWhatsappPhoneNumberId.trim() || undefined,
+        metaWhatsappAccessToken: metaWhatsappAccessToken.trim() || undefined,
       };
 
       // Call PATCH /tenants/:id/branding
@@ -389,7 +404,7 @@ export function SettingsClient() {
                       <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
                       <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
                       <div className="flex-1 bg-white dark:bg-neutral-800 rounded-md text-[9px] py-0.5 px-3 ml-4 text-center truncate text-neutral-400 dark:text-neutral-500 font-mono">
-                        {slug || "loja"}.kivo.app
+                        {slug || "loja"}.kivoni.com.br
                       </div>
                     </div>
 
@@ -397,13 +412,12 @@ export function SettingsClient() {
                     <div className="flex-1 flex bg-neutral-50 dark:bg-neutral-950 font-sans text-xs">
                       {/* Sidebar Mockup */}
                       <div className="w-[85px] bg-white dark:bg-neutral-900 border-r flex flex-col p-2 gap-3" style={{ borderColor: lmfitTokens.border }}>
-                        {/* Logo Area */}
-                        <div className={(!logoUrl || logoUrl === "/kivo-logo.png" || logoUrl === lmfitLogoSrc) ? "rounded bg-black p-1 flex justify-center items-center" : "flex justify-center items-center py-1"}>
+                        <div className="flex justify-center items-center py-1.5">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={logoUrl || (slug === "lmfit" ? lmfitLogoSrc : "/kivo-logo.png")}
+                            src="/kivoni-symbol.svg"
                             alt="Logo Mockup"
-                            className="h-4 w-auto max-w-[70px] object-contain"
+                            className="h-6 w-6 object-contain"
                           />
                         </div>
                         {/* Nav Items Mockup */}

@@ -1,5 +1,5 @@
-export const ACCESS_KEY = "lmfit_access_token";
-export const REFRESH_KEY = "lmfit_refresh_token";
+export const ACCESS_KEY = "kivoni_access_token";
+export const REFRESH_KEY = "kivoni_refresh_token";
 
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;

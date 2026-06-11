@@ -193,8 +193,8 @@ export function CheckoutClient() {
                   <span>Processado por</span>
                   <div className="bg-black px-1.5 py-0.5 rounded flex items-center">
                     <Image
-                      src="/kivo-logo.png"
-                      alt="Kivo"
+                      src="/kivoni-symbol.svg"
+                      alt="Kivoni"
                       width={38}
                       height={12}
                       className="h-3 w-auto object-contain"

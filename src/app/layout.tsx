@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LM FIT — Painel",
-  description: "Controle de pedidos, compras, notas e cadastros LM FIT",
+  title: "Kivoni — Painel",
+  description: "Controle de pedidos, compras, notas e cadastros Kivoni",
 };
 
 export default function RootLayout({

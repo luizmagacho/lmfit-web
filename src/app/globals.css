@@ -5,10 +5,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-lmfit-primary: var(--lmfit-primary);
-  --color-lmfit-accent: var(--lmfit-accent);
-  --color-lmfit-success: var(--lmfit-success);
-  --color-lmfit-error: var(--lmfit-error);
+  --color-kivoni-primary: var(--kivoni-primary);
+  --color-kivoni-accent: var(--kivoni-accent);
+  --color-kivoni-success: var(--kivoni-success);
+  --color-kivoni-error: var(--kivoni-error);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -21,17 +21,17 @@
     --card-bg: #ffffff;
     --chart-track: rgba(0, 0, 0, 0.05);
     --hover-bg: rgba(0, 0, 0, 0.03);
-    --lmfit-primary: #f68006;
-    --lmfit-primary-dark: #c76705;
-    --lmfit-accent: #000000;
-    --lmfit-accent-light: #333333;
-    --lmfit-text: #000000;
-    --lmfit-text-muted: #6d6d6d;
-    --lmfit-border: #e6e6e6;
-    --lmfit-surface: #f6f6f6;
-    --lmfit-success: #3caf65;
-    --lmfit-error: #cc4845;
-    --lmfit-warning-bg: #fdf6ec;
+    --kivoni-primary: #7c3aed;
+    --kivoni-primary-dark: #6d28d9;
+    --kivoni-accent: #000000;
+    --kivoni-accent-light: #333333;
+    --kivoni-text: #000000;
+    --kivoni-text-muted: #6d6d6d;
+    --kivoni-border: #e6e6e6;
+    --kivoni-surface: #f6f6f6;
+    --kivoni-success: #3caf65;
+    --kivoni-error: #cc4845;
+    --kivoni-warning-bg: #fdf6ec;
   }
 
   .dark {
@@ -41,17 +41,17 @@
     --card-bg: #18181b;
     --chart-track: rgba(255, 255, 255, 0.1);
     --hover-bg: rgba(255, 255, 255, 0.05);
-    --lmfit-primary: #f68006;
-    --lmfit-primary-dark: #e87704;
-    --lmfit-accent: #ffffff;
-    --lmfit-accent-light: #e4e4e7;
-    --lmfit-text: #fafafa;
-    --lmfit-text-muted: #a1a1aa;
-    --lmfit-border: #27272a;
-    --lmfit-surface: #18181b;
-    --lmfit-success: #22c55e;
-    --lmfit-error: #ef4444;
-    --lmfit-warning-bg: #422006;
+    --kivoni-primary: #7c3aed;
+    --kivoni-primary-dark: #6d28d9;
+    --kivoni-accent: #ffffff;
+    --kivoni-accent-light: #e4e4e7;
+    --kivoni-text: #fafafa;
+    --kivoni-text-muted: #a1a1aa;
+    --kivoni-border: #27272a;
+    --kivoni-surface: #18181b;
+    --kivoni-success: #22c55e;
+    --kivoni-error: #ef4444;
+    --kivoni-warning-bg: #422006;
   }
 }
 

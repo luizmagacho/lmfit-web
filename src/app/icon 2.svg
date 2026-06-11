@@ -1,0 +1,26 @@
+<svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Minimalist 'K' Symbol for Kivoni -->
+  <!-- Vertical Bar -->
+  <path d="M130 60C130 48.9543 138.954 40 150 40H170C181.046 40 190 48.9543 190 60V340C190 351.046 181.046 360 170 360H150C138.954 360 130 351.046 130 340V60Z" fill="url(#kivo-grad-1)"/>
+  
+  <!-- Top Diagonal -->
+  <path d="M315.858 45.8579C323.668 38.0474 336.332 38.0474 344.142 45.8579C351.953 53.6684 351.953 66.3316 344.142 74.1421L204.142 214.142C196.332 221.953 183.668 221.953 175.858 214.142C168.047 206.332 168.047 193.668 175.858 185.858L315.858 45.8579Z" fill="url(#kivo-grad-2)"/>
+  
+  <!-- Bottom Diagonal -->
+  <path d="M175.858 185.858C183.668 178.047 196.332 178.047 204.142 185.858L344.142 325.858C351.953 333.668 351.953 346.332 344.142 354.142C336.332 361.953 323.668 361.953 315.858 354.142L175.858 214.142C168.047 206.332 168.047 193.668 175.858 185.858Z" fill="url(#kivo-grad-3)"/>
+  
+  <defs>
+    <linearGradient id="kivo-grad-1" x1="130" y1="40" x2="190" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="kivo-grad-2" x1="344.142" y1="45.8579" x2="175.858" y2="214.142" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06B6D4"/>
+      <stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="kivo-grad-3" x1="175.858" y1="185.858" x2="344.142" y2="354.142" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+</svg>

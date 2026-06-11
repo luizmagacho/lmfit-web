@@ -42,7 +42,7 @@ export const useTenantStore = create<TenantState>((set, get) => ({
 
     set({ loading: true, error: null });
     try {
-      const { data } = await publicHttp.get<TenantInfo>(`/public/tenants/${slug}`);
+      const { data } = await publicHttp.get<TenantInfo>(`/public/tenants/${slug}?_t=${Date.now()}`);
       set({ tenant: data, fetchedSlug: slug, loading: false });
       return data;
     } catch (err: any) {

@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "LM Fit - Catálogo",
-  description: "Catálogo de produtos LM Fit",
+  title: "Kivoni - Catálogo",
+  description: "Catálogo de produtos Kivoni",
 };
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (

@@ -6,6 +6,8 @@ import { lmfitLogoSrc, lmfitTokens } from "@/theme/tokens";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { useTenant } from "@/context/TenantContext";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 export function PdvTemplate({
   search,
@@ -16,9 +18,16 @@ export function PdvTemplate({
   children: ReactNode;
   cart: ReactNode;
 }) {
-  const { tenant, slug } = useTenant();
-  const logoUrl = tenant?.branding?.logoUrl || (slug === "lmfit" ? lmfitLogoSrc : "/kivo-logo.png");
-  const storeName = tenant?.name || (slug === "lmfit" ? "LM FIT" : "Kivo");
+  const { tenant } = useTenant();
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const logoUrl = tenant?.branding?.logoUrl || "/kivoni-symbol.svg";
+  const storeName = tenant?.name || "Kivoni";
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--lmfit-surface,#f6f6f6)]">

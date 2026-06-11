@@ -134,7 +134,7 @@ export function DashboardClient() {
             className="text-2xl font-semibold tracking-tight"
             style={{ color: lmfitTokens.text }}
           >
-            {language === "en" ? "LM FIT Dashboard" : "Painel LM FIT"}
+            {language === "en" ? "Kivoni Dashboard" : "Painel Kivoni"}
           </h1>
           <p className="mt-1" style={{ color: lmfitTokens.textMuted }}>
             {language === "en" 

@@ -19,9 +19,9 @@ import { parseBRLToNumber } from "@/lib/orders/normalizeLines";
 type VariantOpt = { id: string; label: string; sku: string; price: number; imageUrl?: string };
 
 export function PrintOrderClient({ orderId }: { orderId: string }) {
-  const { tenant, slug } = useTenant();
-  const logoUrl = tenant?.branding?.logoUrl || (slug === "lmfit" ? lmfitLogoSrc : "/kivo-logo.png");
-  const storeName = tenant?.name || (slug === "lmfit" ? "LMFIT" : "Kivo");
+  const { tenant } = useTenant();
+  const logoUrl = tenant?.branding?.logoUrl || "/kivoni-symbol.svg";
+  const storeName = tenant?.name || "Kivoni";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

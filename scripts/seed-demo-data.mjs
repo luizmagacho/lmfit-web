@@ -69,7 +69,7 @@ const baseURL = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "http
   /\/+$/,
   "",
 );
-const email = process.env.SEED_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "admin@lmfit.local";
+const email = process.env.SEED_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "admin@kivoni.local";
 const password = process.env.SEED_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "";
 
 const args = process.argv.slice(2);
@@ -171,7 +171,7 @@ const suppliers = [
 const customers = [
   {
     name: "Cliente Demo Alpha",
-    email: "demo.alpha@lmfit.local",
+    email: "demo.alpha@kivoni.local",
     phone: "11999990001",
     whatsappWaId: "5511999990001",
     legalName: "Alpha Demo LTDA",
@@ -179,7 +179,7 @@ const customers = [
   },
   {
     name: "Cliente Demo Beta",
-    email: "demo.beta@lmfit.local",
+    email: "demo.beta@kivoni.local",
     phone: "11999990002",
     whatsappWaId: "5511999990002",
     legalName: "Beta Demo ME",
@@ -187,7 +187,7 @@ const customers = [
   },
   {
     name: "Atacadista Gamma",
-    email: "demo.gamma@lmfit.local",
+    email: "demo.gamma@kivoni.local",
     phone: "21988887777",
     whatsappWaId: "5521988887777",
     legalName: "Gamma Comércio",
@@ -195,7 +195,7 @@ const customers = [
   },
   {
     name: "Boutique Delta",
-    email: "demo.delta@lmfit.local",
+    email: "demo.delta@kivoni.local",
     phone: "11955556666",
     whatsappWaId: "5511955556666",
     legalName: "Delta Moda Fitness",
@@ -203,7 +203,7 @@ const customers = [
   },
   {
     name: "Consumidora Épsilon",
-    email: "demo.epsilon@lmfit.local",
+    email: "demo.epsilon@kivoni.local",
     phone: "11977774444",
     legalName: null,
     role: "retail",

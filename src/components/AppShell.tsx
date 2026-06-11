@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { RequireAuth } from "@/components/RequireAuth";
-import { lmfitLogoSrc, lmfitTokens } from "@/theme/tokens";
+import { lmfitTokens } from "@/theme/tokens";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTenant } from "@/context/TenantContext";
 
@@ -56,11 +56,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { tenant, slug } = useTenant();
+  const { tenant } = useTenant();
 
-  const logoUrl = tenant?.branding?.logoUrl || (slug === "lmfit" ? lmfitLogoSrc : "/kivo-logo.png");
-  const storeName = tenant?.name || (slug === "lmfit" ? "LM FIT" : "Kivo");
-  const isDefaultLogo = logoUrl === lmfitLogoSrc || logoUrl === "/kivo-logo.png";
+  const storeName = tenant?.name || "Kivoni";
 
   useEffect(() => {
     setMenuOpen(false);
@@ -92,15 +90,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-between gap-2 px-4 py-3 md:block">
             <Link
               href="/dashboard"
-              className={isDefaultLogo ? "inline-flex rounded-md bg-black px-2.5 py-2 md:mx-0" : "inline-flex py-1.5 md:mx-0"}
+              className="inline-flex py-2 md:mx-0"
               onClick={() => setMenuOpen(false)}
             >
               <Image
-                src={logoUrl}
+                src="/kivoni-symbol.svg"
                 alt={storeName}
-                width={132}
-                height={44}
-                className="h-9 w-auto max-w-[9.5rem] object-contain object-left"
+                width={80}
+                height={80}
+                className="h-14 w-14 object-contain object-left"
                 priority
               />
             </Link>
@@ -225,7 +223,7 @@ function HelpDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: lmfitTokens.border }}>
           <div>
             <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: lmfitTokens.primary }}>
-              ✨ Manual de Funcionalidades LM FIT ERP
+              ✨ Manual de Funcionalidades Kivoni ERP
             </h2>
             <p className="text-xs mt-1" style={{ color: lmfitTokens.textMuted }}>
               Guia completo de tudo o que cada tópico do menu lateral faz e como o ecossistema se integra.

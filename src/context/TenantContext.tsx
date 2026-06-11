@@ -12,11 +12,11 @@ interface TenantContextProps {
 const TenantContext = createContext<TenantContextProps>({
   tenant: null,
   loading: true,
-  slug: "lmfit",
+  slug: "kivoni",
 });
 
 export function getTenantSlugFromHostname(): string {
-  if (typeof window === "undefined") return "lmfit";
+  if (typeof window === "undefined") return "kivoni";
 
   const hostname = window.location.hostname;
   
@@ -28,9 +28,9 @@ export function getTenantSlugFromHostname(): string {
     }
   }
 
-  // Production: "loja.kivo.app"
-  if (hostname.endsWith(".kivo.app")) {
-    const parts = hostname.split(".kivo.app")[0];
+  // Production: "loja.kivoni.com.br"
+  if (hostname.endsWith(".kivoni.com.br")) {
+    const parts = hostname.split(".kivoni.com.br")[0];
     if (parts && parts !== "www" && parts !== "admin") {
       return parts;
     }
@@ -42,7 +42,7 @@ export function getTenantSlugFromHostname(): string {
     return match[2];
   }
 
-  return "lmfit";
+  return "kivoni";
 }
 
 function darkenHexColor(hex: string, percent: number): string {
@@ -66,7 +66,7 @@ function darkenHexColor(hex: string, percent: number): string {
 }
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
-  const [slug, setSlug] = useState<string>("lmfit");
+  const [slug, setSlug] = useState<string>("kivoni");
   const fetchTenant = useTenantStore((s) => s.fetchTenant);
   const tenant = useTenantStore((s) => s.tenant);
   const loading = useTenantStore((s) => s.loading);
@@ -81,23 +81,23 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     // Inject CSS variables for brand identity
     const root = document.documentElement;
 
-    // If slug is lmfit, default to lmfit colors; otherwise default to Kivo violet/cyan
-    const defaultPrimary = slug === "lmfit" ? "#f68006" : "#7c3aed";
-    const defaultSecondary = slug === "lmfit" ? "#000000" : "#06b6d4";
-    const defaultFavicon = slug === "lmfit" ? "https://d1a9qnv764bsoo.cloudfront.net/stores/006/316/201/themes/common/logo-813858800-1750428827-d18edfd75754df23704c77cbd129bbc91750428827-1024-1024.webp?w=1400" : "/icon.png";
+    // If slug is kivoni, default to kivoni colors
+    const defaultPrimary = "#7c3aed";
+    const defaultSecondary = "#06b6d4";
+    const defaultFavicon = "/kivoni-symbol.svg";
 
     const primary = tenant?.branding?.primaryColor || defaultPrimary;
     const secondary = tenant?.branding?.secondaryColor || defaultSecondary;
     const favicon = tenant?.branding?.faviconUrl || defaultFavicon;
 
-    root.style.setProperty("--lmfit-primary", primary);
+    root.style.setProperty("--kivoni-primary", primary);
     root.style.setProperty(
-      "--lmfit-primary-dark",
+      "--kivoni-primary-dark",
       darkenHexColor(primary, 15)
     );
-    root.style.setProperty("--lmfit-accent", secondary);
+    root.style.setProperty("--kivoni-accent", secondary);
     root.style.setProperty(
-      "--lmfit-accent-light",
+      "--kivoni-accent-light",
       darkenHexColor(secondary, 15)
     );
 

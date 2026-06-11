@@ -1,9 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import "./landing.css";
 
 // Minimalist SVG Icons
-const LogoIcon = () => (
+
+const SunIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -11,13 +15,35 @@ const LogoIcon = () => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2.5"
+    strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    style={{ marginRight: "8px", verticalAlign: "middle" }}
   >
-    <polygon points="12 2 22 8.5 12 15 2 8.5 12 2" />
-    <polyline points="2 12.5 12 19 22 12.5" />
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2" />
+    <path d="M12 20v2" />
+    <path d="m4.93 4.93 1.41 1.41" />
+    <path d="m17.66 17.66 1.41 1.41" />
+    <path d="M2 12h2" />
+    <path d="M20 12h2" />
+    <path d="m6.34 17.66-1.41 1.41" />
+    <path d="m19.07 4.93-1.41 1.41" />
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
   </svg>
 );
 
@@ -219,7 +245,7 @@ const FEATURES = [
 const STEPS = [
   { num: "1", title: "Crie sua loja", desc: "Escolha o nome, suba seu logo e defina as cores da sua marca em minutos." },
   { num: "2", title: "Cadastre seus produtos", desc: "Adicione fotos, variações, preços e estoque. Importe de planilha se quiser." },
-  { num: "3", title: "Compartilhe o link", desc: "Envie suaLoja.kivo.app para suas clientes e comece a vender." },
+  { num: "3", title: "Compartilhe o link", desc: "Envie suaLoja.kivoni.com.br para suas clientes e comece a vender." },
 ];
 
 interface PlanFeature {
@@ -230,8 +256,8 @@ interface PlanFeature {
 interface Plan {
   name: string;
   desc: string;
-  price: string;
-  period: string;
+  priceMonthly: number;
+  period?: string;
   featured?: boolean;
   badge?: string;
   features: PlanFeature[];
@@ -242,8 +268,7 @@ const PLANS: Plan[] = [
   {
     name: "Grátis",
     desc: "Para quem está começando",
-    price: "0",
-    period: "para sempre",
+    priceMonthly: 0,
     cta: "Começar grátis",
     features: [
       { text: "Catálogo público", included: true },
@@ -259,8 +284,7 @@ const PLANS: Plan[] = [
   {
     name: "Básico",
     desc: "Para lojistas em crescimento",
-    price: "49",
-    period: "/mês",
+    priceMonthly: 69,
     cta: "Assinar Básico",
     features: [
       { text: "Tudo do Grátis", included: true },
@@ -276,8 +300,7 @@ const PLANS: Plan[] = [
   {
     name: "Pro",
     desc: "Para quem quer escalar",
-    price: "99",
-    period: "/mês",
+    priceMonthly: 149,
     featured: true,
     badge: "Mais popular",
     cta: "Assinar Pro",
@@ -295,8 +318,7 @@ const PLANS: Plan[] = [
   {
     name: "Enterprise",
     desc: "Operação completa",
-    price: "199",
-    period: "/mês",
+    priceMonthly: 299,
     cta: "Falar com consultor",
     features: [
       { text: "Tudo do Pro", included: true },
@@ -318,24 +340,71 @@ const MOCK_PRODUCTS = [
 ];
 
 export default function KivoLandingPage() {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [mounted, setMounted] = useState(false);
+  const [isAnnual, setIsAnnual] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("kivo-theme");
+    if (savedTheme === "light" || savedTheme === "dark") {
+      setTheme(savedTheme);
+    } else {
+      setTheme("light");
+    }
+    setMounted(true);
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    localStorage.setItem("kivo-theme", nextTheme);
+  };
+
+  const logoUrl = "/kivoni-symbol.svg";
+
   return (
-    <div className="kivo-landing">
+    <div className={`kivo-landing ${!mounted || theme === "light" ? "kivo-light" : ""}`}>
       {/* Background effects */}
       <div className="kivo-grid-bg" />
 
       {/* Navbar */}
       <nav className="kivo-nav">
-        <div className="kivo-nav-logo">
-          <LogoIcon />
-          Kivo
-        </div>
-        <div className="kivo-nav-links">
-          <a href="#features">Recursos</a>
-          <a href="#como-funciona">Como funciona</a>
-          <a href="#precos">Preços</a>
-          <a href="#contato" className="kivo-btn kivo-btn--primary kivo-btn--sm">
-            Criar minha loja
-          </a>
+        <Link href="/" className="kivo-nav-logo-link">
+          <Image
+            src="/kivoni-symbol.svg"
+            alt="Kivoni Logo"
+            width={50}
+            height={50}
+            className="kivo-nav-logo-img-top"
+            priority
+          />
+        </Link>
+        
+        <div className="kivo-nav-links-container">
+          <div className="kivo-nav-menu">
+            <a href="#features">Recursos</a>
+            <a href="#como-funciona">Como funciona</a>
+            <a href="#precos">Preços</a>
+          </div>
+          
+          <div className="kivo-nav-actions">
+            <button
+              onClick={toggleTheme}
+              className="kivo-theme-toggle"
+              aria-label="Alternar tema"
+              title={mounted && theme === "light" ? "Ativar Modo Escuro" : "Ativar Modo Claro"}
+            >
+              {mounted && theme === "light" ? <MoonIcon /> : <SunIcon />}
+            </button>
+            
+            <Link href="/login" className="kivo-btn kivo-btn--ghost kivo-btn--sm">
+              Entrar
+            </Link>
+            
+            <a href="#contato" className="kivo-btn kivo-btn--primary kivo-btn--sm">
+              Criar loja
+            </a>
+          </div>
         </div>
       </nav>
 
@@ -376,7 +445,7 @@ export default function KivoLandingPage() {
             <div className="kivo-browser-dot kivo-browser-dot--yellow" />
             <div className="kivo-browser-dot kivo-browser-dot--green" />
             <div className="kivo-browser-url">
-              🔒 suaLoja.kivo.app/catalogo
+              🔒 suaLoja.kivoni.com.br/catalogo
             </div>
           </div>
           <div className="kivo-browser-content">
@@ -401,14 +470,103 @@ export default function KivoLandingPage() {
           Ferramentas profissionais que grandes e-commerces usam — agora
           acessíveis para qualquer lojista.
         </p>
-        <div className="kivo-features-grid">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="kivo-feature-card">
-              <div className="kivo-feature-icon">{f.icon}</div>
-              <h3>{f.title}</h3>
-              <p>{f.desc}</p>
+
+        <div className="kivo-bento-grid">
+          {/* Card 1: Catálogo (Large) */}
+          <div className="kivo-bento-card kivo-bento-card--large">
+            <div className="kivo-bento-content">
+              <div className="kivo-bento-icon">🛍️</div>
+              <h3>Catálogo Profissional</h3>
+              <p>Seus produtos com fotos, variações de cor e tamanho, preços e estoque sincronizado em tempo real.</p>
             </div>
-          ))}
+            <div className="kivo-bento-visual">
+              <div className="kivo-bento-mockup-mobile">
+                <div style={{ height: "40px", borderBottom: "1px solid var(--kv-border)", display: "flex", alignItems: "center", padding: "0 1rem", gap: "0.5rem" }}>
+                  <div className="kivo-mockup-circle" style={{ width: "20px", height: "20px" }}></div>
+                  <div className="kivo-mockup-line" style={{ width: "60px" }}></div>
+                </div>
+                <div style={{ padding: "1rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                  <div style={{ background: "var(--kv-border)", height: "100px", borderRadius: "8px" }}></div>
+                  <div style={{ background: "var(--kv-border)", height: "100px", borderRadius: "8px" }}></div>
+                  <div style={{ background: "var(--kv-border)", height: "100px", borderRadius: "8px" }}></div>
+                  <div style={{ background: "var(--kv-border)", height: "100px", borderRadius: "8px" }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: WhatsApp (Medium) */}
+          <div className="kivo-bento-card kivo-bento-card--medium">
+            <div className="kivo-bento-content">
+              <div className="kivo-bento-icon">💬</div>
+              <h3>Pedido via WhatsApp</h3>
+              <p>Seu cliente monta o carrinho e envia o pedido formatado direto para o seu número.</p>
+            </div>
+            <div className="kivo-bento-visual" style={{ minHeight: "150px" }}>
+              <div style={{ background: "#25D366", color: "#fff", padding: "0.75rem 1rem", borderRadius: "16px 16px 16px 0", maxWidth: "80%", fontSize: "0.875rem", boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)" }}>
+                Novo pedido #1024 📦<br/>Valor: R$ 149,90
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Dashboard (Large Reversed) */}
+          <div className="kivo-bento-card kivo-bento-card--large-rev">
+            <div className="kivo-bento-content">
+              <div className="kivo-bento-icon">📊</div>
+              <h3>Dashboard de Gestão</h3>
+              <p>Acompanhe suas vendas, faturamento e estoque em gráficos intuitivos e relatórios inteligentes.</p>
+            </div>
+            <div className="kivo-bento-visual">
+              <div className="kivo-bento-mockup-dash">
+                <div style={{ display: "flex", gap: "1rem" }}>
+                  <div style={{ flex: 1, height: "60px", background: "var(--kv-border)", borderRadius: "8px" }}></div>
+                  <div style={{ flex: 1, height: "60px", background: "var(--kv-border)", borderRadius: "8px" }}></div>
+                  <div style={{ flex: 1, height: "60px", background: "var(--kv-border)", borderRadius: "8px" }}></div>
+                </div>
+                <div style={{ display: "flex", gap: "1rem", alignItems: "flex-end", height: "120px", marginTop: "1rem" }}>
+                  <div className="kivo-mockup-bar" style={{ flex: 1, height: "40%" }}></div>
+                  <div className="kivo-mockup-bar" style={{ flex: 1, height: "70%" }}></div>
+                  <div className="kivo-mockup-bar" style={{ flex: 1, height: "100%" }}></div>
+                  <div className="kivo-mockup-bar" style={{ flex: 1, height: "85%" }}></div>
+                  <div className="kivo-mockup-bar" style={{ flex: 1, height: "60%" }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Checkout (Medium) */}
+          <div className="kivo-bento-card kivo-bento-card--medium">
+            <div className="kivo-bento-content">
+              <div className="kivo-bento-icon">💳</div>
+              <h3>Checkout no App</h3>
+              <p>Aceite cartão e PIX de forma segura e rápida sem sair da sua plataforma.</p>
+            </div>
+          </div>
+
+          {/* Card 5: Kanban (Half) */}
+          <div className="kivo-bento-card kivo-bento-card--half">
+            <div className="kivo-bento-content">
+              <div className="kivo-bento-icon">📋</div>
+              <h3>Kanban de Pedidos</h3>
+              <p>Organize o fluxo de separação, envio e entrega dos seus pedidos facilmente.</p>
+            </div>
+            <div className="kivo-bento-visual" style={{ minHeight: "200px" }}>
+               <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
+                  <div style={{ flex: 1, background: "var(--kv-border)", borderRadius: "8px", height: "120px", opacity: 0.5 }}></div>
+                  <div style={{ flex: 1, background: "var(--kv-border)", borderRadius: "8px", height: "150px", opacity: 0.8 }}></div>
+                  <div style={{ flex: 1, background: "var(--kv-gradient)", borderRadius: "8px", height: "90px" }}></div>
+               </div>
+            </div>
+          </div>
+
+          {/* Card 6: IA (Half) */}
+          <div className="kivo-bento-card kivo-bento-card--half">
+            <div className="kivo-bento-content">
+              <div className="kivo-bento-icon">🤖</div>
+              <h3>Chatbot IA</h3>
+              <p>Atenda seus clientes automaticamente e aumente a conversão, 24 horas por dia.</p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -437,41 +595,62 @@ export default function KivoLandingPage() {
         <p className="kivo-section-desc">
           Comece grátis e faça upgrade quando sua loja crescer. Sem multas, sem fidelidade.
         </p>
+
+        <div className="kivo-billing-toggle">
+          <span className={`kivo-toggle-label ${!isAnnual ? "active" : ""}`}>Mensal</span>
+          <button 
+            className={`kivo-toggle-switch ${isAnnual ? "active" : ""}`}
+            onClick={() => setIsAnnual(!isAnnual)}
+          >
+            <div className="kivo-toggle-thumb" />
+          </button>
+          <span className={`kivo-toggle-label ${isAnnual ? "active" : ""}`}>
+            Anual <span className="kivo-discount-badge">10% OFF</span>
+          </span>
+        </div>
+
         <div className="kivo-pricing-grid">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.name}
-              className={`kivo-price-card${plan.featured ? " kivo-price-card--featured" : ""}`}
-            >
-              {plan.badge && <div className="kivo-price-badge">{plan.badge}</div>}
-              <div className="kivo-price-name">{plan.name}</div>
-              <div className="kivo-price-desc">{plan.desc}</div>
-              <div className="kivo-price-value">
-                <span className="kivo-price-currency">R$</span>
-                <span className="kivo-price-amount">{plan.price}</span>
-              </div>
-              <div className="kivo-price-period">{plan.period}</div>
-              <ul className="kivo-price-features">
-                {plan.features.map((f) => (
-                  <li key={f.text}>
-                    <span className={`kivo-check ${f.included ? "kivo-check--yes" : "kivo-check--no"}`}>
-                      {f.included ? "✓" : "—"}
-                    </span>
-                    <span style={{ color: f.included ? "var(--kv-text)" : undefined }}>
-                      {f.text}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <a
-                href="#contato"
-                className={`kivo-btn ${plan.featured ? "kivo-btn--primary" : "kivo-btn--ghost"}`}
-                style={{ width: "100%" }}
+          {PLANS.map((plan) => {
+            const price = isAnnual && plan.priceMonthly > 0 
+              ? Math.floor(plan.priceMonthly * 0.9) 
+              : plan.priceMonthly;
+            const period = plan.priceMonthly === 0 ? "para sempre" : (isAnnual ? "/mês (cobrado anualmente)" : "/mês");
+
+            return (
+              <div
+                key={plan.name}
+                className={`kivo-price-card${plan.featured ? " kivo-price-card--featured" : ""}`}
               >
-                {plan.cta}
-              </a>
-            </div>
-          ))}
+                {plan.badge && <div className="kivo-price-badge">{plan.badge}</div>}
+                <div className="kivo-price-name">{plan.name}</div>
+                <div className="kivo-price-desc">{plan.desc}</div>
+                <div className="kivo-price-value">
+                  <span className="kivo-price-currency">R$</span>
+                  <span className="kivo-price-amount">{price}</span>
+                </div>
+                <div className="kivo-price-period">{period}</div>
+                <ul className="kivo-price-features">
+                  {plan.features.map((f) => (
+                    <li key={f.text}>
+                      <span className={`kivo-check ${f.included ? "kivo-check--yes" : "kivo-check--no"}`}>
+                        {f.included ? "✓" : "—"}
+                      </span>
+                      <span style={{ color: f.included ? "var(--kv-text)" : undefined }}>
+                        {f.text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href="#contato"
+                  className={`kivo-btn ${plan.featured ? "kivo-btn--primary" : "kivo-btn--ghost"}`}
+                  style={{ width: "100%" }}
+                >
+                  {plan.cta}
+                </a>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -484,7 +663,7 @@ export default function KivoLandingPage() {
             Sua loja online em minutos.
           </p>
           <a
-            href="https://wa.me/5541996770521?text=Oi!%20Quero%20criar%20minha%20loja%20no%20Kivo"
+            href="https://wa.me/5541996770521?text=Oi!%20Quero%20criar%20minha%20loja%20no%20Kivoni"
             className="kivo-btn"
             target="_blank"
             rel="noopener noreferrer"
@@ -496,11 +675,17 @@ export default function KivoLandingPage() {
 
       {/* Footer */}
       <footer className="kivo-footer">
-        <div className="kivo-footer-logo">
-          <LogoIcon />
-          Kivo
+        <div className="kivo-footer-logo-container">
+          <Image
+            src={logoUrl}
+            alt="Kivoni Logo"
+            width={140}
+            height={40}
+            className="kivo-footer-logo-img"
+            priority
+          />
         </div>
-        <p>© {new Date().getFullYear()} Kivo. Todos os direitos reservados.</p>
+        <p>© {new Date().getFullYear()} Kivoni. Todos os direitos reservados.</p>
       </footer>
     </div>
   );

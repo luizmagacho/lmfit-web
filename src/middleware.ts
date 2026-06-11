@@ -10,9 +10,9 @@ export function middleware(request: NextRequest) {
   if (hostname.includes(".localhost:")) {
     slug = hostname.split(".localhost")[0];
   } 
-  // Production: "loja.kivo.app"
-  else if (hostname.includes(".kivo.app")) {
-    const parts = hostname.split(".kivo.app")[0];
+  // Production: "loja.kivoni.com.br"
+  else if (hostname.includes(".kivoni.com.br")) {
+    const parts = hostname.split(".kivoni.com.br")[0];
     if (parts !== "www" && parts !== "admin") {
       slug = parts;
     }
