@@ -5,6 +5,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
 import { formatBRL } from "@/lib/formatMoney";
 import { http } from "@/lib/http";
+import { showConfirmToast } from "@/lib/ToastHelper";
+import { toast } from "react-hot-toast";
 import {
   createBatch, fetchBatches, removeBatch, updateBatch,
   DEFAULT_STATUSES, INPUT_TYPE_LABELS, UNIT_LABELS,
@@ -69,6 +71,8 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const isEn = language === "en";
+
   const computed = useMemo(
     () => computeCosts(inputs, cuttingCost, sewingCost, overheadPercent, batchQty, targetMarginPercent),
     [inputs, cuttingCost, sewingCost, overheadPercent, batchQty, targetMarginPercent]
@@ -86,31 +90,34 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
 
   const handleCheckPrevious = (field: "sku" | "name", value: string) => {
     if (batch?._id || !value.trim()) return;
-    // Find the most recent matching batch (assuming allBatches is sorted by newest first, find returns first match)
     const prev = allBatches.find(b => b[field] && b[field]?.toLowerCase() === value.trim().toLowerCase());
     if (prev) {
-      // If user already filled some inputs manually, don't interrupt
       const hasFilledCosts = cuttingCost > 0 || sewingCost > 0 || inputs.length > 1 || (inputs[0] && inputs[0].description.trim() !== "");
       if (hasFilledCosts) return;
 
-      if (confirm(isEn 
-        ? `Previous batch "${prev.name}" found. Copy inputs and costs?` 
-        : `Lote anterior "${prev.name}" encontrado. Deseja copiar os insumos e custos dele?`)) {
-        if (field === "sku" && prev.name) setName(prev.name);
-        if (field === "name" && prev.sku) setSku(prev.sku);
-        if (prev.inputs?.length) {
-          setInputs(prev.inputs.map(i => ({
-            ...i,
-            unitPrice: parseBrlMoney(i.unitPrice as string | number),
-            totalCost: parseBrlMoney(i.totalCost as string | number)
-          })));
+      showConfirmToast({
+        message: isEn 
+          ? `Previous batch "${prev.name}" found. Copy inputs and costs?` 
+          : `Lote anterior "${prev.name}" encontrado. Deseja copiar os insumos e custos dele?`,
+        confirmText: isEn ? "Copy" : "Copiar",
+        cancelText: isEn ? "Ignore" : "Ignorar",
+        onConfirm: () => {
+          if (field === "sku" && prev.name) setName(prev.name);
+          if (field === "name" && prev.sku) setSku(prev.sku);
+          if (prev.inputs?.length) {
+            setInputs(prev.inputs.map(i => ({
+              ...i,
+              unitPrice: parseBrlMoney(i.unitPrice as string | number),
+              totalCost: parseBrlMoney(i.totalCost as string | number)
+            })));
+          }
+          setCuttingCost(parseBrlMoney(prev.cuttingCost as string | number));
+          setSewingCost(parseBrlMoney(prev.sewingCost as string | number));
+          setOverheadPercent(prev.overheadPercent || 0);
+          setTargetMarginPercent(prev.targetMarginPercent || 60);
+          if (prev.imageUrl && !imageUrl) setImageUrl(prev.imageUrl);
         }
-        setCuttingCost(parseBrlMoney(prev.cuttingCost as string | number));
-        setSewingCost(parseBrlMoney(prev.sewingCost as string | number));
-        setOverheadPercent(prev.overheadPercent || 0);
-        setTargetMarginPercent(prev.targetMarginPercent || 60);
-        if (prev.imageUrl && !imageUrl) setImageUrl(prev.imageUrl);
-      }
+      });
     }
   };
 
@@ -126,8 +133,8 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
       });
       setImageUrl(res.data.url || (Array.isArray(res.data) && res.data[0]?.url) || "");
     } catch (err) {
-      console.error(err);
-      alert(isEn ? "Error uploading image." : "Erro ao enviar imagem.");
+      console.error("Upload error:", err);
+      toast.error(isEn ? "Error uploading image." : "Erro ao enviar imagem.");
     } finally {
       setUploadingImage(false);
     }
@@ -149,8 +156,8 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
       onSaved();
       onClose();
     } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : "Erro ao salvar o lote.");
+      console.error("Save error:", err);
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar o lote.");
     }
     finally { setSaving(false); }
   };
@@ -159,7 +166,6 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
   const fieldStyle = { borderColor: lmfitTokens.border, color: lmfitTokens.text };
   const labelCls = "block text-xs font-medium mb-1";
 
-  const isEn = language === "en";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -403,9 +409,19 @@ export function ProductionClient() {
 
   const handleDelete = async (id: string) => {
     const isEn = language === "en";
-    if (!confirm(isEn ? "Delete this batch?" : "Excluir este lote?")) return;
-    await removeBatch(id);
-    void load();
+    showConfirmToast({
+      message: isEn ? "Delete this batch?" : "Excluir este lote?",
+      confirmText: isEn ? "Delete" : "Excluir",
+      onConfirm: async () => {
+        try {
+          await removeBatch(id);
+          toast.success(isEn ? "Batch deleted" : "Lote excluído");
+          void load();
+        } catch (err) {
+          toast.error(isEn ? "Error deleting batch" : "Erro ao excluir lote");
+        }
+      }
+    });
   };
 
   // Summary KPIs
