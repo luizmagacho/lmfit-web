@@ -52,10 +52,12 @@ export function ImageGalleryGrid({ urls, onRemoveIndex, className }: Props) {
             >
               {broken[i] ? (
                 <div
-                  className="flex h-full w-full items-center justify-center p-2 text-center text-[10px] leading-tight"
+                  className="flex h-full w-full flex-col items-center justify-center p-2 text-center text-[10px] leading-tight"
                   style={{ color: lmfitTokens.textMuted }}
                 >
-                  Não foi possível carregar
+                  <span className="text-xl mb-1 opacity-50">📸</span>
+                  <span>Arquivo anexado</span>
+                  <span className="text-[8px] opacity-70 mt-1">(Sem pré-visualização)</span>
                 </div>
               ) : (
                 <div className="h-full w-full cursor-zoom-in" onClick={() => setZoomedIndex(i)}>
