@@ -58,6 +58,10 @@ function KanbanCard({
             <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>{batch.sku}</p>
           )}
         </div>
+        {batch.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={batch.imageUrl} alt="" className="w-8 h-8 rounded-md object-cover border shrink-0" style={{ borderColor: lmfitTokens.border }} />
+        )}
         <select
           value={batch.status}
           onChange={(e) => onMove(e.target.value)}

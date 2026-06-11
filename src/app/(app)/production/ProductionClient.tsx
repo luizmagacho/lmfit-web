@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
 import { formatBRL } from "@/lib/formatMoney";
+import { api } from "@/lib/api";
 import {
   createBatch, fetchBatches, removeBatch, updateBatch,
   DEFAULT_STATUSES, INPUT_TYPE_LABELS, UNIT_LABELS,
@@ -54,6 +55,8 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
   const [overheadPercent, setOverheadPercent] = useState(batch?.overheadPercent ?? 0);
   const [targetMarginPercent, setTargetMarginPercent] = useState(batch?.targetMarginPercent ?? 60);
   const [notes, setNotes] = useState(batch?.notes ?? "");
+  const [imageUrl, setImageUrl] = useState(batch?.imageUrl ?? "");
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const computed = useMemo(
@@ -90,7 +93,27 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
         setSewingCost(prev.sewingCost || 0);
         setOverheadPercent(prev.overheadPercent || 0);
         setTargetMarginPercent(prev.targetMarginPercent || 60);
+        if (prev.imageUrl && !imageUrl) setImageUrl(prev.imageUrl);
       }
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api.post("/products/images", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setImageUrl(res.data.url || (Array.isArray(res.data) && res.data[0]?.url) || "");
+    } catch (err) {
+      console.error(err);
+      alert(isEn ? "Error uploading image." : "Erro ao enviar imagem.");
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -99,7 +122,7 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
     setSaving(true);
     try {
       const payload = {
-        name, sku, batchQty, status, 
+        name, sku, batchQty, status, imageUrl,
         inputs: inputs
           .filter(i => i.description.trim() !== "")
           .map(i => ({ ...i, totalCost: i.quantity * i.unitPrice })),
@@ -174,9 +197,18 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
             </div>
             <div>
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
-                {isEn ? "Desired Margin (%)" : "Margem desejada (%)"}
+                {isEn ? "Product Image" : "Imagem da Peça"}
               </label>
-              <input type="number" min={0} max={99} value={targetMarginPercent} onChange={e => setTargetMarginPercent(Number(e.target.value))} className={fieldCls} style={fieldStyle} />
+              <div className="flex items-center gap-2">
+                {imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt="" className="h-8 w-8 rounded object-cover border" style={{ borderColor: lmfitTokens.border }} />
+                )}
+                <label className="flex-1 cursor-pointer border rounded-md px-3 py-1.5 text-xs text-center truncate hover:bg-black/5" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}>
+                  {uploadingImage ? (isEn ? "Uploading..." : "Enviando...") : (isEn ? "Upload Photo" : "Anexar Foto")}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                </label>
+              </div>
             </div>
           </div>
 
@@ -247,6 +279,12 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
                 {isEn ? "Overhead (%)" : "Overhead (%)"}
               </label>
               <input type="number" min={0} step="0.1" value={overheadPercent} onChange={e => setOverheadPercent(Number(e.target.value))} className={fieldCls} style={fieldStyle} />
+            </div>
+            <div>
+              <label className={labelCls} style={{ color: lmfitTokens.text }}>
+                {isEn ? "Desired Margin (%)" : "Margem desejada (%)"}
+              </label>
+              <input type="number" min={0} max={99} value={targetMarginPercent} onChange={e => setTargetMarginPercent(Number(e.target.value))} className={fieldCls} style={fieldStyle} />
             </div>
           </div>
 

@@ -28,6 +28,7 @@ export interface ProductionBatch {
   costPerUnit: number;
   suggestedPrice: number;
   notes?: string;
+  imageUrl?: string;
   dueDate?: string;
   createdAt: string;
   updatedAt: string;
