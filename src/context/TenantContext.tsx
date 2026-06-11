@@ -101,20 +101,25 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       darkenHexColor(secondary, 15)
     );
 
-    // Update Favicon dynamic link
-    let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "icon";
-      document.getElementsByTagName("head")[0].appendChild(link);
+    // Update Favicon dynamically without removing React-managed tags
+    let dynamicLink = document.getElementById("dynamic-tenant-favicon") as HTMLLinkElement;
+    if (!dynamicLink) {
+      dynamicLink = document.createElement("link");
+      dynamicLink.id = "dynamic-tenant-favicon";
+      dynamicLink.rel = "icon";
+      document.head.appendChild(dynamicLink);
     }
-    link.href = favicon;
+    dynamicLink.href = favicon;
 
     // Set page title
     if (tenant?.name) {
       const currentTitle = document.title;
       if (!currentTitle.includes(tenant.name)) {
-        document.title = `${currentTitle.split(" | ")[0]} | ${tenant.name}`;
+        if (currentTitle.includes("Kivoni")) {
+          document.title = currentTitle.replace(/Kivoni/g, tenant.name);
+        } else {
+          document.title = `${currentTitle.split(" | ")[0]} | ${tenant.name}`;
+        }
       }
     }
   }, [tenant, slug]);

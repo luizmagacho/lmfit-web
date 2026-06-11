@@ -88,13 +88,11 @@ function LoginForm() {
       >
         <div className="flex flex-col items-center gap-2">
           <div className="py-2 w-full flex justify-center">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={logoUrl}
               alt={storeName}
-              width={160}
-              height={56}
               className="h-12 w-auto max-w-[200px] object-contain"
-              priority
             />
           </div>
           <p className="text-sm font-medium text-center" style={{ color: lmfitTokens.textMuted }}>
@@ -303,13 +301,11 @@ function StoreDirectory({ theme, toggleTheme }: { theme: "light" | "dark"; toggl
         theme === "light" ? "border-black/5" : "border-white/5"
       }`}>
         <div className="flex items-center gap-3">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="/kivoni-symbol.svg"
               alt="Kivoni Logo"
-              width={50}
-              height={50}
-              className="h-[50px] w-auto object-contain"
-              priority
+              className="h-[50px] w-auto max-w-[200px] object-contain"
             />
           <span className={`text-sm font-medium hidden sm:inline ${
             theme === "light" ? "text-neutral-500" : "text-white/60"

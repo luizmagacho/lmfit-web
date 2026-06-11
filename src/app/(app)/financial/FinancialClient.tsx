@@ -357,16 +357,28 @@ function ManualEntryModal({
     type: entry?.type || "deposit_sales",
     name: entry?.name || "",
     detail: entry?.detail || "",
-    amount: entry?.amount ? Math.abs(entry.amount).toString() : "",
+    amount: entry?.amount ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(entry.amount)) : "",
     isExpense: entry?.amount ? entry.amount < 0 : false,
   });
   const [saving, setSaving] = useState(false);
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, "");
+    if (!value) {
+      setForm({ ...form, amount: "" });
+      return;
+    }
+    const num = Number(value) / 100;
+    const formatted = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+    setForm({ ...form, amount: formatted });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const amountNum = parseFloat(form.amount.replace(",", ".")) || 0;
+      const cleanVal = form.amount.replace(/\./g, "").replace(",", ".");
+      const amountNum = parseFloat(cleanVal) || 0;
       await onSave({
         date: new Date(form.date).toISOString(),
         hour: form.hour,
@@ -423,7 +435,7 @@ function ManualEntryModal({
           <div className="flex gap-4 items-end">
             <div className="flex-1">
               <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Amount (R$)" : "Valor (R$)"}</label>
-              <input required type="number" step="0.01" min="0" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
+              <input required type="text" value={form.amount} onChange={handleAmountChange} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
             </div>
             <label className="flex items-center gap-2 mb-2 text-sm cursor-pointer" style={{ color: lmfitTokens.text }}>
               <input type="checkbox" checked={form.isExpense} onChange={e => setForm({ ...form, isExpense: e.target.checked })} />

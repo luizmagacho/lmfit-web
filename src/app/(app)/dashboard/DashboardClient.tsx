@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useTenant } from "@/context/TenantContext";
 import { useAuthStore } from "@/stores/useAuthStore";
 import {
   deriveAbcFromRevenue,
@@ -35,6 +36,8 @@ function shortDate(iso: string) {
 
 export function DashboardClient() {
   const { language } = useLanguage();
+  const { tenant } = useTenant();
+  const storeName = tenant?.name || "Kivoni";
   const user = useAuthStore((s) => s.user);
   const [days, setDays] = useState(30);
   const [summary, setSummary] = useState<ReportSummary | null>(null);
@@ -134,7 +137,7 @@ export function DashboardClient() {
             className="text-2xl font-semibold tracking-tight"
             style={{ color: lmfitTokens.text }}
           >
-            {language === "en" ? "Kivoni Dashboard" : "Painel Kivoni"}
+            {language === "en" ? `${storeName} Dashboard` : `Painel ${storeName}`}
           </h1>
           <p className="mt-1" style={{ color: lmfitTokens.textMuted }}>
             {language === "en" 

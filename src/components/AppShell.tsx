@@ -93,13 +93,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="inline-flex py-2 md:mx-0"
               onClick={() => setMenuOpen(false)}
             >
-              <Image
-                src="/kivoni-symbol.svg"
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={tenant?.branding?.logoUrl || "/kivoni-symbol.svg"}
                 alt={storeName}
-                width={80}
-                height={80}
-                className="h-14 w-14 object-contain object-left"
-                priority
+                className="h-10 w-auto object-contain object-left max-w-[150px]"
               />
             </Link>
             <button
