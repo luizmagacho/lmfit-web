@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "react-hot-toast";
+import { showConfirmToast } from "@/lib/ToastHelper";
 import { http } from "@/lib/http";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
@@ -543,9 +545,19 @@ export function FinancialClient() {
 
   const handleDeleteBatch = useCallback(
     async (batchId: string) => {
-      if (!confirm(language === "en" ? "Remove this import batch?" : "Remover este lote importado?")) return;
-      await http.delete(`/cashflow/batches/${batchId}`);
-      await loadData();
+      showConfirmToast({
+        message: language === "en" ? "Remove this import batch?" : "Remover este lote importado?",
+        confirmText: language === "en" ? "Remove" : "Remover",
+        onConfirm: async () => {
+          try {
+            await http.delete(`/cashflow/batches/${batchId}`);
+            toast.success(language === "en" ? "Batch removed" : "Lote removido");
+            await loadData();
+          } catch {
+            toast.error(language === "en" ? "Error removing batch" : "Erro ao remover lote");
+          }
+        }
+      });
     },
     [loadData, language],
   );
@@ -573,18 +585,24 @@ export function FinancialClient() {
       }
       await loadData();
     } catch {
-      alert(language === "en" ? "Error saving entry" : "Erro ao salvar lançamento");
+      toast.error(language === "en" ? "Error saving entry" : "Erro ao salvar lançamento");
     }
   };
 
   const handleRemoveEntry = async (id: string) => {
-    if (!confirm(language === "en" ? "Remove this entry?" : "Remover este lançamento?")) return;
-    try {
-      await http.delete(`/cashflow/${id}`);
-      await loadData();
-    } catch {
-      alert(language === "en" ? "Error removing entry" : "Erro ao remover lançamento");
-    }
+    showConfirmToast({
+      message: language === "en" ? "Remove this entry?" : "Remover este lançamento?",
+      confirmText: language === "en" ? "Remove" : "Remover",
+      onConfirm: async () => {
+        try {
+          await http.delete(`/cashflow/${id}`);
+          toast.success(language === "en" ? "Entry removed" : "Lançamento removido");
+          await loadData();
+        } catch {
+          toast.error(language === "en" ? "Error removing entry" : "Erro ao remover lançamento");
+        }
+      }
+    });
   };
 
   const filteredEntries = filterType

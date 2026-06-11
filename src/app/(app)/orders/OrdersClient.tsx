@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 import { http } from "@/lib/http";
+import { toast } from "react-hot-toast";
 import { documentId, extractListItems } from "@/lib/normalizeApiList";
 import { formatBRL } from "@/lib/formatMoney";
 import { slugifyFileBase } from "@/lib/slugifyFileBase";
@@ -34,7 +35,7 @@ export function OrdersClient() {
       await updateOrder(id, { status });
       setRows((prev) => prev.map((o) => (o._id === id ? { ...o, status } : o)));
     } catch {
-      alert("Erro ao atualizar status");
+      toast.error(language === "en" ? "Error updating status" : "Erro ao atualizar status");
     }
   };
 

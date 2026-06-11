@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
 import { formatBRL } from "@/lib/formatMoney";
+import { toast } from "react-hot-toast";
 import {
   fetchKanban, fetchDistinctStatuses, DEFAULT_STATUSES,
   type ProductionBatch, type KanbanData,
@@ -43,16 +44,29 @@ function KanbanCard({
 
   return (
     <div
-      className="rounded-xl border p-3 space-y-2 bg-[var(--card-bg)] shadow-sm hover:shadow-md transition-shadow"
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", batch._id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      className="rounded-xl border bg-[var(--card-bg)] shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing overflow-hidden flex flex-col"
       style={{ borderColor: lmfitTokens.border }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: lmfitTokens.text }}>{batch.name}</p>
-          {batch.sku && (
-            <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>{batch.sku}</p>
-          )}
+      {batch.imageUrl && (
+        <div className="w-full h-36 relative border-b" style={{ borderColor: lmfitTokens.border }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={batch.imageUrl} alt={batch.name} className="w-full h-full object-cover" />
         </div>
+      )}
+
+      <div className="p-3 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate" style={{ color: lmfitTokens.text }}>{batch.name}</p>
+            {batch.sku && (
+              <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>{batch.sku}</p>
+            )}
+          </div>
         <select
           value={batch.status}
           onChange={(e) => onMove(e.target.value)}
@@ -110,15 +124,23 @@ function KanbanCard({
           <span>{isEn ? "Total Batch Cost" : "Custo Total Lote"}</span>
           <span className="tabular-nums">{formatBRL(batch.totalBatchCost)}</span>
         </div>
-      </div>
+        {/* Dates */}
+        <div className="flex items-center justify-between text-[10px] pt-1" style={{ color: lmfitTokens.textMuted }}>
+          <span>{isEn ? "Created" : "Criado"}: {new Date(batch.createdAt).toLocaleDateString(isEn ? "en-US" : "pt-BR")}</span>
+          {batch.updatedAt && (
+            <span>{isEn ? "Upd" : "Atu"}: {new Date(batch.updatedAt).toLocaleDateString(isEn ? "en-US" : "pt-BR")}</span>
+          )}
+        </div>
 
-      <div className="flex gap-1.5 pt-1 border-t" style={{ borderColor: lmfitTokens.border }}>
-        <button onClick={onEdit} className="flex-1 text-[10px] py-1 rounded-md border text-center" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>
-          {isEn ? "Edit" : "Editar"}
-        </button>
-        <button onClick={onDelete} className="flex-1 text-[10px] py-1 rounded-md border text-center" style={{ borderColor: "#fecaca", color: "#dc2626" }}>
-          {isEn ? "Delete" : "Excluir"}
-        </button>
+        <div className="flex gap-1.5 pt-3 border-t" style={{ borderColor: lmfitTokens.border }}>
+          <button onClick={onEdit} className="flex-1 text-[10px] py-1.5 font-medium rounded-md border text-center transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>
+            {isEn ? "Edit" : "Editar"}
+          </button>
+          <button onClick={onDelete} className="flex-1 text-[10px] py-1.5 font-medium rounded-md border text-center transition-colors hover:bg-red-50 dark:hover:bg-red-950/30" style={{ borderColor: "#fecaca", color: "#dc2626" }}>
+            {isEn ? "Delete" : "Excluir"}
+          </button>
+        </div>
+      </div>
       </div>
     </div>
   );
@@ -176,6 +198,7 @@ export function ProductionKanbanClient({
   const [columns, setColumns] = useState<string[]>(DEFAULT_STATUSES);
   const [addColOpen, setAddColOpen] = useState(false);
   const [kanban, setKanban] = useState<KanbanData>({});
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   const loadKanban = useCallback(async () => {
     try {
@@ -196,9 +219,30 @@ export function ProductionKanbanClient({
   useEffect(() => { void loadKanban(); }, [loadKanban, batches]);
 
   const handleMove = async (id: string, status: string) => {
+    // Optimistic UI update
+    setKanban(prev => {
+      const next = { ...prev };
+      // Remove from old column
+      for (const col of Object.keys(next)) {
+        next[col] = next[col].filter(b => b._id !== id);
+      }
+      // Since we don't have the full batch object here, we rely on the API to update it
+      // But we can just refetch immediately which loadKanban does.
+      return next;
+    });
+
     await onStatusChange(id, status);
     void loadKanban();
     onRefresh();
+  };
+
+  const handleDrop = (e: React.DragEvent, col: string) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    const batchId = e.dataTransfer.getData("text/plain");
+    if (batchId) {
+      void handleMove(batchId, col);
+    }
   };
 
   const handleAddColumn = (name: string) => {
@@ -208,7 +252,7 @@ export function ProductionKanbanClient({
   const handleRemoveColumn = (col: string) => {
     const batchesInCol = kanban[col] ?? [];
     if (batchesInCol.length > 0) {
-      alert(isEn
+      toast.error(isEn
         ? `Move the ${batchesInCol.length} batch(es) from this column before removing it.`
         : `Mova os ${batchesInCol.length} lote(s) desta coluna antes de removê-la.`
       );
@@ -239,7 +283,27 @@ export function ProductionKanbanClient({
           const cards = kanban[col] ?? [];
           const colColor = getStatusColor(col);
           return (
-            <div key={col} className="shrink-0 w-72 flex flex-col" style={{ minWidth: 256 }}>
+            <div 
+              key={col} 
+              className="kanban-col-container shrink-0 w-72 flex flex-col transition-all duration-200" 
+              style={{ minWidth: 256 }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setDragOverCol(col);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                // Only clear if we actually leave the column (not moving to children)
+                if ((e.relatedTarget as HTMLElement)?.closest('.kanban-col-container') !== e.currentTarget) {
+                  setDragOverCol(null);
+                }
+              }}
+              onDrop={(e) => handleDrop(e, col)}
+            >
               {/* Column header */}
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
@@ -261,7 +325,14 @@ export function ProductionKanbanClient({
               </div>
 
               {/* Cards */}
-              <div className="flex-1 rounded-xl p-3 space-y-3" style={{ backgroundColor: "var(--chart-track)", minHeight: 200 }}>
+              <div 
+                className={`flex-1 rounded-xl p-3 space-y-3 transition-colors border-2 ${dragOverCol === col ? 'border-dashed' : 'border-transparent'}`} 
+                style={{ 
+                  backgroundColor: dragOverCol === col ? colColor + "11" : "var(--chart-track)", 
+                  borderColor: dragOverCol === col ? colColor : "transparent",
+                  minHeight: 200 
+                }}
+              >
                 {cards.map((batch) => (
                   <KanbanCard
                     key={batch._id}

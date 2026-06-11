@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
 import { formatBRL } from "@/lib/formatMoney";
+import { http } from "@/lib/http";
+import { showConfirmToast } from "@/lib/ToastHelper";
+import { toast } from "react-hot-toast";
 import {
   createBatch, fetchBatches, removeBatch, updateBatch,
   DEFAULT_STATUSES, INPUT_TYPE_LABELS, UNIT_LABELS,
@@ -14,6 +17,17 @@ import { ProductionKanbanClient } from "./ProductionKanbanClient";
 // ── Batch Editor Modal ────────────────────────────────────────────────────────
 
 const EMPTY_INPUT: InputItem = { description: "", inputType: "fabric", unit: "kg", quantity: 0, unitPrice: 0, totalCost: 0 };
+
+function parseBrlMoney(val: string | number): number {
+  if (typeof val === "number") return val;
+  if (!val) return 0;
+  const d = String(val).replace(/\D/g, "");
+  return d ? parseInt(d, 10) / 100 : 0;
+}
+
+function formatBrlMoney(num: number): string {
+  return (num || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 function computeCosts(
   inputs: InputItem[], cuttingCost: number, sewingCost: number,
@@ -28,8 +42,9 @@ function computeCosts(
   return { totalInputsCost, totalBatchCost, costPerUnit, suggestedPrice };
 }
 
-function BatchEditorModal({ batch, onClose, onSaved }: {
+function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
   batch?: Partial<ProductionBatch> | null;
+  allBatches: ProductionBatch[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -38,13 +53,25 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
   const [sku, setSku] = useState(batch?.sku ?? "");
   const [batchQty, setBatchQty] = useState(batch?.batchQty ?? 1);
   const [status, setStatus] = useState(batch?.status ?? DEFAULT_STATUSES[0]);
-  const [inputs, setInputs] = useState<InputItem[]>(batch?.inputs?.length ? batch.inputs : [{ ...EMPTY_INPUT }]);
-  const [cuttingCost, setCuttingCost] = useState(batch?.cuttingCost ?? 0);
-  const [sewingCost, setSewingCost] = useState(batch?.sewingCost ?? 0);
+  const [inputs, setInputs] = useState<InputItem[]>(
+    batch?.inputs?.length
+      ? batch.inputs.map(i => ({
+          ...i,
+          unitPrice: parseBrlMoney(i.unitPrice as string | number),
+          totalCost: parseBrlMoney(i.totalCost as string | number)
+        }))
+      : [{ ...EMPTY_INPUT }]
+  );
+  const [cuttingCost, setCuttingCost] = useState(parseBrlMoney(batch?.cuttingCost as string | number));
+  const [sewingCost, setSewingCost] = useState(parseBrlMoney(batch?.sewingCost as string | number));
   const [overheadPercent, setOverheadPercent] = useState(batch?.overheadPercent ?? 0);
   const [targetMarginPercent, setTargetMarginPercent] = useState(batch?.targetMarginPercent ?? 60);
   const [notes, setNotes] = useState(batch?.notes ?? "");
+  const [imageUrl, setImageUrl] = useState(batch?.imageUrl ?? "");
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const isEn = language === "en";
 
   const computed = useMemo(
     () => computeCosts(inputs, cuttingCost, sewingCost, overheadPercent, batchQty, targetMarginPercent),
@@ -61,19 +88,78 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
     });
   };
 
+  const handleCheckPrevious = (field: "sku" | "name", value: string) => {
+    if (batch?._id || !value.trim()) return;
+    const prev = allBatches.find(b => b[field] && b[field]?.toLowerCase() === value.trim().toLowerCase());
+    if (prev) {
+      const hasFilledCosts = cuttingCost > 0 || sewingCost > 0 || inputs.length > 1 || (inputs[0] && inputs[0].description.trim() !== "");
+      if (hasFilledCosts) return;
+
+      showConfirmToast({
+        position: "top-center",
+        message: isEn 
+          ? `Previous batch "${prev.name}" found. Copy inputs and costs?` 
+          : `Lote anterior "${prev.name}" encontrado. Deseja copiar os insumos e custos dele?`,
+        confirmText: isEn ? "Copy" : "Copiar",
+        cancelText: isEn ? "Ignore" : "Ignorar",
+        onConfirm: () => {
+          if (field === "sku" && prev.name) setName(prev.name);
+          if (field === "name" && prev.sku) setSku(prev.sku);
+          if (prev.inputs?.length) {
+            setInputs(prev.inputs.map(i => ({
+              ...i,
+              unitPrice: parseBrlMoney(i.unitPrice as string | number),
+              totalCost: parseBrlMoney(i.totalCost as string | number)
+            })));
+          }
+          setCuttingCost(parseBrlMoney(prev.cuttingCost as string | number));
+          setSewingCost(parseBrlMoney(prev.sewingCost as string | number));
+          setOverheadPercent(prev.overheadPercent || 0);
+          setTargetMarginPercent(prev.targetMarginPercent || 60);
+          if (prev.imageUrl && !imageUrl) setImageUrl(prev.imageUrl);
+        }
+      });
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await http.post("/products/images", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setImageUrl(res.data.url || (Array.isArray(res.data) && res.data[0]?.url) || "");
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error(isEn ? "Error uploading image." : "Erro ao enviar imagem.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const payload = {
-        name, sku, batchQty, status, inputs: inputs.map(i => ({ ...i, totalCost: i.quantity * i.unitPrice })),
+        name, sku, batchQty, status, imageUrl,
+        inputs: inputs
+          .filter(i => i.description.trim() !== "")
+          .map(i => ({ ...i, totalCost: i.quantity * i.unitPrice })),
         cuttingCost, sewingCost, overheadPercent, targetMarginPercent, notes,
       };
       if (batch?._id) await updateBatch(batch._id, payload);
       else await createBatch(payload);
       onSaved();
       onClose();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error("Save error:", err);
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar o lote.");
+    }
     finally { setSaving(false); }
   };
 
@@ -81,7 +167,6 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
   const fieldStyle = { borderColor: lmfitTokens.border, color: lmfitTokens.text };
   const labelCls = "block text-xs font-medium mb-1";
 
-  const isEn = language === "en";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -102,13 +187,19 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
                 {isEn ? "Batch Name *" : "Nome do Lote *"}
               </label>
-              <input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} style={fieldStyle} placeholder={isEn ? "Ex: Black Legging S/M — May 2026" : "Ex: Legging Preta P/M — Maio 2026"} />
+              <input required value={name} onChange={e => setName(e.target.value)} onBlur={e => handleCheckPrevious("name", e.target.value)} className={fieldCls} style={fieldStyle} placeholder={isEn ? "Ex: Black Legging S/M — May 2026" : "Ex: Legging Preta P/M — Maio 2026"} list="past-names" />
+              <datalist id="past-names">
+                {Array.from(new Set(allBatches.map(b => b.name).filter(Boolean))).map(n => <option key={n} value={n} />)}
+              </datalist>
             </div>
             <div>
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
                 {isEn ? "SKU / Reference" : "SKU / Referência"}
               </label>
-              <input value={sku} onChange={e => setSku(e.target.value)} className={fieldCls} style={fieldStyle} placeholder="LGG-PRT-PM" />
+              <input value={sku} onChange={e => setSku(e.target.value)} onBlur={e => handleCheckPrevious("sku", e.target.value)} className={fieldCls} style={fieldStyle} placeholder="LGG-PRT-PM" list="past-skus" />
+              <datalist id="past-skus">
+                {Array.from(new Set(allBatches.map(b => b.sku).filter(Boolean))).map(s => <option key={s} value={s} />)}
+              </datalist>
             </div>
           </div>
 
@@ -129,9 +220,18 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
             </div>
             <div>
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
-                {isEn ? "Desired Margin (%)" : "Margem desejada (%)"}
+                {isEn ? "Product Image" : "Imagem da Peça"}
               </label>
-              <input type="number" min={0} max={99} value={targetMarginPercent} onChange={e => setTargetMarginPercent(Number(e.target.value))} className={fieldCls} style={fieldStyle} />
+              <div className="flex items-center gap-2">
+                {imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt="" className="h-8 w-8 rounded object-cover border" style={{ borderColor: lmfitTokens.border }} />
+                )}
+                <label className="flex-1 cursor-pointer border rounded-md px-3 py-1.5 text-xs text-center truncate hover:bg-black/5" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}>
+                  {uploadingImage ? (isEn ? "Uploading..." : "Enviando...") : (isEn ? "Upload Photo" : "Anexar Foto")}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                </label>
+              </div>
             </div>
           </div>
 
@@ -172,8 +272,8 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
                           {(Object.keys(UNIT_LABELS) as Unit[]).map(k => <option key={k} value={k}>{UNIT_LABELS[k]}</option>)}
                         </select>
                       </td>
-                      <td className="p-1.5"><input type="number" min={0} step="0.001" value={inp.quantity} onChange={e => handleInputChange(idx, "quantity", Number(e.target.value))} className="w-20 border rounded px-2 py-1 bg-transparent text-xs text-right" style={fieldStyle} /></td>
-                      <td className="p-1.5"><input type="number" min={0} step="0.01" value={inp.unitPrice} onChange={e => handleInputChange(idx, "unitPrice", Number(e.target.value))} className="w-24 border rounded px-2 py-1 bg-transparent text-xs text-right" style={fieldStyle} /></td>
+                      <td className="p-1.5"><input type="number" min={0} step="0.001" value={inp.quantity || ""} onChange={e => handleInputChange(idx, "quantity", Number(e.target.value))} className="w-20 border rounded px-2 py-1 bg-transparent text-xs text-right" style={fieldStyle} /></td>
+                      <td className="p-1.5"><input type="text" value={formatBrlMoney(inp.unitPrice)} onChange={e => handleInputChange(idx, "unitPrice", parseBrlMoney(e.target.value))} className="w-24 border rounded px-2 py-1 bg-transparent text-xs text-right" style={fieldStyle} /></td>
                       <td className="p-1.5 text-right font-semibold tabular-nums" style={{ color: lmfitTokens.text }}>{formatBRL(inp.quantity * inp.unitPrice)}</td>
                       <td className="p-1.5 text-center"><button type="button" onClick={() => setInputs(p => p.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600 text-base leading-none">×</button></td>
                     </tr>
@@ -189,19 +289,25 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
                 {isEn ? "Cutting Cost (batch) R$" : "Custo de Corte (lote) R$"}
               </label>
-              <input type="number" min={0} step="0.01" value={cuttingCost} onChange={e => setCuttingCost(Number(e.target.value))} className={fieldCls} style={fieldStyle} />
+              <input type="text" value={formatBrlMoney(cuttingCost)} onChange={e => setCuttingCost(parseBrlMoney(e.target.value))} className={fieldCls} style={fieldStyle} />
             </div>
             <div>
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
                 {isEn ? "Sewing Cost (batch) R$" : "Custo de Costura (lote) R$"}
               </label>
-              <input type="number" min={0} step="0.01" value={sewingCost} onChange={e => setSewingCost(Number(e.target.value))} className={fieldCls} style={fieldStyle} />
+              <input type="text" value={formatBrlMoney(sewingCost)} onChange={e => setSewingCost(parseBrlMoney(e.target.value))} className={fieldCls} style={fieldStyle} />
             </div>
             <div>
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
                 {isEn ? "Overhead (%)" : "Overhead (%)"}
               </label>
               <input type="number" min={0} step="0.1" value={overheadPercent} onChange={e => setOverheadPercent(Number(e.target.value))} className={fieldCls} style={fieldStyle} />
+            </div>
+            <div>
+              <label className={labelCls} style={{ color: lmfitTokens.text }}>
+                {isEn ? "Desired Margin (%)" : "Margem desejada (%)"}
+              </label>
+              <input type="number" min={0} max={99} value={targetMarginPercent} onChange={e => setTargetMarginPercent(Number(e.target.value))} className={fieldCls} style={fieldStyle} />
             </div>
           </div>
 
@@ -304,9 +410,19 @@ export function ProductionClient() {
 
   const handleDelete = async (id: string) => {
     const isEn = language === "en";
-    if (!confirm(isEn ? "Delete this batch?" : "Excluir este lote?")) return;
-    await removeBatch(id);
-    void load();
+    showConfirmToast({
+      message: isEn ? "Delete this batch?" : "Excluir este lote?",
+      confirmText: isEn ? "Delete" : "Excluir",
+      onConfirm: async () => {
+        try {
+          await removeBatch(id);
+          toast.success(isEn ? "Batch deleted" : "Lote excluído");
+          void load();
+        } catch (err) {
+          toast.error(isEn ? "Error deleting batch" : "Erro ao excluir lote");
+        }
+      }
+    });
   };
 
   // Summary KPIs
@@ -428,6 +544,7 @@ export function ProductionClient() {
       {editorOpen && (
         <BatchEditorModal
           batch={editing}
+          allBatches={batches}
           onClose={() => { setEditorOpen(false); setEditing(null); }}
           onSaved={() => void load()}
         />
