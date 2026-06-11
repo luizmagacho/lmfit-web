@@ -49,20 +49,24 @@ function KanbanCard({
         e.dataTransfer.setData("text/plain", batch._id);
         e.dataTransfer.effectAllowed = "move";
       }}
-      className="rounded-xl border p-3 space-y-2 bg-[var(--card-bg)] shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
+      className="rounded-xl border bg-[var(--card-bg)] shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing overflow-hidden flex flex-col"
       style={{ borderColor: lmfitTokens.border }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: lmfitTokens.text }}>{batch.name}</p>
-          {batch.sku && (
-            <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>{batch.sku}</p>
-          )}
+      {batch.imageUrl && (
+        <div className="w-full h-36 relative border-b" style={{ borderColor: lmfitTokens.border }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={batch.imageUrl} alt={batch.name} className="w-full h-full object-cover" />
         </div>
-        {batch.imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={batch.imageUrl} alt="" className="w-8 h-8 rounded-md object-cover border shrink-0" style={{ borderColor: lmfitTokens.border }} />
-        )}
+      )}
+
+      <div className="p-3 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate" style={{ color: lmfitTokens.text }}>{batch.name}</p>
+            {batch.sku && (
+              <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>{batch.sku}</p>
+            )}
+          </div>
         <select
           value={batch.status}
           onChange={(e) => onMove(e.target.value)}
@@ -120,15 +124,22 @@ function KanbanCard({
           <span>{isEn ? "Total Batch Cost" : "Custo Total Lote"}</span>
           <span className="tabular-nums">{formatBRL(batch.totalBatchCost)}</span>
         </div>
-      </div>
+        {/* Dates */}
+        <div className="flex items-center justify-between text-[10px] pt-1" style={{ color: lmfitTokens.textMuted }}>
+          <span>{isEn ? "Created" : "Criado"}: {new Date(batch.createdAt).toLocaleDateString(isEn ? "en-US" : "pt-BR")}</span>
+          {batch.updatedAt && (
+            <span>{isEn ? "Upd" : "Atu"}: {new Date(batch.updatedAt).toLocaleDateString(isEn ? "en-US" : "pt-BR")}</span>
+          )}
+        </div>
 
-      <div className="flex gap-1.5 pt-1 border-t" style={{ borderColor: lmfitTokens.border }}>
-        <button onClick={onEdit} className="flex-1 text-[10px] py-1 rounded-md border text-center" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>
-          {isEn ? "Edit" : "Editar"}
-        </button>
-        <button onClick={onDelete} className="flex-1 text-[10px] py-1 rounded-md border text-center" style={{ borderColor: "#fecaca", color: "#dc2626" }}>
-          {isEn ? "Delete" : "Excluir"}
-        </button>
+        <div className="flex gap-1.5 pt-3 border-t" style={{ borderColor: lmfitTokens.border }}>
+          <button onClick={onEdit} className="flex-1 text-[10px] py-1.5 font-medium rounded-md border text-center transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>
+            {isEn ? "Edit" : "Editar"}
+          </button>
+          <button onClick={onDelete} className="flex-1 text-[10px] py-1.5 font-medium rounded-md border text-center transition-colors hover:bg-red-50 dark:hover:bg-red-950/30" style={{ borderColor: "#fecaca", color: "#dc2626" }}>
+            {isEn ? "Delete" : "Excluir"}
+          </button>
+        </div>
       </div>
     </div>
   );
