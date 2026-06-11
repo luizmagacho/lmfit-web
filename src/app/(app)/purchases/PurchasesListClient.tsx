@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatBRL } from "@/lib/formatMoney";
+import { toast } from "react-hot-toast";
 import { slugifyFileBase } from "@/lib/slugifyFileBase";
 import { http } from "@/lib/http";
 import { listPurchases } from "@/lib/purchases/purchasesApi";
@@ -101,7 +102,7 @@ export function PurchasesListClient() {
       await http.patch(`/purchases/${id}`, { status });
       setRows((prev) => prev.map((r) => (r._id === id ? { ...r, status } : r)));
     } catch {
-      alert("Erro ao atualizar status");
+      toast.error(language === "en" ? "Error updating status" : "Erro ao atualizar status");
     }
   };
 

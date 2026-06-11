@@ -6,6 +6,7 @@ import type { PurchaseRecord } from "@/lib/purchases/types";
 import { formatBRL } from "@/lib/formatMoney";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
+import { toast } from "react-hot-toast";
 
 const DEFAULT_STATUSES = ["interest", "order_reserved", "in_transit", "received", "cancelled"];
 
@@ -215,7 +216,7 @@ export function PurchasesKanban({
   const handleRemoveColumn = (col: string) => {
     const itemsInCol = purchases.filter((p) => p.status === col);
     if (itemsInCol.length > 0) {
-      alert(isEn
+      toast.error(isEn
         ? `Move the ${itemsInCol.length} purchase(s) from this column before removing it.`
         : `Mova as ${itemsInCol.length} compra(s) desta coluna antes de removê-la.`
       );

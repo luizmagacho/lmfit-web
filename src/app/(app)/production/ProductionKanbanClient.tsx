@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
 import { formatBRL } from "@/lib/formatMoney";
+import { toast } from "react-hot-toast";
 import {
   fetchKanban, fetchDistinctStatuses, DEFAULT_STATUSES,
   type ProductionBatch, type KanbanData,
@@ -239,7 +240,7 @@ export function ProductionKanbanClient({
   const handleRemoveColumn = (col: string) => {
     const batchesInCol = kanban[col] ?? [];
     if (batchesInCol.length > 0) {
-      alert(isEn
+      toast.error(isEn
         ? `Move the ${batchesInCol.length} batch(es) from this column before removing it.`
         : `Mova os ${batchesInCol.length} lote(s) desta coluna antes de removê-la.`
       );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { lmfitTokens } from "@/theme/tokens";
 import type { OrderWithWarnings } from "@/lib/orders/types";
 import { formatBRL } from "@/lib/formatMoney";
@@ -232,7 +233,7 @@ export function OrdersKanban({
   const handleRemoveColumn = (col: string) => {
     const itemsInCol = orders.filter((o) => o.status === col);
     if (itemsInCol.length > 0) {
-      alert(isEn
+      toast.error(isEn
         ? `Move the ${itemsInCol.length} order(s) from this column before removing it.`
         : `Mova os ${itemsInCol.length} pedido(s) desta coluna antes de removê-la.`
       );
