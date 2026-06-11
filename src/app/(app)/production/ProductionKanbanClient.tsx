@@ -141,6 +141,7 @@ function KanbanCard({
           </button>
         </div>
       </div>
+      </div>
     </div>
   );
 }
