@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { publicHttp } from "@/lib/publicHttp";
-import { resolvePrimaryImageUrl } from "@/lib/productImageUrl";
+import { resolvePrimaryImageUrl, resolveProductImageUrls } from "@/lib/productImageUrl";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { lmfitTokens } from "@/theme/tokens";
 import { VariantGrid } from "@/components/organisms/VariantGrid";
 import { Skeleton } from "@/components/atoms/Skeleton";
+import { ImageCarousel } from "@/components/ImageCarousel";
 
 export function ProductDetailClient({ slug }: { slug: string }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,7 +68,7 @@ export function ProductDetailClient({ slug }: { slug: string }) {
     );
   }
 
-  const img = resolvePrimaryImageUrl(product);
+  const urls = resolveProductImageUrls(product);
   const name = String(product.name ?? "Produto");
   const desc = product.description ? String(product.description) : null;
 
@@ -81,15 +82,8 @@ export function ProductDetailClient({ slug }: { slug: string }) {
 
       {/* Imagem Principal */}
       <div className="relative w-full bg-neutral-100 rounded-xl overflow-hidden shadow-sm" style={{ aspectRatio: "4/5" }}>
-        {img ? (
-          <Image
-            src={img}
-            alt={name}
-            fill
-            sizes="(max-width: 768px) 100vw, 42rem"
-            className="object-cover"
-            priority
-          />
+        {urls.length > 0 ? (
+          <ImageCarousel urls={urls} size="fill" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-neutral-400">Sem foto</div>
         )}

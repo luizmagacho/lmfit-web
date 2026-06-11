@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { lmfitTokens } from "@/theme/tokens";
 
-export type ImageCarouselSize = "sm" | "md";
+export type ImageCarouselSize = "sm" | "md" | "fill";
 
 type Props = {
   urls: string[];
@@ -15,6 +15,7 @@ type Props = {
 
 const wrapSm = "relative h-20 w-20 shrink-0";
 const wrapMd = "relative h-40 w-full max-w-[min(100%,20rem)]";
+const wrapFill = "absolute inset-0 w-full h-full";
 
 export function ImageCarousel({ urls, size = "sm", onRemoveIndex, className }: Props) {
   const [index, setIndex] = useState(0);
@@ -34,7 +35,7 @@ export function ImageCarousel({ urls, size = "sm", onRemoveIndex, className }: P
     return (
       <div
         className={[
-          size === "sm" ? wrapSm : wrapMd,
+          size === "sm" ? wrapSm : size === "fill" ? wrapFill : wrapMd,
           "rounded-md border border-dashed flex items-center justify-center text-xs px-1",
           className,
         ]
@@ -48,7 +49,7 @@ export function ImageCarousel({ urls, size = "sm", onRemoveIndex, className }: P
   }
 
   const showNav = n > 1;
-  const wrap = size === "sm" ? wrapSm : wrapMd;
+  const wrap = size === "sm" ? wrapSm : size === "fill" ? wrapFill : wrapMd;
 
   return (
     <div className={[wrap, "group", className].filter(Boolean).join(" ")}>
@@ -68,7 +69,7 @@ export function ImageCarousel({ urls, size = "sm", onRemoveIndex, className }: P
           <img
             src={src}
             alt=""
-            className={size === "sm" ? "h-full w-full object-cover" : "h-full w-full object-contain"}
+            className={size === "sm" || size === "fill" ? "h-full w-full object-cover" : "h-full w-full object-contain"}
             onError={() => setBroken((b) => ({ ...b, [safeIdx]: true }))}
           />
         )}

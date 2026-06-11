@@ -6,11 +6,12 @@ import { useMemo } from "react";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Badge } from "@/components/atoms/Badge";
 import { PriceTag } from "@/components/atoms/PriceTag";
-import { resolvePrimaryImageUrl } from "@/lib/productImageUrl";
+import { resolvePrimaryImageUrl, resolveProductImageUrls } from "@/lib/productImageUrl";
 import { documentId } from "@/lib/normalizeApiList";
 import { inferModeForUser, type CustomerRole } from "@/lib/pricing";
 import { useCatalogStore } from "@/stores/useCatalogStore";
 import { lmfitTokens } from "@/theme/tokens";
+import { ImageCarousel } from "@/components/ImageCarousel";
 
 export type CatalogProduct = Record<string, unknown> & {
   name?: string;
@@ -134,7 +135,7 @@ export function ProductGrid({
       {filtered.map((p) => {
         const id = documentId(p) || String(p.slug ?? "");
         const slug = p.slug ? String(p.slug) : id;
-        const img = resolvePrimaryImageUrl(p);
+        const urls = resolveProductImageUrls(p);
         const price = retailPrice(p);
         const compareAt = typeof p.compareAtPrice === "number" ? p.compareAtPrice : null;
         const isNew = productIsNew(p);
@@ -148,15 +149,8 @@ export function ProductGrid({
           >
             <article className="flex flex-col h-full">
               <div className="relative w-full bg-neutral-100" style={{ aspectRatio: "1 / 1" }}>
-                {img ? (
-                  <Image
-                    src={img}
-                    alt={String(p.name ?? "Produto")}
-                    fill
-                    sizes="(min-width: 768px) 25vw, 50vw"
-                    className="object-cover"
-                    unoptimized
-                  />
+                {urls.length > 0 ? (
+                  <ImageCarousel urls={urls} size="fill" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs text-neutral-400" aria-hidden>
                     Sem foto
