@@ -37,8 +37,9 @@ function computeCosts(
   return { totalInputsCost, totalBatchCost, costPerUnit, suggestedPrice };
 }
 
-function BatchEditorModal({ batch, onClose, onSaved }: {
+function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
   batch?: Partial<ProductionBatch> | null;
+  allBatches: ProductionBatch[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -68,6 +69,29 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
       next[idx] = row;
       return next;
     });
+  };
+
+  const handleCheckPrevious = (field: "sku" | "name", value: string) => {
+    if (batch?._id || !value.trim()) return;
+    // Find the most recent matching batch (assuming allBatches is sorted by newest first, find returns first match)
+    const prev = allBatches.find(b => b[field] && b[field]?.toLowerCase() === value.trim().toLowerCase());
+    if (prev) {
+      // If user already filled some inputs manually, don't interrupt
+      const hasFilledCosts = cuttingCost > 0 || sewingCost > 0 || inputs.length > 1 || (inputs[0] && inputs[0].description.trim() !== "");
+      if (hasFilledCosts) return;
+
+      if (confirm(isEn 
+        ? `Previous batch "${prev.name}" found. Copy inputs and costs?` 
+        : `Lote anterior "${prev.name}" encontrado. Deseja copiar os insumos e custos dele?`)) {
+        if (field === "sku" && prev.name) setName(prev.name);
+        if (field === "name" && prev.sku) setSku(prev.sku);
+        if (prev.inputs?.length) setInputs(prev.inputs.map(i => ({ ...i })));
+        setCuttingCost(prev.cuttingCost || 0);
+        setSewingCost(prev.sewingCost || 0);
+        setOverheadPercent(prev.overheadPercent || 0);
+        setTargetMarginPercent(prev.targetMarginPercent || 60);
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,13 +141,19 @@ function BatchEditorModal({ batch, onClose, onSaved }: {
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
                 {isEn ? "Batch Name *" : "Nome do Lote *"}
               </label>
-              <input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} style={fieldStyle} placeholder={isEn ? "Ex: Black Legging S/M — May 2026" : "Ex: Legging Preta P/M — Maio 2026"} />
+              <input required value={name} onChange={e => setName(e.target.value)} onBlur={e => handleCheckPrevious("name", e.target.value)} className={fieldCls} style={fieldStyle} placeholder={isEn ? "Ex: Black Legging S/M — May 2026" : "Ex: Legging Preta P/M — Maio 2026"} list="past-names" />
+              <datalist id="past-names">
+                {Array.from(new Set(allBatches.map(b => b.name).filter(Boolean))).map(n => <option key={n} value={n} />)}
+              </datalist>
             </div>
             <div>
               <label className={labelCls} style={{ color: lmfitTokens.text }}>
                 {isEn ? "SKU / Reference" : "SKU / Referência"}
               </label>
-              <input value={sku} onChange={e => setSku(e.target.value)} className={fieldCls} style={fieldStyle} placeholder="LGG-PRT-PM" />
+              <input value={sku} onChange={e => setSku(e.target.value)} onBlur={e => handleCheckPrevious("sku", e.target.value)} className={fieldCls} style={fieldStyle} placeholder="LGG-PRT-PM" list="past-skus" />
+              <datalist id="past-skus">
+                {Array.from(new Set(allBatches.map(b => b.sku).filter(Boolean))).map(s => <option key={s} value={s} />)}
+              </datalist>
             </div>
           </div>
 
@@ -443,6 +473,7 @@ export function ProductionClient() {
       {editorOpen && (
         <BatchEditorModal
           batch={editing}
+          allBatches={batches}
           onClose={() => { setEditorOpen(false); setEditing(null); }}
           onSaved={() => void load()}
         />
