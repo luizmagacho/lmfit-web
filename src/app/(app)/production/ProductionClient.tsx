@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
 import { formatBRL } from "@/lib/formatMoney";
-import { api } from "@/lib/api";
+import { http } from "@/lib/http";
 import {
   createBatch, fetchBatches, removeBatch, updateBatch,
   DEFAULT_STATUSES, INPUT_TYPE_LABELS, UNIT_LABELS,
@@ -105,7 +105,7 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await api.post("/products/images", formData, {
+      const res = await http.post("/products/images", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setImageUrl(res.data.url || (Array.isArray(res.data) && res.data[0]?.url) || "");
