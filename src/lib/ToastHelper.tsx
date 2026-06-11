@@ -4,11 +4,13 @@ export function showConfirmToast({
   message,
   confirmText = "Confirmar",
   cancelText = "Cancelar",
+  position,
   onConfirm,
 }: {
   message: string;
   confirmText?: string;
   cancelText?: string;
+  position?: "top-center" | "top-right" | "bottom-right" | "top-left" | "bottom-left" | "bottom-center";
   onConfirm: () => void;
 }) {
   toast.custom(
@@ -46,6 +48,7 @@ export function showConfirmToast({
     ),
     {
       duration: Infinity,
+      position,
     }
   );
 }

@@ -96,6 +96,7 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
       if (hasFilledCosts) return;
 
       showConfirmToast({
+        position: "top-center",
         message: isEn 
           ? `Previous batch "${prev.name}" found. Copy inputs and costs?` 
           : `Lote anterior "${prev.name}" encontrado. Deseja copiar os insumos e custos dele?`,
