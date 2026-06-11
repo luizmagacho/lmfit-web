@@ -16,8 +16,10 @@ import { ProductionKanbanClient } from "./ProductionKanbanClient";
 
 const EMPTY_INPUT: InputItem = { description: "", inputType: "fabric", unit: "kg", quantity: 0, unitPrice: 0, totalCost: 0 };
 
-function parseBrlMoney(val: string): number {
-  const d = val.replace(/\D/g, "");
+function parseBrlMoney(val: string | number): number {
+  if (typeof val === "number") return val;
+  if (!val) return 0;
+  const d = String(val).replace(/\D/g, "");
   return d ? parseInt(d, 10) / 100 : 0;
 }
 
@@ -49,9 +51,17 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
   const [sku, setSku] = useState(batch?.sku ?? "");
   const [batchQty, setBatchQty] = useState(batch?.batchQty ?? 1);
   const [status, setStatus] = useState(batch?.status ?? DEFAULT_STATUSES[0]);
-  const [inputs, setInputs] = useState<InputItem[]>(batch?.inputs?.length ? batch.inputs : [{ ...EMPTY_INPUT }]);
-  const [cuttingCost, setCuttingCost] = useState(batch?.cuttingCost ?? 0);
-  const [sewingCost, setSewingCost] = useState(batch?.sewingCost ?? 0);
+  const [inputs, setInputs] = useState<InputItem[]>(
+    batch?.inputs?.length
+      ? batch.inputs.map(i => ({
+          ...i,
+          unitPrice: parseBrlMoney(i.unitPrice as any),
+          totalCost: parseBrlMoney(i.totalCost as any)
+        }))
+      : [{ ...EMPTY_INPUT }]
+  );
+  const [cuttingCost, setCuttingCost] = useState(parseBrlMoney(batch?.cuttingCost as any));
+  const [sewingCost, setSewingCost] = useState(parseBrlMoney(batch?.sewingCost as any));
   const [overheadPercent, setOverheadPercent] = useState(batch?.overheadPercent ?? 0);
   const [targetMarginPercent, setTargetMarginPercent] = useState(batch?.targetMarginPercent ?? 60);
   const [notes, setNotes] = useState(batch?.notes ?? "");
@@ -88,9 +98,15 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
         : `Lote anterior "${prev.name}" encontrado. Deseja copiar os insumos e custos dele?`)) {
         if (field === "sku" && prev.name) setName(prev.name);
         if (field === "name" && prev.sku) setSku(prev.sku);
-        if (prev.inputs?.length) setInputs(prev.inputs.map(i => ({ ...i })));
-        setCuttingCost(prev.cuttingCost || 0);
-        setSewingCost(prev.sewingCost || 0);
+        if (prev.inputs?.length) {
+          setInputs(prev.inputs.map(i => ({
+            ...i,
+            unitPrice: parseBrlMoney(i.unitPrice as any),
+            totalCost: parseBrlMoney(i.totalCost as any)
+          })));
+        }
+        setCuttingCost(parseBrlMoney(prev.cuttingCost as any));
+        setSewingCost(parseBrlMoney(prev.sewingCost as any));
         setOverheadPercent(prev.overheadPercent || 0);
         setTargetMarginPercent(prev.targetMarginPercent || 60);
         if (prev.imageUrl && !imageUrl) setImageUrl(prev.imageUrl);
