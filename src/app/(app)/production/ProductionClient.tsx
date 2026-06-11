@@ -55,13 +55,13 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
     batch?.inputs?.length
       ? batch.inputs.map(i => ({
           ...i,
-          unitPrice: parseBrlMoney(i.unitPrice as any),
-          totalCost: parseBrlMoney(i.totalCost as any)
+          unitPrice: parseBrlMoney(i.unitPrice as string | number),
+          totalCost: parseBrlMoney(i.totalCost as string | number)
         }))
       : [{ ...EMPTY_INPUT }]
   );
-  const [cuttingCost, setCuttingCost] = useState(parseBrlMoney(batch?.cuttingCost as any));
-  const [sewingCost, setSewingCost] = useState(parseBrlMoney(batch?.sewingCost as any));
+  const [cuttingCost, setCuttingCost] = useState(parseBrlMoney(batch?.cuttingCost as string | number));
+  const [sewingCost, setSewingCost] = useState(parseBrlMoney(batch?.sewingCost as string | number));
   const [overheadPercent, setOverheadPercent] = useState(batch?.overheadPercent ?? 0);
   const [targetMarginPercent, setTargetMarginPercent] = useState(batch?.targetMarginPercent ?? 60);
   const [notes, setNotes] = useState(batch?.notes ?? "");
@@ -101,12 +101,12 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
         if (prev.inputs?.length) {
           setInputs(prev.inputs.map(i => ({
             ...i,
-            unitPrice: parseBrlMoney(i.unitPrice as any),
-            totalCost: parseBrlMoney(i.totalCost as any)
+            unitPrice: parseBrlMoney(i.unitPrice as string | number),
+            totalCost: parseBrlMoney(i.totalCost as string | number)
           })));
         }
-        setCuttingCost(parseBrlMoney(prev.cuttingCost as any));
-        setSewingCost(parseBrlMoney(prev.sewingCost as any));
+        setCuttingCost(parseBrlMoney(prev.cuttingCost as string | number));
+        setSewingCost(parseBrlMoney(prev.sewingCost as string | number));
         setOverheadPercent(prev.overheadPercent || 0);
         setTargetMarginPercent(prev.targetMarginPercent || 60);
         if (prev.imageUrl && !imageUrl) setImageUrl(prev.imageUrl);
