@@ -95,7 +95,8 @@ export async function parseInfinitePayPdf(file: File): Promise<InfinitepayReport
     if (currentTx) txs.push(currentTx);
   }
 
-  const transactions = txs.map(t => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const transactions = txs.map((t: any) => {
     let type: TransactionType = 'other';
     const rawType = t.typeRaw.trim().toLowerCase();
     const rawDetail = t.detail.trim().toLowerCase();
