@@ -1,11 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { publicHttp } from "@/lib/publicHttp";
-import { resolvePrimaryImageUrl, resolveProductImageUrls } from "@/lib/productImageUrl";
+import { resolveProductImageUrls } from "@/lib/productImageUrl";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { lmfitTokens } from "@/theme/tokens";
 import { VariantGrid } from "@/components/organisms/VariantGrid";
