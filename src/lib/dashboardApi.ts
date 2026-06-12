@@ -18,7 +18,9 @@ export type SalesAndPurchasesDailyResponse = {
   points: Array<{
     date: string;
     purchaseCount: number;
-    totalAmount?: number;
+    totalPurchases: number;
+    orderCount: number;
+    totalSales: number;
   }>;
 };
 
