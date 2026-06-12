@@ -210,21 +210,6 @@ export function ProductVariantsEditor({
               <th className="px-2 py-2 font-medium whitespace-nowrap" style={{ color: lmfitTokens.accentBlue }}>
                 <div className="flex items-center gap-1.5">
                   <span>SKU</span>
-                  <button
-                    type="button"
-                    title="Sugerir SKUs automaticamente para todas as variações vazias"
-                    className="text-[10px] font-sans px-1.5 py-0.5 rounded border transition-all font-semibold cursor-pointer animate-pulse hover:opacity-80"
-                    style={{ color: lmfitTokens.primary, borderColor: lmfitTokens.primary, backgroundColor: 'transparent' }}
-                    onClick={() => {
-                      const next = drafts.map(x => ({
-                        ...x,
-                        sku: x.sku.trim() || generateSkuSuggestion(productName, x.color, x.size)
-                      }));
-                      pushDrafts(next);
-                    }}
-                  >
-                    ✨ Sugerir
-                  </button>
                 </div>
               </th>
               <th className="px-2 py-2 font-medium whitespace-nowrap" style={{ color: lmfitTokens.accentBlue }}>
