@@ -539,7 +539,7 @@ export function FinancialClient() {
       setSummary(sumData);
       setEntries(entData.items ?? []);
       setBatches(batData ?? []);
-      setSuppliers((supData as any).items ?? supData ?? []);
+      setSuppliers((supData as { items?: Array<{ _id: string; name: string }> }).items ?? supData ?? []);
     } catch {
       // ignore — no data yet
     } finally {
