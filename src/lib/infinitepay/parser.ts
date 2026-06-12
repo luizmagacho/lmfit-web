@@ -108,7 +108,13 @@ export async function parseInfinitePayPdf(file: File): Promise<InfinitepayReport
     }
 
     const cleanedAmount = t.amountRaw.replace(/[^\d.,+-]/g, '').replace(/\./g, '').replace(',', '.');
-    const amount = parseFloat(cleanedAmount);
+    let amount = parseFloat(cleanedAmount);
+
+    if (type === 'deposit_sales' || type === 'pix_received') {
+      amount = Math.abs(amount);
+    } else if (type === 'pix_sent') {
+      amount = -Math.abs(amount);
+    }
 
     let name = t.name.trim();
     if (name.toLowerCase().startsWith('pix ')) {
