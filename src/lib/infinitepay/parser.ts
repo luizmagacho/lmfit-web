@@ -2,7 +2,7 @@
  * InfinitePay PDF parser — client-side only (uses pdfjs-dist).
  * Parses the "Relatório de movimentações" format.
  */
-import type { InfinitepayReport, ParsedTransaction, TransactionType } from './types';
+import type { InfinitepayReport, TransactionType } from './types';
 
 // Lazy-load pdfjs to avoid SSR issues
 async function getPdfjs() {
@@ -16,6 +16,7 @@ export async function parseInfinitePayPdf(file: File): Promise<InfinitepayReport
   const pdfjs = await getPdfjs();
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const txs: any[] = [];
   
   let periodFrom: string | undefined;
@@ -26,7 +27,6 @@ export async function parseInfinitePayPdf(file: File): Promise<InfinitepayReport
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items = content.items as Array<{ str: string; transform: number[] }>;
     
     // Check metadata from first page

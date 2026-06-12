@@ -1,12 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Badge } from "@/components/atoms/Badge";
 import { PriceTag } from "@/components/atoms/PriceTag";
-import { resolvePrimaryImageUrl, resolveProductImageUrls } from "@/lib/productImageUrl";
+import { resolveProductImageUrls } from "@/lib/productImageUrl";
 import { documentId } from "@/lib/normalizeApiList";
 import { inferModeForUser, type CustomerRole } from "@/lib/pricing";
 import { useCatalogStore } from "@/stores/useCatalogStore";
