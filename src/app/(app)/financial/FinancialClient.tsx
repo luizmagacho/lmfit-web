@@ -319,18 +319,10 @@ function PreviewModal({
           <button
             onClick={() => onConfirm(false, selectedTxs)}
             disabled={loading || selected.size === 0}
-            className="px-4 py-2 rounded-lg text-sm font-medium border disabled:opacity-50"
-            style={{ borderColor: lmfitTokens.primary, color: lmfitTokens.primary }}
-          >
-            {loading ? (lang === "en" ? "Importing…" : "Importando…") : (lang === "en" ? "Import" : "Importar")}
-          </button>
-          <button
-            onClick={() => onConfirm(true, selectedTxs)}
-            disabled={loading || selected.size === 0}
             className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
             style={{ backgroundColor: lmfitTokens.primary }}
           >
-            {loading ? (lang === "en" ? "Importing…" : "Importando…") : (lang === "en" ? "✨ Import + AI Analysis" : "✨ Importar + Análise com IA")}
+            {loading ? (lang === "en" ? "Importing…" : "Importando…") : (lang === "en" ? "Import" : "Importar")}
           </button>
         </div>
       </div>
@@ -916,14 +908,7 @@ export function FinancialClient() {
                   <span style={{ color: "#991b1b" }}>-{formatBRL(b.totalOut)}</span>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => void handleAnalyzeBatch(b._id)}
-                    disabled={analyzingBatch === b._id}
-                    className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors"
-                    style={{ borderColor: lmfitTokens.primary, color: lmfitTokens.primary }}
-                  >
-                    {analyzingBatch === b._id ? "Analyzing…" : "✨ AI Analyze"}
-                  </button>
+
                   <button
                     onClick={() => void handleDeleteBatch(b._id)}
                     className="text-xs px-3 py-1.5 rounded-lg border font-medium"

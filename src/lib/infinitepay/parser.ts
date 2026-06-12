@@ -16,8 +16,7 @@ export async function parseInfinitePayPdf(file: File): Promise<InfinitepayReport
   const pdfjs = await getPdfjs();
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-
-  const txs: ParsedTransaction[] = [];
+  const txs: any[] = [];
   
   let periodFrom: string | undefined;
   let periodTo: string | undefined;
