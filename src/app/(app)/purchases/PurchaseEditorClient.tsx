@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Link from "next/link";
@@ -13,8 +14,10 @@ import {
 } from "@/lib/normalizeApiList";
 import { normalizePurchaseLines } from "@/lib/purchases/normalizeLines";
 import { createPurchase, getPurchase, updatePurchase } from "@/lib/purchases/purchasesApi";
-import type { PurchaseLineInput } from "@/lib/purchases/types";
+
 import { lmfitTokens } from "@/theme/tokens";
+import AsyncCreatableSelect from "react-select/async-creatable";
+import AsyncSelect from "react-select/async";
 
 type SupplierRow = { _id: string; name?: string };
 type VariantOpt = { id: string; label: string; sku: string };
@@ -24,14 +27,35 @@ type LocalLine = {
   itemType: 'variant' | 'material';
   variantId: string;
   materialId: string;
+  rawName: string;
   unitPrice: string;
   quantityOrdered: string;
   quantityReceived: string;
 };
 type MaterialOpt = { id: string; name: string; unit: string };
 
+
+function floatToBRL(value: number | string | null | undefined) {
+  if (value == null || value === "") return "";
+  const num = Number(value);
+  if (isNaN(num)) return "";
+  return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function maskBRL(value: string) {
+  const digits = String(value).replace(/\D/g, "");
+  if (!digits) return "";
+  const amount = parseInt(digits, 10) / 100;
+  return amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function parseBRL(value: string) {
+  const digits = String(value).replace(/\D/g, "");
+  if (!digits) return 0;
+  return parseInt(digits, 10) / 100;
+}
 function emptyLine(key: string): LocalLine {
-  return { key, itemType: 'variant', variantId: "", materialId: "", unitPrice: "0", quantityOrdered: "1", quantityReceived: "" };
+  return { key, itemType: 'variant', variantId: "", materialId: "", rawName: "", unitPrice: floatToBRL(0), quantityOrdered: "1", quantityReceived: "" };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,7 +66,8 @@ function linesToLocal(lines: any[], nextKey: () => string): LocalLine[] {
     itemType: l.materialId ? 'material' : 'variant',
     variantId: l.variantId ? String(l.variantId) : "",
     materialId: l.materialId ? String(l.materialId) : "",
-    unitPrice: l.unitPrice != null ? String(l.unitPrice) : "0",
+    rawName: l.rawName ? String(l.rawName) : "",
+    unitPrice: l.unitPrice != null ? floatToBRL(l.unitPrice) : floatToBRL(0),
     quantityOrdered: String(l.quantityOrdered),
     quantityReceived:
       l.quantityReceived != null && Number.isFinite(l.quantityReceived) ? String(l.quantityReceived) : "",
@@ -54,11 +79,11 @@ function parseLinesPayload(rows: LocalLine[]): any[] {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const out: any[] = [];
   for (const r of rows) {
-    if (r.itemType === 'variant' && !r.variantId.trim()) continue;
-    if (r.itemType === 'material' && !r.materialId.trim()) continue;
+    if (r.itemType === 'variant' && !r.variantId.trim() && !r.rawName.trim()) continue;
+    if (r.itemType === 'material' && !r.materialId.trim() && !r.rawName.trim()) continue;
     
     const quantityOrdered = Number(String(r.quantityOrdered).replace(",", "."));
-    const unitPrice = Number(String(r.unitPrice).replace(",", "."));
+    const unitPrice = parseBRL(r.unitPrice);
     const qrRaw = r.quantityReceived.trim();
     const quantityReceived = qrRaw === "" ? undefined : Number(qrRaw.replace(",", "."));
     
@@ -69,9 +94,11 @@ function parseLinesPayload(rows: LocalLine[]): any[] {
       quantityReceived: quantityReceived !== undefined && Number.isFinite(quantityReceived) ? quantityReceived : undefined,
     };
     if (r.itemType === 'variant') {
-      line.variantId = r.variantId.trim();
+      if (r.variantId) line.variantId = r.variantId.trim();
+      else line.rawName = r.rawName.trim();
     } else {
-      line.materialId = r.materialId.trim();
+      if (r.materialId) line.materialId = r.materialId.trim();
+      else line.rawName = r.rawName.trim();
     }
     out.push(line);
   }
@@ -85,12 +112,8 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
 
   const [loading, setLoading] = useState(Boolean(purchaseId));
   const [loadErr, setLoadErr] = useState<string | null>(null);
-  const [suppliers, setSuppliers] = useState<SupplierRow[]>([]);
-  const [variantOpts, setVariantOpts] = useState<VariantOpt[]>([]);
-  const [materialOpts, setMaterialOpts] = useState<MaterialOpt[]>([]);
-  const [variantFilter, setVariantFilter] = useState("");
-
-  const [supplierId, setSupplierId] = useState("");
+  const [supplierOpt, setSupplierOpt] = useState<{value: string, label: string} | null>(null);
+  const supplierId = supplierOpt?.value || "";
   const [status, setStatus] = useState("pending");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
@@ -106,63 +129,94 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const filteredVariants = useMemo(() => {
-    const q = variantFilter.trim().toLowerCase();
-    if (!q) return variantOpts;
-    return variantOpts.filter((v) => v.label.toLowerCase().includes(q) || v.sku.toLowerCase().includes(q));
-  }, [variantOpts, variantFilter]);
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState("");
+  const [newSupplierTaxId, setNewSupplierTaxId] = useState("");
+  const [newSupplierPhone, setNewSupplierPhone] = useState("");
+  const [savingSupplier, setSavingSupplier] = useState(false);
 
-  const filteredMaterials = useMemo(() => {
-    const q = variantFilter.trim().toLowerCase();
-    if (!q) return materialOpts;
-    return materialOpts.filter((m) => m.name.toLowerCase().includes(q));
-  }, [materialOpts, variantFilter]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const selectStyles = {
+    control: (base: any) => ({
+      ...base,
+      minHeight: '2.75rem',
+      borderRadius: '0.375rem',
+      borderColor: lmfitTokens.border,
+      backgroundColor: 'var(--card-bg)',
+      color: lmfitTokens.text,
+    }),
+    singleValue: (base: any) => ({ ...base, color: lmfitTokens.text }),
+    input: (base: any) => ({ ...base, color: lmfitTokens.text }),
+    menu: (base: any) => ({ ...base, zIndex: 50, backgroundColor: 'var(--card-bg)' }),
+    option: (base: any, state: { isFocused: boolean }) => ({
+      ...base,
+      backgroundColor: state.isFocused ? lmfitTokens.accentBlue + '20' : 'transparent',
+      color: lmfitTokens.text,
+      cursor: 'pointer'
+    }),
+  };
 
-  const loadMaterials = useCallback(async () => {
+  async function handleAddSupplier(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newSupplierName.trim()) return;
+    setSavingSupplier(true);
     try {
-      const { data } = await http.get<unknown>("/materials", { params: { page: 1, limit: 500 } });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const items = extractListItems(data) as any[];
-      setMaterialOpts(items.map((m) => ({ id: m._id, name: m.name, unit: m.unit })));
+      const res = await http.post("/suppliers", {
+        name: newSupplierName.trim(),
+        taxId: newSupplierTaxId.trim() || undefined,
+        phone: newSupplierPhone.trim() || undefined,
+      });
+      const newSup = { value: String(res.data._id), label: res.data.name };
+      setSupplierOpt(newSup);
+      setShowSupplierModal(false);
+      setNewSupplierName("");
+      setNewSupplierTaxId("");
+      setNewSupplierPhone("");
     } catch {
-      setMaterialOpts([]);
+      alert("Erro ao criar fornecedor.");
+    } finally {
+      setSavingSupplier(false);
     }
-  }, []);
+  }
 
-  const loadCatalog = useCallback(async () => {
+
+  const loadSupplierOptions = async (inputValue: string) => {
     try {
-      const { data } = await http.get<unknown>("/products", { params: { page: 1, limit: 200 } });
+      const { data } = await http.get<unknown>("/suppliers", { params: { page: 1, limit: 50, search: inputValue } });
+      const items = extractListItems(data);
+      return items
+        .filter((row): row is Record<string, unknown> => row != null && typeof row === "object")
+        .map((row) => ({
+          value: String(documentId(row)),
+          label: row.name != null ? String(row.name) : String(documentId(row)),
+        }))
+        .filter((s) => s.value !== "undefined");
+    } catch {
+      return [];
+    }
+  };
+
+  const loadVariantOptions = async (inputValue: string) => {
+    try {
+      const { data } = await http.get<unknown>("/products", { params: { page: 1, limit: 50, search: inputValue } });
       const items = extractListItems(data);
       const rows = collectVariantOptionsFromProducts(items);
-      setVariantOpts(rows.map((r) => ({ id: r.id, sku: r.sku, label: r.label })));
+      return rows.map((r) => ({ value: r.id, label: r.label }));
     } catch {
-      setVariantOpts([]);
+      return [];
     }
-  }, []);
+  };
 
-  const loadSuppliers = useCallback(async () => {
+  const loadMaterialOptions = async (inputValue: string) => {
     try {
-      const { data } = await http.get<unknown>("/suppliers", { params: { page: 1, limit: 500 } });
-      const items = extractListItems(data);
-      setSuppliers(
-        items
-          .filter((row): row is Record<string, unknown> => row != null && typeof row === "object")
-          .map((row) => ({
-            _id: documentId(row),
-            name: row.name != null ? String(row.name) : undefined,
-          }))
-          .filter((s) => s._id),
-      );
+      const { data } = await http.get<unknown>("/materials", { params: { page: 1, limit: 50, search: inputValue } });
+      const items = extractListItems(data) as any[];
+      return items.map((m) => ({ value: m._id, label: `${m.name} (${m.unit || 'un'})` }));
     } catch {
-      setSuppliers([]);
+      return [];
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    void loadCatalog();
-    void loadSuppliers();
-    void loadMaterials();
-  }, [loadCatalog, loadSuppliers, loadMaterials]);
 
   useEffect(() => {
     if (!purchaseId) {
@@ -173,7 +227,8 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
             itemType: 'variant',
             variantId: presetVariantId,
             materialId: "",
-            unitPrice: "0",
+            rawName: "",
+            unitPrice: floatToBRL(0),
             quantityOrdered: "1",
             quantityReceived: "",
           },
@@ -189,7 +244,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
       try {
         const p = await getPurchase(purchaseId);
         if (cancelled) return;
-        setSupplierId(p.supplierId ? String(p.supplierId) : "");
+        setSupplierOpt(p.supplierId ? { value: String(documentId(p.supplierId)), label: (p.supplierId as any).name ? String((p.supplierId as any).name) : String(documentId(p.supplierId)) } : null);
         setStatus(p.status ? String(p.status) : "pending");
         setReference(p.reference != null ? String(p.reference) : "");
         setNotes(p.notes != null ? String(p.notes) : "");
@@ -247,7 +302,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
       });
       setSuccessMsg("Compra atualizada.");
     } catch (e) {
-      setSaveErr(isAxiosError(e) ? axiosErrorMessage(e) : "Não foi possível salvar.");
+      setSaveErr(isAxiosError(e) ? JSON.stringify((e as any).response?.data || e.message) : "Não foi possível salvar.");
     } finally {
       setSaving(false);
     }
@@ -270,7 +325,8 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
   }
 
   return (
-    <form onSubmit={(ev) => void onSubmit(ev)} className="space-y-4 max-w-4xl">
+    <>
+      <form onSubmit={(ev) => void onSubmit(ev)} className="space-y-4 max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight" style={{ color: lmfitTokens.text }}>
           {purchaseId ? "Editar compra" : "Nova compra ao fornecedor"}
@@ -302,31 +358,43 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block text-sm space-y-1">
           <span style={{ color: lmfitTokens.textMuted }}>Fornecedor *</span>
-          <select
-            required
-            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
-            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-            value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
-          >
-            <option value="">Selecione…</option>
-            {suppliers.map((s) => (
-              <option key={s._id} value={s._id}>
-                {s.name?.trim() ? `${s.name} (${s._id})` : s._id}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <AsyncSelect
+                cacheOptions
+                          
+                defaultOptions
+                loadOptions={loadSupplierOptions}
+                styles={selectStyles}
+                placeholder="Selecione o fornecedor..."
+                value={supplierOpt}
+                onChange={(opt: any) => setSupplierOpt(opt)}
+              />
+            </div>
+            <button
+              type="button"
+              className="min-h-11 px-3 border rounded-md text-sm whitespace-nowrap"
+              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.primary }}
+              onClick={() => setShowSupplierModal(true)}
+            >
+              + Novo
+            </button>
+          </div>
         </label>
 
         <label className="block text-sm space-y-1">
           <span style={{ color: lmfitTokens.textMuted }}>Status</span>
-          <input
+          <select
             className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            placeholder="pending"
-          />
+          >
+            <option value="pending">Pendente</option>
+            <option value="started">Iniciado</option>
+            <option value="completed">Finalizado</option>
+            <option value="cancelled">Cancelado</option>
+          </select>
         </label>
 
         <label className="block text-sm space-y-1">
@@ -355,14 +423,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
           <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
             Linhas
           </h2>
-          <input
-            type="search"
-            className="text-sm min-h-9 max-w-xs border rounded-md px-2 py-1 flex-1"
-            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-            placeholder="Filtrar variantes…"
-            value={variantFilter}
-            onChange={(e) => setVariantFilter(e.target.value)}
-          />
+
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm text-left">
@@ -398,41 +459,64 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                   </td>
                   <td className="py-2 pr-2">
                     {row.itemType === 'variant' ? (
-                      <select
-                        className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-[var(--card-bg)]"
-                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-                        value={row.variantId}
-                        onChange={(e) =>
-                          setLines((prev) =>
-                            prev.map((l) => (l.key === row.key ? { ...l, variantId: e.target.value } : l)),
-                          )
-                        }
-                      >
-                        <option value="">Selecione a peça…</option>
-                        {filteredVariants.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.label}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="w-full min-w-[14rem]">
+                        <AsyncCreatableSelect
+                          isClearable
+                          cacheOptions
+                          createOptionPosition="first"
+                          defaultOptions
+                          loadOptions={loadVariantOptions}
+                          styles={selectStyles}
+                          placeholder="Selecione a peça…"
+                          formatCreateLabel={(val) => `Criar "${val}"`}
+                          value={row.variantId ? { value: row.variantId, label: row.variantId } : row.rawName ? { value: row.rawName, label: row.rawName } : null}
+                          onChange={(opt: any) => {
+                            if (!opt) {
+                              setLines(prev => prev.map(l => l.key === row.key ? { ...l, variantId: "", rawName: "" } : l));
+                            } else if (opt.__isNew__) {
+                              setLines(prev => prev.map(l => l.key === row.key ? { ...l, variantId: "", rawName: opt.value } : l));
+                            } else {
+                              // We just store the ID in lines. To show label on re-render properly, we could cache it, but react-select keeps it if we don't unmount, and AsyncCreatable updates it.
+                              setLines(prev => prev.map(l => l.key === row.key ? { ...l, variantId: opt.value, rawName: "" } : l));
+                            }
+                          }}
+                          onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                            const val = e.target.value;
+                            if (val && !row.variantId && row.rawName !== val) {
+                              setLines(prev => prev.map(l => l.key === row.key ? { ...l, variantId: "", rawName: val } : l));
+                            }
+                          }}
+                        />
+                      </div>
                     ) : (
-                      <select
-                        className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-[var(--card-bg)]"
-                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-                        value={row.materialId}
-                        onChange={(e) =>
-                          setLines((prev) =>
-                            prev.map((l) => (l.key === row.key ? { ...l, materialId: e.target.value } : l)),
-                          )
-                        }
-                      >
-                        <option value="">Selecione o insumo…</option>
-                        {filteredMaterials.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name} ({m.unit || 'un'})
-                          </option>
-                        ))}
-                      </select>
+                      <div className="w-full min-w-[14rem]">
+                        <AsyncCreatableSelect
+                          isClearable
+                          cacheOptions
+                          createOptionPosition="first"
+                          defaultOptions
+                          loadOptions={loadMaterialOptions}
+                          styles={selectStyles}
+                          placeholder="Selecione o insumo…"
+                          formatCreateLabel={(val) => `Criar "${val}"`}
+                          value={row.materialId ? { value: row.materialId, label: row.materialId } : row.rawName ? { value: row.rawName, label: row.rawName } : null}
+                          onChange={(opt: any) => {
+                            if (!opt) {
+                              setLines(prev => prev.map(l => l.key === row.key ? { ...l, materialId: "", rawName: "" } : l));
+                            } else if (opt.__isNew__) {
+                              setLines(prev => prev.map(l => l.key === row.key ? { ...l, materialId: "", rawName: opt.value } : l));
+                            } else {
+                              setLines(prev => prev.map(l => l.key === row.key ? { ...l, materialId: opt.value, rawName: "" } : l));
+                            }
+                          }}
+                          onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                            const val = e.target.value;
+                            if (val && !row.materialId && row.rawName !== val) {
+                              setLines(prev => prev.map(l => l.key === row.key ? { ...l, materialId: "", rawName: val } : l));
+                            }
+                          }}
+                        />
+                      </div>
                     )}
                   </td>
                   <td className="py-2 pr-2">
@@ -443,7 +527,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                       value={row.unitPrice}
                       onChange={(e) =>
                         setLines((prev) =>
-                          prev.map((l) => (l.key === row.key ? { ...l, unitPrice: e.target.value } : l)),
+                          prev.map((l) => (l.key === row.key ? { ...l, unitPrice: maskBRL(e.target.value) } : l)),
                         )
                       }
                       placeholder="0.00"
@@ -512,5 +596,32 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
         {saving ? "Salvando…" : "Salvar"}
       </button>
     </form>
+
+    {showSupplierModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-xl shadow-lg p-5 w-full max-w-sm" style={{ color: lmfitTokens.text }}>
+            <h3 className="text-lg font-medium mb-4">Novo fornecedor</h3>
+            <div className="space-y-3">
+              <label className="block text-sm">
+                Nome *
+                <input required className="w-full border rounded-md mt-1 px-3 py-2" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} />
+              </label>
+              <label className="block text-sm">
+                CNPJ
+                <input className="w-full border rounded-md mt-1 px-3 py-2" value={newSupplierTaxId} onChange={e => setNewSupplierTaxId(e.target.value)} />
+              </label>
+              <label className="block text-sm">
+                Telefone
+                <input className="w-full border rounded-md mt-1 px-3 py-2" value={newSupplierPhone} onChange={e => setNewSupplierPhone(e.target.value)} />
+              </label>
+              <div className="flex gap-2 pt-2">
+                <button type="button" className="flex-1 border rounded-md py-2" onClick={() => setShowSupplierModal(false)}>Cancelar</button>
+                <button type="button" className="flex-1 rounded-md py-2 text-white" style={{ background: lmfitTokens.primary }} disabled={savingSupplier || !newSupplierName.trim()} onClick={handleAddSupplier}>{savingSupplier ? "Salvando..." : "Salvar"}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
