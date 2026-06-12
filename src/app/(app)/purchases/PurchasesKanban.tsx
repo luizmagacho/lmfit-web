@@ -7,23 +7,19 @@ import { formatBRL } from "@/lib/formatMoney";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 
-const DEFAULT_STATUSES = ["interest", "order_reserved", "in_transit", "received", "cancelled"];
+const DEFAULT_STATUSES = ["pending", "started", "completed", "cancelled"];
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "#64748b",        // Slate
-  interest: "#6366f1",       // Indigo
-  order_reserved: "#f59e0b", // Amber
-  in_transit: "#3b82f6",     // Blue
-  received: "#10b981",       // Emerald
+  started: "#f59e0b",
+  completed: "#10b981",
   cancelled: "#ef4444",      // Red
 };
 
 const STATUS_LABELS: Record<string, Record<string, string>> = {
   pending: { "pt-BR": "Pendente", en: "Pending" },
-  interest: { "pt-BR": "Interesse", en: "Interest" },
-  order_reserved: { "pt-BR": "Reserva de Pedido", en: "Order Reserved" },
-  in_transit: { "pt-BR": "Em Trânsito", en: "In Transit" },
-  received: { "pt-BR": "Recebido", en: "Received" },
+  started: { "pt-BR": "Iniciado", en: "Started" },
+  completed: { "pt-BR": "Finalizado", en: "Completed" },
   cancelled: { "pt-BR": "Cancelado", en: "Cancelled" },
 };
 

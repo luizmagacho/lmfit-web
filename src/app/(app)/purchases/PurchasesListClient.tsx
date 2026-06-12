@@ -109,10 +109,8 @@ export function PurchasesListClient() {
     if (!st) return "—";
     const map: Record<string, { pt: string; en: string }> = {
       pending: { pt: "Pendente", en: "Pending" },
-      interest: { pt: "Interesse", en: "Interest" },
-      order_reserved: { pt: "Reserva de Pedido", en: "Order Reserved" },
-      in_transit: { pt: "Em Trânsito", en: "In Transit" },
-      received: { pt: "Recebido", en: "Received" },
+      started: { pt: "Iniciado", en: "Started" },
+      completed: { pt: "Finalizado", en: "Completed" },
       cancelled: { pt: "Cancelado", en: "Cancelled" },
     };
     return map[st] ? (language === "en" ? map[st].en : map[st].pt) : st;
