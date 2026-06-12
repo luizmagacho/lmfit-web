@@ -13,7 +13,7 @@ export type ReportSummary = {
 };
 
 /** Compras registradas por dia (ex.: Bling / Shopify style). */
-export type PurchasesDailyResponse = {
+export type SalesAndPurchasesDailyResponse = {
   range: { from: string; to: string };
   points: Array<{
     date: string;
@@ -71,12 +71,12 @@ export async function fetchReportSummary(from: string, to: string): Promise<Repo
   }
 }
 
-export async function fetchPurchasesDaily(
+export async function fetchSalesAndPurchasesDaily(
   from: string,
   to: string,
-): Promise<PurchasesDailyResponse | null> {
+): Promise<SalesAndPurchasesDailyResponse | null> {
   try {
-    const { data } = await http.get<PurchasesDailyResponse>("/reports/purchases-daily", {
+    const { data } = await http.get<SalesAndPurchasesDailyResponse>("/reports/sales-and-purchases-daily", {
       params: { from, to },
     });
     return data;
