@@ -40,6 +40,7 @@ const navKeys = [
   { href: "/crm/segments", key: "nav.segments", icon: UserCheck },
   { href: "/suppliers", key: "nav.suppliers", icon: Truck },
   { href: "/products", key: "nav.products", icon: Package },
+  { href: "/materials", key: "nav.materials", icon: Layers },
   { href: "/orders", key: "nav.orders", icon: ShoppingCart },
   { href: "/purchases", key: "nav.purchases", icon: CreditCard },
   { href: "/production", key: "nav.production", icon: Scissors },
@@ -76,7 +77,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Sidebar: drawer on small screens */}
         <aside
           className={[
-            "z-50 shrink-0 border-[var(--lmfit-border)] bg-[var(--card-bg)] md:static md:flex md:w-56 md:flex-col md:border-r",
+            "z-50 shrink-0 border-[var(--lmfit-border)] bg-[var(--card-bg)] md:sticky md:top-0 md:h-screen md:flex md:w-56 md:flex-col md:border-r",
             menuOpen
               ? "fixed inset-y-0 left-0 flex w-[min(18rem,88vw)] flex-col border-r shadow-lg md:shadow-none"
               : "hidden md:flex",

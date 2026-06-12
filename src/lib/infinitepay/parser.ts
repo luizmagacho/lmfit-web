@@ -12,138 +12,121 @@ async function getPdfjs() {
   return pdfjs;
 }
 
-function parseBrlAmount(str: string): number {
-  // "1.234,56" → 1234.56 | "-1.234,56" → -1234.56
-  const cleaned = str.replace(/\./g, '').replace(',', '.');
-  return parseFloat(cleaned);
-}
-
-function classifyType(transactionType: string, detail: string): TransactionType {
-  const t = transactionType.toLowerCase();
-  const d = detail.toLowerCase();
-  if (t.includes('depósito de vendas') || t.includes('deposito de vendas') || d.includes('depósito infinitepay') || d.includes('deposito infinitepay')) {
-    return 'deposit_sales';
-  }
-  if (t.includes('pix')) {
-    if (d.includes('recebido')) return 'pix_received';
-    if (d.includes('enviado')) return 'pix_sent';
-  }
-  return 'other';
-}
-
-/**
- * Parse the Brazilian date format found in InfinitePay reports.
- * Handles: "01 Jan, 2026", "25 Abr, 2026", etc.
- */
-function parsePtBrDate(dateStr: string): string | null {
-  const months: Record<string, string> = {
-    jan: '01', fev: '02', mar: '03', abr: '04', mai: '05', jun: '06',
-    jul: '07', ago: '08', set: '09', out: '10', nov: '11', dez: '12',
-  };
-  const m = dateStr.trim().match(/(\d{1,2})\s+(\w+),?\s+(\d{4})/i);
-  if (!m) return null;
-  const [, day, mon, year] = m;
-  const monthNum = months[mon.toLowerCase().substring(0, 3)];
-  if (!monthNum) return null;
-  return `${year}-${monthNum}-${day.padStart(2, '0')}`;
-}
-
 export async function parseInfinitePayPdf(file: File): Promise<InfinitepayReport> {
   const pdfjs = await getPdfjs();
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
 
-  const allLines: string[] = [];
-
-  for (let p = 1; p <= pdf.numPages; p++) {
-    const page = await pdf.getPage(p);
-    const content = await page.getTextContent();
-    const items = content.items as Array<{ str: string }>;
-    const text = items.map((i) => i.str).join('\n');
-    allLines.push(...text.split('\n').map((l) => l.trim()).filter(Boolean));
-  }
-
-  // --- Extract metadata ---
+  const txs: ParsedTransaction[] = [];
+  
   let periodFrom: string | undefined;
   let periodTo: string | undefined;
   let cnpj: string | undefined;
   let companyName: string | undefined;
 
-  // Period line: "31 Jan, 2026 - 30 Abr, 2026"
-  const periodLineIdx = allLines.findIndex((l) => /\d{1,2}\s+\w+,\s+\d{4}\s*-\s*\d{1,2}\s+\w+,\s+\d{4}/i.test(l));
-  if (periodLineIdx >= 0) {
-    const parts = allLines[periodLineIdx].split('-').map((s) => s.trim());
-    if (parts.length >= 2) {
-      periodFrom = parsePtBrDate(parts[0]) ?? undefined;
-      periodTo = parsePtBrDate(parts[1]) ?? undefined;
-    }
-  }
-
-  // CNPJ line
-  const cnpjLine = allLines.find((l) => /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/.test(l));
-  if (cnpjLine) {
-    const cnpjMatch = cnpjLine.match(/(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/);
-    cnpj = cnpjMatch?.[1];
-    // Company name is usually before the CNPJ on the same line
-    companyName = cnpjLine.split('-')[0].replace(cnpj ?? '', '').trim() || undefined;
-  }
-
-  // --- Parse transactions ---
-  // The report groups transactions by date (like "16 Abr, 2026" as a section header),
-  // then each entry has: Hour | TipoTransação | Nome | Detalhe | Valor
-  const transactions: ParsedTransaction[] = [];
-
-  let currentDate: string | null = null;
-  const timeRegex = /^\d{2}:\d{2}$/;
-  const amountRegex = /^[+-]?(?:r\$)?\s*[\d.,]+$/i;
-  const dateHeaderRegex = /^\d{1,2}\s+\w+,\s+\d{4}$/i;
-
-  // Build a cursor-based state machine over the flat line list
-  let i = 0;
-  while (i < allLines.length) {
-    const line = allLines[i];
-
-    // Detect date section header (e.g. "16 Abr, 2026")
-    if (dateHeaderRegex.test(line)) {
-      const parsed = parsePtBrDate(line);
-      if (parsed) currentDate = parsed;
-      i++;
-      continue;
-    }
-
-    // Detect transaction: starts with a time (HH:MM)
-    if (timeRegex.test(line) && currentDate) {
-      const hour = line;
-      const typeStr = allLines[i + 1] ?? '';
-      const nameStr = allLines[i + 2] ?? '';
-      const detailStr = allLines[i + 3] ?? '';
-      const rawAmount = allLines[i + 4] ?? '';
-
-      // Validate amount field
-      const cleanRawAmount = rawAmount.replace(/\s/g, '').toLowerCase().replace('r$', '');
-      if (amountRegex.test(cleanRawAmount)) {
-        const amount = parseBrlAmount(cleanRawAmount);
-        const type = classifyType(typeStr, detailStr);
-
-        transactions.push({
-          date: currentDate,
-          hour,
-          type,
-          name: nameStr.trim() || undefined,
-          detail: detailStr.trim() || undefined,
-          amount,
-        });
-        i += 5;
-        continue;
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items = content.items as Array<{ str: string; transform: number[] }>;
+    
+    // Check metadata from first page
+    if (p === 1) {
+      const allText = items.map(i => i.str).join(' ');
+      const periodMatch = allText.match(/([a-zA-Z]{3})\s+(\d{1,2}),?\s+(\d{4})\s*-\s*([a-zA-Z]{3})\s+(\d{1,2}),?\s+(\d{4})/i);
+      if (periodMatch) {
+         // rough match, ignore for now as it's not strictly required
       }
+      const cnpjMatch = allText.match(/(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/);
+      if (cnpjMatch) cnpj = cnpjMatch[1];
     }
 
-    i++;
+    const dates: Array<{y: number, date: string}> = [];
+    const months: Record<string, string> = { jan:'01', feb:'02', mar:'03', apr:'04', may:'05', jun:'06', jul:'07', aug:'08', sep:'09', oct:'10', nov:'11', dec:'12' };
+    
+    items.forEach(i => {
+      const str = i.str.trim();
+      const m = str.match(/^([a-zA-Z]{3})\s+(\d{1,2}),?\s+(\d{4})$/i);
+      if (m) {
+        const month = months[m[1].toLowerCase()];
+        if (month) {
+          dates.push({ y: i.transform[5], date: `${m[3]}-${month}-${m[2].padStart(2, '0')}` });
+        }
+      }
+    });
+
+    items.sort((a, b) => {
+      if (Math.abs(b.transform[5] - a.transform[5]) > 2) {
+        return b.transform[5] - a.transform[5];
+      }
+      return a.transform[4] - b.transform[4];
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let currentTx: any = null;
+    let currentDate: string | null = null;
+
+    items.forEach(i => {
+      const str = i.str.trim();
+      if (!str) return;
+      const y = i.transform[5];
+      const x = i.transform[4];
+
+      const matchingDate = dates.find(d => Math.abs(d.y - y) < 15);
+      if (matchingDate) currentDate = matchingDate.date;
+
+      if (/^\d{1,2}:\d{2}\s*(AM|PM)?$/i.test(str)) {
+        if (currentTx) txs.push(currentTx);
+        currentTx = {
+          date: currentDate,
+          hour: str,
+          typeRaw: '',
+          name: '',
+          detail: '',
+          amountRaw: '',
+          yTop: y
+        };
+      } else if (currentTx && Math.abs(currentTx.yTop - y) < 25) {
+        if (x > 140 && x < 250) currentTx.typeRaw += ' ' + str;
+        else if (x >= 250 && x < 500) currentTx.name += ' ' + str;
+        else if (x >= 500 && x < 700) currentTx.detail += ' ' + str;
+        else if (x >= 700) currentTx.amountRaw += str;
+      }
+    });
+    if (currentTx) txs.push(currentTx);
   }
 
-  // Compute summary
-  const totalIn = transactions.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const totalOut = transactions.filter((t) => t.amount < 0).reduce((s, t) => s + t.amount, 0);
+  const transactions = txs.map(t => {
+    let type: TransactionType = 'other';
+    const rawType = t.typeRaw.trim().toLowerCase();
+    const rawDetail = t.detail.trim().toLowerCase();
+    
+    if (rawType.includes('pix')) {
+      type = rawDetail.includes('enviado') ? 'pix_sent' : 'pix_received';
+    } else if (rawType.includes('depósito') || rawType.includes('deposito')) {
+      type = 'deposit_sales';
+    }
+
+    const cleanedAmount = t.amountRaw.replace(/[^\d.,+-]/g, '').replace(/\./g, '').replace(',', '.');
+    const amount = parseFloat(cleanedAmount);
+
+    let name = t.name.trim();
+    if (name.toLowerCase().startsWith('pix ')) {
+      name = name.substring(4).trim();
+    }
+
+    return {
+      date: t.date || '',
+      hour: t.hour,
+      type,
+      name,
+      detail: t.detail.trim(),
+      amount
+    };
+  }).filter(t => !isNaN(t.amount) && t.date !== '');
+
+  const totalIn = transactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const totalOut = transactions.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
 
   return {
     periodFrom,
@@ -151,10 +134,6 @@ export async function parseInfinitePayPdf(file: File): Promise<InfinitepayReport
     cnpj,
     companyName,
     transactions,
-    summary: {
-      totalIn,
-      totalOut,
-      balance: totalIn + totalOut,
-    },
+    summary: { totalIn, totalOut, balance: totalIn + totalOut }
   };
 }
