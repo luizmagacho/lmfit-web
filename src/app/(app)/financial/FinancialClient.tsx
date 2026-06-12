@@ -370,8 +370,10 @@ function ManualEntryModal({
     type: entry?.type || "deposit_sales",
     name: entry?.name || "",
     detail: entry?.detail || "",
-    amount: entry?.amount ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(Math.abs(entry.amount)) : "",
-    isExpense: entry?.amount ? entry.amount < 0 : false,
+    amount: entry?.amount !== undefined && entry.amount !== null 
+      ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(Math.abs(getRawNumber(entry.amount))) 
+      : "",
+    isExpense: entry?.amount !== undefined && entry.amount !== null ? getRawNumber(entry.amount) < 0 : false,
     supplierId: entry?.supplierId || "",
     installments: 1,
     intervalDays: 30,
