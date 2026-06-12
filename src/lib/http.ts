@@ -36,6 +36,13 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 http.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
+    if (error.response?.status === 402) {
+      if (typeof window !== "undefined" && window.location.pathname !== "/billing") {
+        window.location.href = "/billing";
+      }
+      return Promise.reject(error);
+    }
+
     const original = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };

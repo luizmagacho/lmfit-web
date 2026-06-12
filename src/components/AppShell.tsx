@@ -28,7 +28,8 @@ import {
   MessageSquare, 
   User, 
   Settings,
-  Scissors
+  Scissors,
+  Star
 } from "lucide-react";
 
 const navKeys = [
@@ -50,6 +51,7 @@ const navKeys = [
   { href: "/reports", key: "nav.reports", icon: BarChart },
   { href: "/escalations", key: "nav.escalations", icon: MessageSquare },
   { href: "/users", key: "nav.users", icon: User },
+  { href: "/billing", key: "nav.billing", icon: Star },
   { href: "/settings", key: "nav.settings", icon: Settings },
 ];
 
