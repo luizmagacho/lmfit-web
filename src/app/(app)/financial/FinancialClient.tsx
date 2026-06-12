@@ -9,6 +9,7 @@ import { lmfitTokens } from "@/theme/tokens";
 import type { InfinitepayReport, ParsedTransaction } from "@/lib/infinitepay/types";
 import { fetchDre, type DreResponse } from "@/lib/production/productionApi";
 import { rangeIso } from "@/lib/dashboardApi";
+import { LayoutDashboard, List, TrendingUp } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ type ApiEntry = {
   detail?: string;
   amount: number;
   importBatch: string;
+  supplierId?: string;
   aiAnalysis?: {
     category?: string;
     customerHint?: string | null;
@@ -95,23 +97,21 @@ function DailyChart({ data, lang }: { data: { date: string; in: number; out: num
     <div className="overflow-x-auto">
       <div className="flex items-end gap-1.5" style={{ minWidth: data.length * 36, height: 100 }}>
         {data.map((d) => (
-          <div key={d.date} className="flex flex-col items-center gap-1 flex-1" style={{ minWidth: 28 }}>
-            <div className="flex items-end gap-1 flex-1 w-full">
+          <div key={d.date} className="flex flex-col items-center justify-end gap-1 flex-1" style={{ minWidth: 28 }}>
+            <div className="flex items-end gap-1 w-full" style={{ height: 80 }}>
               <div
                 className="flex-1 rounded-sm transition-all shadow-sm"
                 style={{
-                  height: maxVal ? `${Math.round((d.in / maxVal) * 100)}%` : "0%",
-                  backgroundColor: lmfitTokens.primary,
-                  minHeight: d.in > 0 ? 3 : 0,
+                  height: maxVal && d.in > 0 ? `${Math.max(2, Math.round((d.in / maxVal) * 100))}%` : "0%",
+                  backgroundColor: "#10b981",
                 }}
                 title={lang === "en" ? `Incomes: ${formatBRL(d.in)}` : `Entradas: ${formatBRL(d.in)}`}
               />
               <div
                 className="flex-1 rounded-sm transition-all shadow-sm"
                 style={{
-                  height: maxVal ? `${Math.round((d.out / maxVal) * 100)}%` : "0%",
+                  height: maxVal && d.out > 0 ? `${Math.max(2, Math.round((d.out / maxVal) * 100))}%` : "0%",
                   backgroundColor: "#ef4444",
-                  minHeight: d.out > 0 ? 3 : 0,
                 }}
                 title={lang === "en" ? `Expenses: ${formatBRL(d.out)}` : `Saídas: ${formatBRL(d.out)}`}
               />
@@ -124,7 +124,7 @@ function DailyChart({ data, lang }: { data: { date: string; in: number; out: num
       </div>
       <div className="flex gap-5 mt-4 text-xs font-semibold" style={{ color: lmfitTokens.textMuted }}>
         <span className="flex items-center gap-2">
-          <span className="inline-block w-3.5 h-3.5 rounded shadow-sm" style={{ backgroundColor: lmfitTokens.primary }} />
+          <span className="inline-block w-3.5 h-3.5 rounded shadow-sm" style={{ backgroundColor: "#10b981" }} />
           {lang === "en" ? "Incomes" : "Entradas"}
         </span>
         <span className="flex items-center gap-2">
@@ -340,16 +340,31 @@ function PreviewModal({
 
 // ─── Manual Entry Modal ──────────────────────────────────────────────────────────
 
+
+// ─── Number Formatter for Amount Mask ──────────────────────────────────────────
+
+const formatAmountInput = (value: string) => {
+  // Removes all non-digit characters
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  // Convert to float (divide by 100 to get cents)
+  const num = parseInt(digits, 10) / 100;
+  // Format to pt-BR string with 2 decimal places
+  return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+};
+
 function ManualEntryModal({
   entry,
   onClose,
   onSave,
   lang,
+  suppliers = []
 }: {
   entry?: Partial<ApiEntry> | null;
   onClose: () => void;
-  onSave: (data: Partial<ApiEntry>) => Promise<void>;
+  onSave: (data: Partial<ApiEntry>[]) => Promise<void>;
   lang: string;
+  suppliers?: Array<{ _id: string; name: string }>;
 }) {
   const [form, setForm] = useState({
     date: entry?.date ? entry.date.split("T")[0] : new Date().toISOString().split("T")[0],
@@ -357,36 +372,54 @@ function ManualEntryModal({
     type: entry?.type || "deposit_sales",
     name: entry?.name || "",
     detail: entry?.detail || "",
-    amount: entry?.amount ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(entry.amount)) : "",
+    amount: entry?.amount ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(Math.abs(entry.amount)) : "",
     isExpense: entry?.amount ? entry.amount < 0 : false,
+    supplierId: entry?.supplierId || "",
+    installments: 1,
+    intervalDays: 30,
   });
   const [saving, setSaving] = useState(false);
-
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    if (!value) {
-      setForm({ ...form, amount: "" });
-      return;
-    }
-    const num = Number(value) / 100;
-    const formatted = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
-    setForm({ ...form, amount: formatted });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const cleanVal = form.amount.replace(/\./g, "").replace(",", ".");
-      const amountNum = parseFloat(cleanVal) || 0;
-      await onSave({
-        date: new Date(form.date).toISOString(),
-        hour: form.hour,
-        type: form.type,
-        name: form.name,
-        detail: form.detail,
-        amount: form.isExpense ? -Math.abs(amountNum) : Math.abs(amountNum),
-      });
+      const amountClean = form.amount.replace(/\./g, '').replace(',', '.');
+      const amountNum = parseFloat(amountClean) || 0;
+      const baseAmount = form.isExpense ? -Math.abs(amountNum) : Math.abs(amountNum);
+      const isEditing = !!entry?._id;
+      
+      const entriesToSave: Partial<ApiEntry>[] = [];
+      
+      if (isEditing || form.installments <= 1) {
+        entriesToSave.push({
+          date: new Date(form.date).toISOString(),
+          hour: form.hour,
+          type: form.type,
+          name: form.name,
+          detail: form.detail,
+          amount: baseAmount,
+          supplierId: form.supplierId || undefined,
+        });
+      } else {
+        const installAmount = baseAmount / form.installments;
+        let currentDate = new Date(form.date);
+        
+        for (let i = 0; i < form.installments; i++) {
+          entriesToSave.push({
+            date: currentDate.toISOString(),
+            hour: form.hour,
+            type: form.type,
+            name: form.name,
+            detail: form.installments > 1 ? `${form.detail} (Parcela ${i + 1}/${form.installments})` : form.detail,
+            amount: installAmount,
+            supplierId: form.supplierId || undefined,
+          });
+          currentDate = new Date(currentDate.getTime() + form.intervalDays * 24 * 60 * 60 * 1000);
+        }
+      }
+      
+      await onSave(entriesToSave);
       onClose();
     } catch (err) {
       console.error(err);
@@ -395,9 +428,13 @@ function ManualEntryModal({
     }
   };
 
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, amount: formatAmountInput(e.target.value) });
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-[var(--card-bg)] rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+      <div className="bg-[var(--card-bg)] rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-screen">
         <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: lmfitTokens.border }}>
           <h2 className="text-lg font-semibold" style={{ color: lmfitTokens.text }}>
             {entry?._id ? (lang === "en" ? "Edit Entry" : "Editar Lançamento") : (lang === "en" ? "New Entry" : "Novo Lançamento")}
@@ -425,6 +462,15 @@ function ManualEntryModal({
             </select>
           </div>
           <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Supplier" : "Fornecedor"}</label>
+            <select value={form.supplierId} onChange={e => setForm({ ...form, supplierId: e.target.value })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>
+              <option value="">{lang === "en" ? "-- Select (optional) --" : "-- Selecionar (opcional) --"}</option>
+              {suppliers.map(s => (
+                <option key={s._id} value={s._id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Name" : "Nome"}</label>
             <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
           </div>
@@ -434,14 +480,28 @@ function ManualEntryModal({
           </div>
           <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Amount (R$)" : "Valor (R$)"}</label>
-              <input required type="text" value={form.amount} onChange={handleAmountChange} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
+              <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Total Amount (R$)" : "Valor Total (R$)"}</label>
+              <input required type="text" value={form.amount} onChange={handleAmountChange} placeholder="0,00" className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
             </div>
             <label className="flex items-center gap-2 mb-2 text-sm cursor-pointer" style={{ color: lmfitTokens.text }}>
               <input type="checkbox" checked={form.isExpense} onChange={e => setForm({ ...form, isExpense: e.target.checked })} />
               {lang === "en" ? "Is Expense" : "É Saída"}
             </label>
           </div>
+          {!entry?._id && (
+            <div className="flex gap-4 p-3 rounded-lg mt-2" style={{ backgroundColor: "rgba(0,0,0,0.02)" }}>
+              <div className="flex-1">
+                <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Installments" : "Parcelas"}</label>
+                <input type="number" min="1" max="120" value={form.installments} onChange={e => setForm({ ...form, installments: parseInt(e.target.value) || 1 })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
+              </div>
+              {form.installments > 1 && (
+                <div className="flex-1">
+                  <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Days between" : "Dias entre parc."}</label>
+                  <input type="number" min="1" max="365" value={form.intervalDays} onChange={e => setForm({ ...form, intervalDays: parseInt(e.target.value) || 30 })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-4 border-t mt-4" style={{ borderColor: lmfitTokens.border }}>
             <button type="button" onClick={onClose} className="px-4 py-1.5 rounded-md border text-sm" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}>{lang === "en" ? "Cancel" : "Cancelar"}</button>
             <button type="submit" disabled={saving} className="px-4 py-1.5 rounded-md text-sm text-white" style={{ backgroundColor: lmfitTokens.primary }}>{saving ? (lang === "en" ? "Saving..." : "Salvando...") : (lang === "en" ? "Save" : "Salvar")}</button>
@@ -462,6 +522,7 @@ export function FinancialClient() {
   const [dre, setDre] = useState<DreResponse | null>(null);
   const [dreLoading, setDreLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
+  const [suppliers, setSuppliers] = useState<Array<{ _id: string; name: string }>>([]);
   const [preview, setPreview] = useState<InfinitepayReport | null>(null);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
@@ -477,14 +538,16 @@ export function FinancialClient() {
   const loadData = useCallback(async () => {
     setLoadingData(true);
     try {
-      const [{ data: sumData }, { data: entData }, { data: batData }] = await Promise.all([
+      const [{ data: sumData }, { data: entData }, { data: batData }, { data: supData }] = await Promise.all([
         http.get<SummaryData>("/cashflow/summary"),
         http.get<{ items: ApiEntry[] }>("/cashflow", { params: { limit: 100 } }),
         http.get<BatchInfo[]>("/cashflow/batches"),
+        http.get<Array<{ _id: string; name: string }>>("/suppliers"),
       ]);
       setSummary(sumData);
       setEntries(entData.items ?? []);
       setBatches(batData ?? []);
+      setSuppliers(supData ?? []);
     } catch {
       // ignore — no data yet
     } finally {
@@ -588,12 +651,14 @@ export function FinancialClient() {
     [language],
   );
 
-  const handleSaveEntry = async (data: Partial<ApiEntry>) => {
+  const handleSaveEntry = async (entries: Partial<ApiEntry>[]) => {
     try {
       if (editingEntry?._id) {
-        await http.patch(`/cashflow/${editingEntry._id}`, data);
+        await http.patch(`/cashflow/${editingEntry._id}`, entries[0]);
       } else {
-        await http.post("/cashflow", data);
+        for (const entry of entries) {
+          await http.post("/cashflow", entry);
+        }
       }
       await loadData();
     } catch {
@@ -677,15 +742,15 @@ export function FinancialClient() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
+            className="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2"
             style={{
               borderColor: tab === t ? lmfitTokens.primary : "transparent",
               color: tab === t ? lmfitTokens.primary : lmfitTokens.textMuted,
             }}
           >
-            {t === "dashboard" ? (language === "en" ? "📊 Dashboard" : "📊 Início")
-              : t === "history" ? (language === "en" ? "📋 Batch History" : "📋 Histórico de Lotes")
-              : "📈 Resultado (DRE)"}
+            {t === "dashboard" ? <><LayoutDashboard className="w-4 h-4" /> {language === "en" ? "Dashboard" : "Início"}</>
+              : t === "history" ? <><List className="w-4 h-4" /> {language === "en" ? "Batch History" : "Histórico de Lotes"}</>
+              : <><TrendingUp className="w-4 h-4" /> Resultado (DRE)</>}
           </button>
         ))}
       </div>
@@ -1046,6 +1111,7 @@ export function FinancialClient() {
           }}
           onSave={handleSaveEntry}
           lang={language}
+          suppliers={suppliers}
         />
       )}
     </div>
