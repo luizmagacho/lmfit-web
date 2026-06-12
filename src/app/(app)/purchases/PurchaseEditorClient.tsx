@@ -21,39 +21,59 @@ type VariantOpt = { id: string; label: string; sku: string };
 
 type LocalLine = {
   key: string;
+  itemType: 'variant' | 'material';
   variantId: string;
+  materialId: string;
+  unitPrice: string;
   quantityOrdered: string;
   quantityReceived: string;
 };
+type MaterialOpt = { id: string; name: string; unit: string };
 
 function emptyLine(key: string): LocalLine {
-  return { key, variantId: "", quantityOrdered: "1", quantityReceived: "" };
+  return { key, itemType: 'variant', variantId: "", materialId: "", unitPrice: "0", quantityOrdered: "1", quantityReceived: "" };
 }
 
-function linesToLocal(lines: PurchaseLineInput[], nextKey: () => string): LocalLine[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function linesToLocal(lines: any[], nextKey: () => string): LocalLine[] {
   if (!lines.length) return [emptyLine(nextKey())];
   return lines.map((l) => ({
     key: nextKey(),
-    variantId: l.variantId,
+    itemType: l.materialId ? 'material' : 'variant',
+    variantId: l.variantId ? String(l.variantId) : "",
+    materialId: l.materialId ? String(l.materialId) : "",
+    unitPrice: l.unitPrice != null ? String(l.unitPrice) : "0",
     quantityOrdered: String(l.quantityOrdered),
     quantityReceived:
       l.quantityReceived != null && Number.isFinite(l.quantityReceived) ? String(l.quantityReceived) : "",
   }));
 }
 
-function parseLinesPayload(rows: LocalLine[]): PurchaseLineInput[] {
-  const out: PurchaseLineInput[] = [];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseLinesPayload(rows: LocalLine[]): any[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const out: any[] = [];
   for (const r of rows) {
-    if (!r.variantId.trim()) continue;
+    if (r.itemType === 'variant' && !r.variantId.trim()) continue;
+    if (r.itemType === 'material' && !r.materialId.trim()) continue;
+    
     const quantityOrdered = Number(String(r.quantityOrdered).replace(",", "."));
+    const unitPrice = Number(String(r.unitPrice).replace(",", "."));
     const qrRaw = r.quantityReceived.trim();
     const quantityReceived = qrRaw === "" ? undefined : Number(qrRaw.replace(",", "."));
-    out.push({
-      variantId: r.variantId.trim(),
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const line: any = {
+      unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
       quantityOrdered: Number.isFinite(quantityOrdered) ? quantityOrdered : 0,
-      quantityReceived:
-        quantityReceived !== undefined && Number.isFinite(quantityReceived) ? quantityReceived : undefined,
-    });
+      quantityReceived: quantityReceived !== undefined && Number.isFinite(quantityReceived) ? quantityReceived : undefined,
+    };
+    if (r.itemType === 'variant') {
+      line.variantId = r.variantId.trim();
+    } else {
+      line.materialId = r.materialId.trim();
+    }
+    out.push(line);
   }
   return out;
 }
@@ -67,6 +87,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [suppliers, setSuppliers] = useState<SupplierRow[]>([]);
   const [variantOpts, setVariantOpts] = useState<VariantOpt[]>([]);
+  const [materialOpts, setMaterialOpts] = useState<MaterialOpt[]>([]);
   const [variantFilter, setVariantFilter] = useState("");
 
   const [supplierId, setSupplierId] = useState("");
@@ -90,6 +111,23 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
     if (!q) return variantOpts;
     return variantOpts.filter((v) => v.label.toLowerCase().includes(q) || v.sku.toLowerCase().includes(q));
   }, [variantOpts, variantFilter]);
+
+  const filteredMaterials = useMemo(() => {
+    const q = variantFilter.trim().toLowerCase();
+    if (!q) return materialOpts;
+    return materialOpts.filter((m) => m.name.toLowerCase().includes(q));
+  }, [materialOpts, variantFilter]);
+
+  const loadMaterials = useCallback(async () => {
+    try {
+      const { data } = await http.get<unknown>("/materials", { params: { page: 1, limit: 500 } });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const items = extractListItems(data) as any[];
+      setMaterialOpts(items.map((m) => ({ id: m._id, name: m.name, unit: m.unit })));
+    } catch {
+      setMaterialOpts([]);
+    }
+  }, []);
 
   const loadCatalog = useCallback(async () => {
     try {
@@ -123,7 +161,8 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
   useEffect(() => {
     void loadCatalog();
     void loadSuppliers();
-  }, [loadCatalog, loadSuppliers]);
+    void loadMaterials();
+  }, [loadCatalog, loadSuppliers, loadMaterials]);
 
   useEffect(() => {
     if (!purchaseId) {
@@ -131,7 +170,10 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
         setLines([
           {
             key: nextKey(),
+            itemType: 'variant',
             variantId: presetVariantId,
+            materialId: "",
+            unitPrice: "0",
             quantityOrdered: "1",
             quantityReceived: "",
           },
@@ -175,11 +217,11 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
 
     const payloadLines = parseLinesPayload(lines);
     if (!purchaseId && payloadLines.length === 0) {
-      setSaveErr("Inclua ao menos uma linha com variante.");
+      setSaveErr("Inclua ao menos um item.");
       return;
     }
     if (purchaseId && payloadLines.length === 0) {
-      setSaveErr("Inclua ao menos uma linha com variante.");
+      setSaveErr("Inclua ao menos um item.");
       return;
     }
 
@@ -326,12 +368,10 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
           <table className="min-w-full text-sm text-left">
             <thead>
               <tr className="border-b" style={{ borderColor: lmfitTokens.border }}>
-                <th className="py-2 pr-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
-                  Variante
-                </th>
-                <th className="py-2 pr-2 font-medium w-32" style={{ color: lmfitTokens.accentBlue }}>
-                  Qtd pedida
-                </th>
+                <th className="py-2 pr-2 font-medium w-24" style={{ color: lmfitTokens.accentBlue }}>Tipo</th>
+                <th className="py-2 pr-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>Item</th>
+                <th className="py-2 pr-2 font-medium w-24" style={{ color: lmfitTokens.accentBlue }}>Preço Un.</th>
+                <th className="py-2 pr-2 font-medium w-24" style={{ color: lmfitTokens.accentBlue }}>Qtd pedida</th>
                 <th className="py-2 pr-2 font-medium w-32" style={{ color: lmfitTokens.accentBlue }}>
                   Qtd recebida
                 </th>
@@ -341,24 +381,73 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
             <tbody>
               {lines.map((row) => (
                 <tr key={row.key} className="border-b align-top" style={{ borderColor: lmfitTokens.border }}>
-                  <td className="py-2 pr-2">
+                                    <td className="py-2 pr-2">
                     <select
-                      className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-[var(--card-bg)]"
+                      className="w-full border rounded-md px-2 py-2 min-h-11 bg-[var(--card-bg)]"
                       style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-                      value={row.variantId}
+                      value={row.itemType}
                       onChange={(e) =>
                         setLines((prev) =>
-                          prev.map((l) => (l.key === row.key ? { ...l, variantId: e.target.value } : l)),
+                          prev.map((l) => (l.key === row.key ? { ...l, itemType: e.target.value as 'variant' | 'material' } : l)),
                         )
                       }
                     >
-                      <option value="">Selecione…</option>
-                      {filteredVariants.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.label}
-                        </option>
-                      ))}
+                      <option value="variant">Peça</option>
+                      <option value="material">Insumo</option>
                     </select>
+                  </td>
+                  <td className="py-2 pr-2">
+                    {row.itemType === 'variant' ? (
+                      <select
+                        className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-[var(--card-bg)]"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                        value={row.variantId}
+                        onChange={(e) =>
+                          setLines((prev) =>
+                            prev.map((l) => (l.key === row.key ? { ...l, variantId: e.target.value } : l)),
+                          )
+                        }
+                      >
+                        <option value="">Selecione a peça…</option>
+                        {filteredVariants.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <select
+                        className="w-full min-w-[12rem] border rounded-md px-2 py-2 min-h-11 bg-[var(--card-bg)]"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                        value={row.materialId}
+                        onChange={(e) =>
+                          setLines((prev) =>
+                            prev.map((l) => (l.key === row.key ? { ...l, materialId: e.target.value } : l)),
+                          )
+                        }
+                      >
+                        <option value="">Selecione o insumo…</option>
+                        {filteredMaterials.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name} ({m.unit || 'un'})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
+                  <td className="py-2 pr-2">
+                    <input
+                      inputMode="decimal"
+                      className="w-full border rounded-md px-2 py-2 min-h-11 tabular-nums"
+                      style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      value={row.unitPrice}
+                      onChange={(e) =>
+                        setLines((prev) =>
+                          prev.map((l) => (l.key === row.key ? { ...l, unitPrice: e.target.value } : l)),
+                        )
+                      }
+                      placeholder="0.00"
+                    />
                   </td>
                   <td className="py-2 pr-2">
                     <input
