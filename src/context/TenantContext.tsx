@@ -19,6 +19,23 @@ const TenantContext = createContext<TenantContextProps>({
   slug: "kivoni",
 });
 
+/**
+ * Uma cor de destaque só é segura para sobrescrever o tema se não for
+ * quase preta nem quase branca — nesses extremos ela fica invisível em um
+ * dos temas (a var inline vence a classe .dark).
+ */
+function isThemeSafeAccent(hex: string): boolean {
+  let h = hex.replace(/^\s*#|\s*$/g, "");
+  if (h.length === 3) h = h.replace(/(.)/g, "$1$1");
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return false;
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  // Luminância relativa aproximada (0 = preto, 255 = branco)
+  const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luma > 40 && luma < 215;
+}
+
 function darkenHexColor(hex: string, percent: number): string {
   hex = hex.replace(/^\s*#|\s*$/g, "");
   if (hex.length === 3) {
@@ -74,11 +91,19 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       "--kivoni-primary-dark",
       darkenHexColor(primary, 15)
     );
-    root.style.setProperty("--kivoni-accent", secondary);
-    root.style.setProperty(
-      "--kivoni-accent-light",
-      darkenHexColor(secondary, 15)
-    );
+    // Cores secundárias quase pretas/brancas (ex.: LMFit usa #000000) matam o
+    // contraste em um dos temas se sobrescreverem a var — inline style vence a
+    // classe .dark. Nesses casos, mantém o padrão do tema (que se adapta).
+    if (isThemeSafeAccent(secondary)) {
+      root.style.setProperty("--kivoni-accent", secondary);
+      root.style.setProperty(
+        "--kivoni-accent-light",
+        darkenHexColor(secondary, 15)
+      );
+    } else {
+      root.style.removeProperty("--kivoni-accent");
+      root.style.removeProperty("--kivoni-accent-light");
+    }
 
     // Update Favicon dynamically: mutate existing icon elements to avoid React unmount errors
     let type = "image/x-icon";

@@ -940,13 +940,13 @@ export function ResourceList({
                     "px-3 py-2 font-medium",
                     c.hiddenOnMobile ? "hidden md:table-cell" : "",
                   ].join(" ")}
-                  style={{ color: lmfitTokens.accentBlue }}
+                  style={{ color: lmfitTokens.textMuted }}
                 >
                   {c.label}
                 </th>
               ))}
               {showActionsColumn ? (
-                <th className="px-3 py-2 font-medium w-36" style={{ color: lmfitTokens.accentBlue }}>
+                <th className="px-3 py-2 font-medium w-36" style={{ color: lmfitTokens.textMuted }}>
                   Ações
                 </th>
               ) : null}
