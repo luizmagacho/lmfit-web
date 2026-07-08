@@ -297,12 +297,22 @@ function StoreDirectory({ theme, toggleTheme }: { theme: "light" | "dark"; toggl
       }
     } else {
       const cleanHost = host.replace("www.", "");
-      const parts = cleanHost.split(".");
-      if (parts.length === 2) {
-        redirectUrl = `${window.location.protocol}//${slug}.${cleanHost}`;
+      // Produção: lojas vivem em {slug}.kivoni.com.br. Trocar o primeiro
+      // label do host quebraria domínios .com.br (kivoni.com.br → lmfit.com.br).
+      if (
+        cleanHost === "kivoni.com.br" ||
+        cleanHost.endsWith(".kivoni.com.br") ||
+        cleanHost.endsWith("lmfit.com.br")
+      ) {
+        redirectUrl = `${window.location.protocol}//${slug}.kivoni.com.br`;
       } else {
-        parts[0] = slug;
-        redirectUrl = `${window.location.protocol}//${parts.join(".")}`;
+        const parts = cleanHost.split(".");
+        if (parts.length === 2) {
+          redirectUrl = `${window.location.protocol}//${slug}.${cleanHost}`;
+        } else {
+          parts[0] = slug;
+          redirectUrl = `${window.location.protocol}//${parts.join(".")}`;
+        }
       }
     }
     window.location.href = `${redirectUrl}/login`;
