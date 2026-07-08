@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { ProductionClient } from './ProductionClient';
 
 export const metadata = {
-  title: 'Produção — LM FIT',
+  title: 'Produção — Kivoni',
   description: 'Gestão de lotes de produção, custo por peça e Kanban de fabricação',
 };
 

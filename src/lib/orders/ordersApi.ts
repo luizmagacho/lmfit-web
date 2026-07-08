@@ -35,6 +35,7 @@ export type CreateOrderBody = {
   reference?: string | null;
   notes?: string | null;
   lines?: OrderLineInput[];
+  paymentMethod?: "pix" | "cash" | "card";
 };
 
 export async function createOrder(body: CreateOrderBody) {
@@ -49,6 +50,7 @@ export type UpdateOrderBody = {
   notes?: string | null;
   total?: number | null;
   lines?: OrderLineInput[];
+  paymentMethod?: "pix" | "cash" | "card";
 };
 
 export async function updateOrder(id: string, body: UpdateOrderBody) {

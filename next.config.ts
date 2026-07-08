@@ -29,6 +29,16 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
       {
+        protocol: "https",
+        hostname: "api.kivoni.com.br",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.kivoni.com.br",
+        pathname: "/**",
+      },
+      {
         protocol: "http",
         hostname: "localhost",
         port: "4000",

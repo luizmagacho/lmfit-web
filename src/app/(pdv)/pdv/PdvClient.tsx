@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { PdvTemplate } from "@/components/templates/PdvTemplate";
 import { VariantGrid } from "@/components/organisms/VariantGrid";
@@ -9,11 +10,17 @@ import { Skeleton } from "@/components/atoms/Skeleton";
 import { Badge } from "@/components/atoms/Badge";
 import { OrderWarningsPanel } from "@/components/OrderWarningsPanel";
 import { StockConflictPanel } from "@/components/StockConflictPanel";
+import { NewCustomerModal } from "@/components/organisms/NewCustomerModal";
+import { PaymentModal, type PaymentMethod } from "@/components/organisms/PaymentModal";
+import type { VariantRowData } from "@/components/molecules/VariantQtyRow";
 import { pdvSearchProducts, type PdvProduct } from "@/lib/pdv/searchProducts";
+import { createBatch } from "@/lib/production/productionApi";
+import { resolvePrimaryImageUrl } from "@/lib/productImageUrl";
 import { documentId, extractListItems } from "@/lib/normalizeApiList";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useCartStore } from "@/stores/useCartStore";
 import { usePdvStore } from "@/stores/usePdvStore";
+import { useTenantStore } from "@/stores/useTenantStore";
 import { createOrder } from "@/lib/orders/ordersApi";
 import { axiosErrorMessage, getStockConflictsFromAxiosError } from "@/lib/apiErrors";
 import { http } from "@/lib/http";
@@ -31,6 +38,8 @@ function productSku(p: PdvProduct | null): string {
 export function PdvClient() {
   const router = useRouter();
   const role = useAuthStore((s) => s.inferredRole());
+  const tenantPlan = useTenantStore((s) => s.tenant?.plan);
+  const isProductionLocked = tenantPlan !== "pro" && tenantPlan !== "enterprise";
   const cart = useCartStore();
   const pdv = usePdvStore();
 
@@ -43,6 +52,9 @@ export function PdvClient() {
   const [stockConflicts, setStockConflicts] = useState<StockConflict[] | null>(null);
   const [customerResults, setCustomerResults] = useState<Array<{ id: string; name: string }>>([]);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [orderData, setOrderData] = useState<{ variant: VariantRowData; product: Record<string, unknown> } | null>(null);
 
   useEffect(() => {
     cart.setRole(role);
@@ -115,7 +127,7 @@ export function PdvClient() {
     };
   }, [customerSearch]);
 
-  const onFinalize = useCallback(async () => {
+  const onFinalize = useCallback(() => {
     const snap = cart.snapshot();
     if (snap.items === 0) return;
     if (!snap.customer?.id) {
@@ -125,25 +137,53 @@ export function PdvClient() {
     setSubmitErr(null);
     setStockConflicts(null);
     setOrderWarnings([]);
+    setIsPaymentOpen(true);
+  }, [cart]);
+
+  const handleConfirmPayment = useCallback(async (method: PaymentMethod, notes: string) => {
+    const snap = cart.snapshot();
+    if (!snap.customer?.id) return;
     setSubmitting(true);
     try {
       const order = await createOrder({
         customerId: snap.customer.id,
         channel: "in_person",
-        status: "completed",
-        notes: "PDV mobile",
+        status: snap.lines.some(l => l.isOrder) ? "open" : "completed",
+        paymentMethod: method,
+        notes: notes ? `PDV mobile - ${notes}` : "PDV mobile",
         lines: snap.lines.map((l) => ({
           variantId: l.variantId,
           quantity: l.quantity,
           unitPrice: l.unitPrice,
           description: [l.productName, l.color, l.size].filter(Boolean).join(" · "),
+          isOrder: l.isOrder,
         })),
       });
+
+      const orderLines = snap.lines.filter(l => l.isOrder);
+      if (orderLines.length > 0) {
+        await Promise.all(orderLines.map(l => createBatch({
+          name: `Encomenda: ${l.productName} - ${[l.color, l.size].filter(Boolean).join(" ")}`.trim(),
+          sku: l.sku,
+          batchQty: l.quantity,
+          status: 'Encomendado (Pago)',
+          notes: `Encomenda via PDV para o cliente: ${snap.customer!.name || "Sem Nome"} (${snap.customer!.id})\nVinculado ao pedido: ${order?._id ?? ''}`,
+          imageUrl: l.imageUrl || undefined,
+        }).catch(err => {
+          console.error("Erro ao criar batch para encomenda", err);
+        })));
+      }
+
       setOrderWarnings(order?.warnings ?? []);
       cart.clear();
       pdv.setActiveProduct(null);
-      if (order?._id) router.push(`/orders/${order._id}`);
+      setIsPaymentOpen(false);
+      setCustomerSearch("");
+      setCustomerResults([]);
+      
+      toast.success("Venda finalizada com sucesso!");
     } catch (e) {
+      setIsPaymentOpen(false);
       const stock = getStockConflictsFromAxiosError(e);
       if (stock) {
         setStockConflicts(stock.conflicts ?? []);
@@ -156,6 +196,13 @@ export function PdvClient() {
     }
   }, [cart, pdv, router]);
 
+  const handleOrderRequest = useCallback((variant: VariantRowData, product: Record<string, unknown>) => {
+    if (isProductionLocked) {
+      setSubmitErr("Este recurso requer o plano Pro ou superior. Entre em contato para fazer o upgrade e liberar as Encomendas (Lotes de Produção).");
+      return;
+    }
+  }, [isProductionLocked]);
+
   const customerLabel = useMemo(() => {
     const c = cart.customer;
     if (!c) return "";
@@ -165,18 +212,7 @@ export function PdvClient() {
 
   return (
     <PdvTemplate
-      search={
-        <input
-          type="search"
-          inputMode="search"
-          placeholder="Nome ou SKU…"
-          className="w-full border rounded-md py-2 pr-3 text-sm min-h-10 bg-[var(--card-bg)]"
-          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-          value={pdv.search}
-          onChange={(e) => pdv.setSearch(e.target.value)}
-          autoFocus
-        />
-      }
+      search={null}
       cart={<QuickCart onFinalize={onFinalize} busy={submitting} finalizeLabel="Finalizar (Ctrl+Enter)" />}
     >
       {stockConflicts ? (
@@ -204,7 +240,7 @@ export function PdvClient() {
           <label className="text-xs" style={{ color: lmfitTokens.textMuted }}>
             Cliente
           </label>
-          <div className="flex-1 relative">
+          <div className="flex-1 relative flex gap-2">
             <input
               type="search"
               inputMode="search"
@@ -214,6 +250,14 @@ export function PdvClient() {
               value={customerSearch}
               onChange={(e) => setCustomerSearch(e.target.value)}
             />
+            <button
+              type="button"
+              onClick={() => setIsNewCustomerOpen(true)}
+              className="text-xs font-medium px-2 py-1 border rounded-md whitespace-nowrap hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+            >
+              + Novo
+            </button>
             {customerResults.length ? (
               <ul
                 className="absolute z-10 left-0 right-0 top-full mt-1 rounded-md border bg-[var(--card-bg)] shadow"
@@ -231,9 +275,6 @@ export function PdvClient() {
                       }}
                     >
                       <span style={{ color: lmfitTokens.text }}>{c.name || c.id}</span>
-                      <span className="block text-xs font-mono" style={{ color: lmfitTokens.textMuted }}>
-                        {c.id}
-                      </span>
                     </button>
                   </li>
                 ))}
@@ -245,14 +286,13 @@ export function PdvClient() {
           </Badge>
         </div>
         {cart.customer?.id ? (
-          <div className="flex items-center gap-2 text-xs" style={{ color: lmfitTokens.textMuted }}>
+          <div className="text-xs mt-1 flex items-center justify-between" style={{ color: lmfitTokens.textMuted }}>
             <span>
-              Cliente selecionado: <strong style={{ color: lmfitTokens.text }}>{customerLabel}</strong>
+              ID: {cart.customer.id}
             </span>
             <button
               type="button"
               className="underline"
-              style={{ color: lmfitTokens.primary }}
               onClick={() => cart.setCustomer(null)}
             >
               limpar
@@ -261,10 +301,41 @@ export function PdvClient() {
         ) : null}
       </div>
 
-      {term.length >= 2 ? (
+      {isNewCustomerOpen && (
+        <NewCustomerModal
+          onClose={() => setIsNewCustomerOpen(false)}
+          onSuccess={(customer) => {
+            cart.setCustomer({ id: customer.id, name: customer.name });
+            setCustomerSearch("");
+            setCustomerResults([]);
+            setIsNewCustomerOpen(false);
+          }}
+        />
+      )}
+
+      {isPaymentOpen && (
+        <PaymentModal
+          total={cart.snapshot().subtotal}
+          onClose={() => setIsPaymentOpen(false)}
+          onConfirm={handleConfirmPayment}
+          loading={submitting}
+        />
+      )}
+
+
+        <div className="relative mb-2 mt-4">
+          <input
+            type="search"
+            inputMode="search"
+            placeholder="Buscar por Produto, SKU, Cor..."
+            className="w-full border rounded-md py-2 px-3 text-sm min-h-12 bg-[var(--card-bg)]"
+            value={pdv.search}
+            onChange={(e) => pdv.setSearch(e.target.value)}
+          />
+        </div>
+
         <div
           className="rounded-lg border bg-[var(--card-bg)] overflow-hidden"
-          style={{ borderColor: lmfitTokens.border }}
         >
           {searching ? (
             <div className="p-3 space-y-2">
@@ -273,24 +344,24 @@ export function PdvClient() {
               ))}
             </div>
           ) : results.length === 0 ? (
-            <div className="p-3 text-sm" style={{ color: lmfitTokens.textMuted }}>
-              Nenhum produto para “{term}”.
+            <div className="p-4 text-center text-sm">
+              Nenhum produto encontrado.
             </div>
           ) : (
             <ul>
               {results.map((p) => {
                 const id = documentId(p);
                 return (
-                  <li key={id || productSku(p)} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
+                  <li key={id} className="border-b last:border-0">
                     <button
                       type="button"
                       className="w-full text-left px-3 py-2 hover:bg-[var(--hover-bg)] min-h-11"
                       onClick={() => pickProduct(p)}
                     >
-                      <span className="font-medium text-sm" style={{ color: lmfitTokens.text }}>
+                      <span className="block text-sm font-semibold">
                         {productName(p)}
                       </span>
-                      <span className="block text-xs font-mono" style={{ color: lmfitTokens.textMuted }}>
+                      <span className="block text-xs mt-0.5">
                         {productSku(p)}
                       </span>
                     </button>
@@ -300,19 +371,24 @@ export function PdvClient() {
             </ul>
           )}
         </div>
-      ) : null}
 
       {pdv.activeProduct ? (
         <section className="space-y-2">
           <header className="flex items-baseline justify-between">
-            <h2 className="text-base font-semibold" style={{ color: lmfitTokens.text }}>
+            <h2 className="text-lg font-bold">
               {productName(pdv.activeProduct)}
             </h2>
-            <span className="text-xs font-mono" style={{ color: lmfitTokens.textMuted }}>
+            <span className="text-sm font-mono opacity-60">
               {productSku(pdv.activeProduct)}
             </span>
           </header>
-          <VariantGrid product={pdv.activeProduct} role={role} loading={loadingVariants} />
+              <VariantGrid 
+                product={pdv.activeProduct} 
+                role={role} 
+                loading={loadingVariants} 
+                onOrderRequest={handleOrderRequest}
+                productionLocked={isProductionLocked}
+              />
         </section>
       ) : null}
     </PdvTemplate>
