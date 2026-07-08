@@ -1,7 +1,7 @@
 import { AtacadoClient } from "./AtacadoClient";
 
 export const metadata = {
-  title: "Área do Atacado | LM FIT",
+  title: "Área do Atacado | Kivoni",
   description: "Faça seu cadastro para ter acesso aos preços de atacado.",
 };
 

@@ -4,7 +4,7 @@ import { validateProductImageFile } from "./imageUpload";
 describe("validateProductImageFile", () => {
   it("rejects wrong mime", () => {
     const f = new File([""], "x.gif", { type: "image/gif" });
-    expect(validateProductImageFile(f)).toBe("Use apenas JPEG ou PNG.");
+    expect(validateProductImageFile(f)).toBe("Use apenas JPEG, PNG, WEBP ou HEIC.");
   });
 
   it("accepts jpeg", () => {

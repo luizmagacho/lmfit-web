@@ -6,6 +6,7 @@ import {
   getRefreshToken,
   setTokens,
 } from "./tokenStorage";
+import { getTenantSlug } from "@/lib/tenantSlug";
 
 export const http = axios.create({
   baseURL: apiBaseUrl(),
@@ -17,8 +18,21 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  // For FormData, remove the preset Content-Type so axios auto-sets
-  // "multipart/form-data; boundary=..." with the correct boundary.
+
+  // Sempre usa o slug da URL atual — garante isolamento por loja
+  if (typeof window !== "undefined") {
+    const slug = getTenantSlug();
+    config.headers["X-Tenant-Slug"] = slug;
+  } else {
+    // SSR: tenta ler do cookie do request (middleware injeta isso)
+    const match =
+      typeof document !== "undefined"
+        ? document.cookie.match(/(^|;)\s*tenant-slug\s*=\s*([^;]+)/)
+        : null;
+    config.headers["X-Tenant-Slug"] = match ? match[2] : "kivoni";
+  }
+
+  // Para FormData, remove o preset Content-Type para axios setar corretamente
   if (config.data instanceof FormData) {
     delete config.headers["Content-Type"];
   }
@@ -28,6 +42,13 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 http.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
+    if (error.response?.status === 402) {
+      if (typeof window !== "undefined" && window.location.pathname !== "/billing") {
+        window.location.href = "/billing";
+      }
+      return Promise.reject(error);
+    }
+
     const original = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };

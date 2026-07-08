@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { CreditCard, MessageSquare } from "lucide-react";
 import { AddressForm } from "@/components/organisms/AddressForm";
 import { ShippingPicker, shippingCost } from "@/components/organisms/ShippingPicker";
 import { PixPayment } from "@/components/organisms/PixPayment";
@@ -12,17 +14,25 @@ import { createPublicDraftWithLines, submitPublicDraft } from "@/lib/publicOrder
 import { useCartStore } from "@/stores/useCartStore";
 import { useCheckoutStore } from "@/stores/useCheckoutStore";
 import { lmfitTokens } from "@/theme/tokens";
+import { useTenant } from "@/context/TenantContext";
 
 export function CheckoutClient() {
   const router = useRouter();
   const cart = useCartStore();
   const snap = cart.snapshot();
   const checkout = useCheckoutStore();
+  const { tenant } = useTenant();
 
   const [addressValid, setAddressValid] = useState(false);
-  const [step, setStep] = useState<"address" | "payment" | "done">("address");
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"infinitepay" | "manual">("infinitepay");
+
+  useEffect(() => {
+    if (tenant && !tenant.infinitePayTag) {
+      setPaymentMethod("manual");
+    }
+  }, [tenant]);
 
   const shippingValue = shippingCost(checkout.shipping);
   const total = snap.subtotal + shippingValue;
@@ -54,32 +64,36 @@ export function CheckoutClient() {
           unitPrice: l.unitPrice,
         })),
       });
-      const result = await submitPublicDraft(sessionToken, { payment: { method: "pix" } });
-      const payment = result.payment;
-      const paymentId = payment?.paymentId ?? payment?.id ?? "";
-      const qrCode = payment?.qrCode ?? "";
-      const qrImageUrl = payment?.qrCodeImage ?? payment?.qrImageUrl ?? null;
-      const expires =
-        typeof payment?.expiresAt === "number"
-          ? payment.expiresAt
-          : payment?.expiresAt
-            ? Date.parse(String(payment.expiresAt))
-            : Date.now() + 15 * 60 * 1000;
-      if (paymentId && qrCode) {
-        checkout.setPix({
-          paymentId,
-          qrCode,
-          qrImageUrl,
-          expiresAt: Number.isFinite(expires) ? expires : Date.now() + 15 * 60 * 1000,
-          status: "pending",
-        });
-        setStep("payment");
+
+      if (paymentMethod === "infinitepay") {
+        const result = await submitPublicDraft(sessionToken, { payment: { method: "infinitepay" } });
+        const payment = result.payment;
+        const paymentId = payment?.paymentId ?? payment?.id ?? "";
+        const checkoutUrl = payment?.checkoutUrl;
+        cart.clear();
+        if (checkoutUrl && checkoutUrl.startsWith("http")) {
+          if (typeof window !== "undefined") {
+            window.location.href = checkoutUrl;
+          }
+        } else {
+          router.push(`/checkout/payment-simulation?paymentId=${paymentId}&token=${encodeURIComponent(sessionToken)}`);
+        }
       } else {
-        setStep("done");
+        const result = await submitPublicDraft(sessionToken, { payment: { method: "manual" } });
+        const orderId = result.orderId;
+        const msg = `Olá! Gostaria de confirmar meu pedido #${orderId} no valor de ${formatBRL(total)}.\n\nItens:\n${snap.lines.map((l) => `- ${l.productName} (${[l.color, l.size].filter(Boolean).join(" · ")}) x${l.quantity}`).join("\n")}`;
+        
+        const cleanPhone = (tenant?.whatsappNumber || "").replace(/\D/g, "");
+        const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`;
+        
+        if (typeof window !== "undefined") {
+          window.open(waUrl, "_blank");
+        }
         cart.clear();
         router.push(`/pedido/novo?session=${encodeURIComponent(sessionToken)}`);
       }
-    } catch {
+    } catch (e: any) {
+      console.error(e);
       setErr("Não foi possível criar o pedido. Verifique os dados e tente novamente.");
     } finally {
       setSubmitting(false);
@@ -92,10 +106,9 @@ export function CheckoutClient() {
         <h1 className="text-2xl font-semibold" style={{ color: lmfitTokens.text }}>
           Finalizar pedido
         </h1>
-        {checkout.pix ? <PaymentStatusBadge status={checkout.pix.status === "paid" ? "pago" : checkout.pix.status === "expired" ? "estornado" : "pendente"} /> : null}
       </header>
 
-      {snap.items === 0 && step === "address" ? (
+      {snap.items === 0 ? (
         <div
           className="rounded-lg border bg-[var(--card-bg)] p-6 text-center text-sm"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}
@@ -108,7 +121,7 @@ export function CheckoutClient() {
         </div>
       ) : null}
 
-      {step !== "payment" && snap.items > 0 ? (
+      {snap.items > 0 ? (
         <>
           <section
             className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3"
@@ -167,6 +180,82 @@ export function CheckoutClient() {
             ) : null}
           </section>
 
+          {tenant?.infinitePayTag ? (
+            <section
+              className="rounded-2xl border bg-[var(--card-bg)] p-5 space-y-4 shadow-sm"
+              style={{ borderColor: lmfitTokens.border }}
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold" style={{ color: lmfitTokens.text }}>
+                  Forma de Pagamento
+                </h2>
+                <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 select-none">
+                  <span>Processado por</span>
+                  <div className="bg-black px-1.5 py-0.5 rounded flex items-center">
+                    <Image
+                      src="/kivoni-symbol.svg"
+                      alt="Kivoni"
+                      width={38}
+                      height={12}
+                      className="h-3 w-auto object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("infinitepay")}
+                  className="group relative flex items-start gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer select-none text-left focus:outline-none hover:shadow-md hover:-translate-y-0.5"
+                  style={{
+                    borderColor: paymentMethod === "infinitepay" ? lmfitTokens.primary : lmfitTokens.border,
+                    backgroundColor: paymentMethod === "infinitepay" ? `color-mix(in srgb, ${lmfitTokens.primary} 4%, var(--card-bg))` : "transparent",
+                  }}
+                >
+                  <div className="flex items-center justify-center p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+                    <CreditCard size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="font-semibold text-sm block" style={{ color: lmfitTokens.text }}>
+                      Cartão de Crédito / Pix (Online)
+                    </span>
+                    <span className="text-xs leading-normal block" style={{ color: lmfitTokens.textMuted }}>
+                      Pague online de forma segura com InfinitePay.
+                    </span>
+                  </div>
+                  {paymentMethod === "infinitepay" && (
+                    <div className="absolute top-3 right-3 w-2 h-2 rounded-full" style={{ backgroundColor: lmfitTokens.primary }} />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("manual")}
+                  className="group relative flex items-start gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer select-none text-left focus:outline-none hover:shadow-md hover:-translate-y-0.5"
+                  style={{
+                    borderColor: paymentMethod === "manual" ? lmfitTokens.primary : lmfitTokens.border,
+                    backgroundColor: paymentMethod === "manual" ? `color-mix(in srgb, ${lmfitTokens.primary} 4%, var(--card-bg))` : "transparent",
+                  }}
+                >
+                  <div className="flex items-center justify-center p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+                    <MessageSquare size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="font-semibold text-sm block" style={{ color: lmfitTokens.text }}>
+                      Combinar no WhatsApp (Manual)
+                    </span>
+                    <span className="text-xs leading-normal block" style={{ color: lmfitTokens.textMuted }}>
+                      Finalize os detalhes de pagamento direto com a loja.
+                    </span>
+                  </div>
+                  {paymentMethod === "manual" && (
+                    <div className="absolute top-3 right-3 w-2 h-2 rounded-full" style={{ backgroundColor: lmfitTokens.primary }} />
+                  )}
+                </button>
+              </div>
+            </section>
+          ) : null}
+
           <section
             className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3"
             style={{ borderColor: lmfitTokens.border }}
@@ -213,16 +302,14 @@ export function CheckoutClient() {
               type="button"
               onClick={submit}
               disabled={!canSubmit || submitting}
-              className="w-full min-h-12 rounded-md text-sm font-semibold text-white disabled:opacity-60"
+              className="w-full min-h-12 rounded-xl text-sm font-semibold text-white disabled:opacity-60 hover:opacity-90 active:scale-[0.99] transition-all shadow-sm"
               style={{ backgroundColor: lmfitTokens.primary }}
             >
-              {submitting ? "Gerando PIX…" : "Pagar com PIX"}
+              {submitting ? "Processando..." : paymentMethod === "infinitepay" ? "Finalizar e Pagar Online" : "Finalizar e abrir WhatsApp"}
             </button>
           </section>
         </>
       ) : null}
-
-      {step === "payment" ? <PixPayment /> : null}
     </div>
   );
 }

@@ -15,6 +15,7 @@ export type PublicPaymentResponse = {
   qrCodeImage?: string | null;
   qrImageUrl?: string | null;
   expiresAt?: string | number;
+  checkoutUrl?: string;
 };
 
 /** Cria rascunho e já adiciona linhas; idempotente em relação ao token. */

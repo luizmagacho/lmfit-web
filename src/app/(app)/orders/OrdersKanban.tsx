@@ -52,7 +52,7 @@ function OrderKanbanCard({
 }) {
   const isEn = language === "en";
   const cid = item.customerId ? String(item.customerId) : "";
-  const customerName = cid ? customers[cid] ?? cid : (isEn ? "No customer" : "Sem cliente");
+  const customerName = cid ? (customers[cid] || (isEn ? "Unknown" : "Desconhecido")) : (isEn ? "No customer" : "Sem cliente");
   const channelName = orderChannelLabel(item.channel as string);
 
   return (

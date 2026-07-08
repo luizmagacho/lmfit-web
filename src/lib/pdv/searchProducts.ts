@@ -16,7 +16,6 @@ export type PdvProduct = Record<string, unknown> & {
 
 export async function pdvSearchProducts(term: string, limit = 20): Promise<PdvProduct[]> {
   const t = term.trim();
-  if (!t) return [];
   try {
     const { data } = await http.get<unknown>("/products", {
       params: { search: t, page: 1, limit },

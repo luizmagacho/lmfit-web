@@ -120,6 +120,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
   const [stockErr, setStockErr] = useState<{ message: string; conflicts?: StockConflict[] } | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cash" | "card" | "">("");
 
   const linesLocked = isLinesLockedStatus(status);
 
@@ -233,6 +234,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         setCustomerId(o.customerId ? String(o.customerId) : "");
         setChannel((o.channel as OrderChannel) || DEFAULT_ORDER_CHANNEL);
         setStatus((o.status as OrderStatus) || "open");
+        setPaymentMethod((o.paymentMethod as any) || "");
         setOrderNumber(o.number ?? null);
         setReference(o.reference != null ? String(o.reference) : "");
         setNotes(o.notes != null ? String(o.notes) : "");
@@ -297,6 +299,11 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
       return;
     }
 
+    if (status === "completed" && !paymentMethod) {
+      setSaveErr("Selecione a forma de pagamento para concluir o pedido.");
+      return;
+    }
+
     const payloadLines = parseLinesPayload(lines);
     if (!orderId && (!payloadLines || payloadLines.length === 0)) {
       setSaveErr("Inclua ao menos uma linha com variante e quantidade.");
@@ -317,6 +324,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
           reference: reference.trim() || null,
           notes: notes.trim() || null,
           lines: payloadLines,
+          paymentMethod: paymentMethod || undefined,
         });
         router.replace(`/orders/${encodeURIComponent(String(created._id))}`);
         return;
@@ -327,6 +335,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         status,
         reference: reference.trim() || null,
         notes: notes.trim() || null,
+        paymentMethod: paymentMethod || undefined,
       };
       if (!linesLocked && payloadLines && payloadLines.length > 0) {
         body.lines = payloadLines;
@@ -508,6 +517,26 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
                 {s.label}
               </option>
             ))}
+          </select>
+        </label>
+
+        <label className="block text-sm space-y-1">
+          <span style={{ color: lmfitTokens.textMuted }}>
+            Forma de Pagamento {status === "completed" ? "*" : ""}
+          </span>
+          <select
+            className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
+            style={{
+              borderColor: status === "completed" && !paymentMethod ? lmfitTokens.error : lmfitTokens.border,
+              color: lmfitTokens.text
+            }}
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value as any)}
+          >
+            <option value="">Selecione…</option>
+            <option value="pix">Pix</option>
+            <option value="cash">Dinheiro</option>
+            <option value="card">Cartão</option>
           </select>
         </label>
 

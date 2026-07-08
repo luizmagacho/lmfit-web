@@ -9,18 +9,22 @@ import {
   setTokens,
 } from "@/lib/tokenStorage";
 import type { CustomerRole } from "@/lib/pricing";
+import { getTenantSlug } from "@/lib/tenantSlug";
 
 export type AuthUser = {
   id: string;
   email: string;
   name: string;
   role: string;
+  tenantId?: string;
 };
 
 type AuthState = {
   user: AuthUser | null;
   loading: boolean;
   initialized: boolean;
+  // Guarda o slug para o qual foi inicializado, para resetar se mudar
+  initializedForSlug: string | null;
   init: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -31,10 +35,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   loading: true,
   initialized: false,
+  initializedForSlug: null,
 
   init: async () => {
-    if (get().initialized) return;
-    set({ initialized: true });
+    const currentSlug = getTenantSlug();
+
+    // Se já foi inicializado para ESTE slug, não refaz
+    if (get().initialized && get().initializedForSlug === currentSlug) return;
+
+    // Se o slug mudou (usuário trocou de loja), reseta antes de re-inicializar
+    if (get().initialized && get().initializedForSlug !== currentSlug) {
+      set({ user: null, initialized: false, initializedForSlug: null });
+    }
+
+    set({ initialized: true, initializedForSlug: currentSlug });
+
     const access = getAccessToken();
     if (!access) {
       set({ user: null, loading: false });
@@ -67,7 +82,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       /* ignore */
     } finally {
       clearTokens();
-      set({ user: null });
+      // Reseta COMPLETAMENTE o estado de auth — próximo init vai re-checar tokens
+      set({ user: null, initialized: false, initializedForSlug: null });
     }
   },
 

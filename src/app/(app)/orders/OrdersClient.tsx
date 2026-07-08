@@ -50,7 +50,7 @@ export function OrdersClient() {
         const id = documentId(c);
         if (!id) continue;
         const name = c.name != null ? String(c.name) : "";
-        map[id] = name.trim() ? name : id;
+        map[id] = name.trim();
       }
       setCustomerById(map);
     } catch {
@@ -102,7 +102,7 @@ export function OrdersClient() {
         params: ordersExportParams({ search: search.trim() || undefined, channel }),
       });
       const blob = res.data as Blob;
-      const ct = (res.headers["content-type"] ?? "").toLowerCase();
+      const ct = String(res.headers["content-type"] ?? "").toLowerCase();
       const looksLikeSheet =
         ct.includes("spreadsheetml") ||
         ct.includes("ms-excel") ||
@@ -274,7 +274,7 @@ export function OrdersClient() {
                       {row.reference != null && String(row.reference) !== "" ? String(row.reference) : "—"}
                     </td>
                     <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
-                      {cid ? customerById[cid] ?? cid : "—"}
+                      {cid ? (customerById[cid] || "—") : "—"}
                     </td>
                     <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.text }}>
                       {t(`channel.${row.channel}`, orderChannelLabel(row.channel as string))}

@@ -45,10 +45,14 @@ export function VariantGrid({
   product,
   role,
   loading,
+  onOrderRequest,
+  productionLocked,
 }: {
   product: Product | null;
   role: CustomerRole;
   loading?: boolean;
+  onOrderRequest?: (data: VariantRowData, product: Product) => void;
+  productionLocked?: boolean;
 }) {
   const cart = useCartStore();
   const focusVariantId = usePdvStore((s) => s.focusVariantId);
@@ -93,7 +97,7 @@ export function VariantGrid({
   }, [productKey]);
 
   const setQty = useCallback(
-    (row: VariantRowData, nextRaw: number) => {
+    (row: VariantRowData, nextRaw: number, isOrder: boolean = false) => {
       const next = Math.max(0, Math.floor(nextRaw));
       setLocalQty((prev) => ({ ...prev, [row.variantId]: next }));
       if (!product) return;
@@ -104,7 +108,7 @@ export function VariantGrid({
       const name = String((product as { name?: unknown }).name ?? "Produto");
       const img = resolvePrimaryImageUrl(product);
 
-      const existing = cart.lines.find((l) => l.variantId === row.variantId);
+      const existing = cart.lines.find((l) => l.variantId === row.variantId && l.isOrder === isOrder);
       if (!existing) {
         if (next <= 0) return;
         cart.addOrIncrement(
@@ -121,9 +125,10 @@ export function VariantGrid({
             imageUrl: img,
           },
           next,
+          isOrder
         );
       } else {
-        cart.setQuantity(row.variantId, next);
+        cart.setQuantity(row.variantId, next, isOrder);
       }
     },
     [cart, product],
@@ -164,7 +169,8 @@ export function VariantGrid({
   return (
     <ul className="rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
       {rows.map((r) => {
-        const cartQty = cart.lines.find((l) => l.variantId === r.variantId)?.quantity ?? 0;
+        const outOfStock = r.stock <= 0;
+        const cartQty = cart.lines.find((l) => l.variantId === r.variantId && !!l.isOrder === outOfStock)?.quantity ?? 0;
         const qty = localQty[r.variantId] ?? cartQty;
         return (
           <VariantQtyRow
@@ -173,7 +179,9 @@ export function VariantGrid({
             quantity={qty}
             focused={focusVariantId === r.variantId}
             onFocus={() => setFocusVariantId(r.variantId)}
-            onChange={(next) => setQty(r, next)}
+            onChange={(next) => setQty(r, next, outOfStock)}
+            onOrderRequest={onOrderRequest ? () => onOrderRequest(r, product) : undefined}
+            productionLocked={productionLocked}
           />
         );
       })}

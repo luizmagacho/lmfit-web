@@ -50,6 +50,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       "nav.reports": { "pt-BR": "Relatórios", "en": "Reports" },
       "nav.escalations": { "pt-BR": "WhatsApp", "en": "WhatsApp" },
       "nav.users": { "pt-BR": "Usuários", "en": "Users" },
+      "nav.billing": { "pt-BR": "Meu Plano", "en": "My Plan" },
+      "nav.integrations": { "pt-BR": "Integrações", "en": "Integrations" },
       "nav.settings": { "pt-BR": "Configurações", "en": "Settings" },
       "status.open": { "pt-BR": "Em aberto", "en": "Open" },
       "status.picking": { "pt-BR": "Em separação", "en": "Picking" },

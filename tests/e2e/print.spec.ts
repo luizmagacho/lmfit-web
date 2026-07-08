@@ -9,8 +9,8 @@ test.describe("Order Custom Print E2E Flow", () => {
         contentType: "application/json",
         body: JSON.stringify({
           id: "user-123",
-          email: "admin@lmfit.local",
-          name: "Administrador LMFIT",
+          email: "admin@kivoni.local",
+          name: "Administrador Kivoni",
           role: "admin",
         }),
       });
@@ -86,8 +86,8 @@ test.describe("Order Custom Print E2E Flow", () => {
     // 2. Inject localStorage tokens for Requirement Auth bypassing and print stubbing
     await page.addInitScript(() => {
       try {
-        localStorage.setItem("lmfit_access_token", "fake-token");
-        localStorage.setItem("lmfit_refresh_token", "fake-token");
+        localStorage.setItem("kivoni_access_token", "fake-token");
+        localStorage.setItem("kivoni_refresh_token", "fake-token");
       } catch {
         /* ignore */
       }

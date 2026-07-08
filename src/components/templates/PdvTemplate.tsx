@@ -5,6 +5,9 @@ import { ArrowLeft, Search } from "lucide-react";
 import { lmfitLogoSrc, lmfitTokens } from "@/theme/tokens";
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { useTenant } from "@/context/TenantContext";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 export function PdvTemplate({
   search,
@@ -15,6 +18,17 @@ export function PdvTemplate({
   children: ReactNode;
   cart: ReactNode;
 }) {
+  const { tenant } = useTenant();
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const logoUrl = tenant?.branding?.logoUrl || "/kivoni-symbol.svg";
+  const storeName = tenant?.name || "Kivoni";
+
   return (
     <div className="min-h-screen flex flex-col bg-[var(--lmfit-surface,#f6f6f6)]">
       <header
@@ -31,10 +45,10 @@ export function PdvTemplate({
         </Link>
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="relative hidden sm:block h-8 w-24 shrink-0">
-            <Image src={lmfitLogoSrc} alt="LM FIT" fill className="object-contain" />
+            <Image src={logoUrl} alt={storeName} fill className="object-contain" />
           </div>
           <h1 className="text-sm font-semibold truncate" style={{ color: lmfitTokens.text }}>
-            PDV · Lançamento em grade
+            PDV · Lançamento em grade ({storeName})
           </h1>
         </div>
         <div className="flex-1" />

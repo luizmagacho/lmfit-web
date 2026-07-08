@@ -7,8 +7,10 @@ import { CatalogFilters } from "@/components/organisms/CatalogFilters";
 import { ProductGrid, type CatalogProduct } from "@/components/organisms/ProductGrid";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { lmfitTokens } from "@/theme/tokens";
+import { useTenant } from "@/context/TenantContext";
 
 export function CatalogoClient() {
+  const { tenant } = useTenant();
   const [items, setItems] = useState<CatalogProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -39,8 +41,8 @@ export function CatalogoClient() {
   return (
     <div className="space-y-4">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold" style={{ color: lmfitTokens.text }}>
-          Catálogo LM FIT
+        <h1 className="text-2xl font-semibold font-sans" style={{ color: lmfitTokens.text }}>
+          Catálogo {tenant?.name || "Kivo"}
         </h1>
         <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
           {role === "wholesaler" || role === "staff"

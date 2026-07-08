@@ -18,6 +18,7 @@ export type CartLine = {
   unitPrice: number;
   mode: PriceMode;
   imageUrl?: string | null;
+  isOrder?: boolean;
 };
 
 export type CartCustomer = {
@@ -40,10 +41,10 @@ type CartState = {
   role: CustomerRole;
   setRole: (r: CustomerRole) => void;
   setCustomer: (c: CartCustomer | null) => void;
-  addOrIncrement: (line: Omit<CartLine, "quantity" | "unitPrice" | "mode">, qty: number) => void;
-  setQuantity: (variantId: string, qty: number) => void;
-  increment: (variantId: string, delta: number) => void;
-  remove: (variantId: string) => void;
+  addOrIncrement: (line: Omit<CartLine, "quantity" | "unitPrice" | "mode">, qty: number, isOrder?: boolean) => void;
+  setQuantity: (variantId: string, qty: number, isOrder?: boolean) => void;
+  increment: (variantId: string, delta: number, isOrder?: boolean) => void;
+  remove: (variantId: string, isOrder?: boolean) => void;
   clear: () => void;
   snapshot: () => CartSnapshot;
 };
@@ -81,46 +82,73 @@ export const useCartStore = create<CartState>((set, get) => ({
   setRole: (r) => set((s) => ({ role: r, lines: recalc(s.lines, r) })),
   setCustomer: (c) => set({ customer: c }),
 
-  addOrIncrement: (line, qty) =>
+  addOrIncrement: (line, qty, isOrder) =>
     set((s) => {
       const q = Math.max(1, Math.floor(qty || 1));
-      const existing = s.lines.find((l) => l.variantId === line.variantId);
+      const existing = s.lines.find((l) => l.variantId === line.variantId && l.isOrder === isOrder);
       let next: CartLine[];
       if (existing) {
         next = s.lines.map((l) =>
-          l.variantId === line.variantId ? { ...l, quantity: l.quantity + q } : l,
+          l.variantId === line.variantId && l.isOrder === isOrder ? { ...l, quantity: l.quantity + q } : l,
         );
       } else {
         next = [
           ...s.lines,
-          { ...line, quantity: q, unitPrice: line.priceRetail, mode: "varejo" },
+          { ...line, quantity: q, unitPrice: line.priceRetail, mode: "varejo", isOrder },
         ];
       }
       return { lines: recalc(next, s.role) };
     }),
 
-  setQuantity: (variantId, qty) =>
+  setQuantity: (variantId, qty, isOrder) =>
     set((s) => {
-      const q = Math.max(0, Math.floor(qty || 0));
-      if (q === 0) return { lines: s.lines.filter((l) => l.variantId !== variantId) };
-      const next = s.lines.map((l) => (l.variantId === variantId ? { ...l, quantity: q } : l));
+      if (qty <= 0) {
+        return {
+          lines: recalc(
+            s.lines.filter((l) => !(l.variantId === variantId && l.isOrder === isOrder)),
+            s.role,
+          ),
+        };
+      }
+      return {
+        lines: recalc(
+          s.lines.map((l) =>
+            l.variantId === variantId && l.isOrder === isOrder ? { ...l, quantity: qty } : l,
+          ),
+          s.role,
+        ),
+      };
+    }),
+
+  increment: (variantId, delta, isOrder) =>
+    set((s) => {
+      let remove = false;
+      const next = s.lines.map((l) => {
+        if (l.variantId === variantId && l.isOrder === isOrder) {
+          const q = l.quantity + delta;
+          if (q <= 0) remove = true;
+          return { ...l, quantity: q };
+        }
+        return l;
+      });
+      if (remove) {
+        return {
+          lines: recalc(
+            next.filter((l) => l.quantity > 0),
+            s.role,
+          ),
+        };
+      }
       return { lines: recalc(next, s.role) };
     }),
 
-  increment: (variantId, delta) =>
-    set((s) => {
-      const next = s.lines
-        .map((l) =>
-          l.variantId === variantId
-            ? { ...l, quantity: Math.max(0, l.quantity + delta) }
-            : l,
-        )
-        .filter((l) => l.quantity > 0);
-      return { lines: recalc(next, s.role) };
-    }),
-
-  remove: (variantId) =>
-    set((s) => ({ lines: s.lines.filter((l) => l.variantId !== variantId) })),
+  remove: (variantId, isOrder) =>
+    set((s) => ({
+      lines: recalc(
+        s.lines.filter((l) => !(l.variantId === variantId && l.isOrder === isOrder)),
+        s.role,
+      ),
+    })),
 
   clear: () => set({ lines: [], customer: null }),
 

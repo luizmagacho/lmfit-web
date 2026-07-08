@@ -4,17 +4,18 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useTenant } from "@/context/TenantContext";
 import { useAuthStore } from "@/stores/useAuthStore";
 import {
   deriveAbcFromRevenue,
   fetchAbcCurve,
-  fetchPurchasesDaily,
+  fetchSalesAndPurchasesDaily,
   fetchReportSummary,
   fetchRevenueByProduct,
   fetchSalesToday,
   rangeIso,
   type AbcResponse,
-  type PurchasesDailyResponse,
+  type SalesAndPurchasesDailyResponse,
   type ReportSummary,
   type RevenueByProductResponse,
   type SalesTodayResponse,
@@ -35,10 +36,12 @@ function shortDate(iso: string) {
 
 export function DashboardClient() {
   const { language } = useLanguage();
+  const { tenant } = useTenant();
+  const storeName = tenant?.name || "Kivoni";
   const user = useAuthStore((s) => s.user);
   const [days, setDays] = useState(30);
   const [summary, setSummary] = useState<ReportSummary | null>(null);
-  const [purchasesDaily, setPurchasesDaily] = useState<PurchasesDailyResponse | null>(null);
+  const [salesAndPurchasesDaily, setSalesAndPurchasesDaily] = useState<SalesAndPurchasesDailyResponse | null>(null);
   const [revenueByProduct, setRevenueByProduct] = useState<RevenueByProductResponse | null>(null);
   const [salesToday, setSalesToday] = useState<SalesTodayResponse | null>(null);
   const [abc, setAbc] = useState<AbcResponse | null>(null);
@@ -84,14 +87,14 @@ export function DashboardClient() {
     (async () => {
       const [s, p, r, today, abcResp] = await Promise.all([
         fetchReportSummary(range.from, range.to),
-        fetchPurchasesDaily(range.from, range.to),
+        fetchSalesAndPurchasesDaily(range.from, range.to),
         fetchRevenueByProduct(range.from, range.to, 50),
         fetchSalesToday(),
         fetchAbcCurve(range.from, range.to),
       ]);
       if (cancelled) return;
       setSummary(s);
-      setPurchasesDaily(p);
+      setSalesAndPurchasesDaily(p);
       setRevenueByProduct(r);
       setSalesToday(today);
       setAbc(abcResp ?? deriveAbcFromRevenue(r));
@@ -113,10 +116,10 @@ export function DashboardClient() {
     [abc],
   );
 
-  const maxPurchases = useMemo(() => {
-    if (!purchasesDaily?.points?.length) return 1;
-    return Math.max(...purchasesDaily.points.map((p) => p.purchaseCount), 1);
-  }, [purchasesDaily]);
+  const maxSalesAndPurchases = useMemo(() => {
+    if (!salesAndPurchasesDaily?.points?.length) return 1;
+    return Math.max(...salesAndPurchasesDaily.points.map((p) => Math.max(p.totalSales, p.totalPurchases)), 1);
+  }, [salesAndPurchasesDaily]);
 
   const maxProductRev = useMemo(() => {
     if (!revenueByProduct?.items?.length) return 0;
@@ -134,7 +137,7 @@ export function DashboardClient() {
             className="text-2xl font-semibold tracking-tight"
             style={{ color: lmfitTokens.text }}
           >
-            {language === "en" ? "LM FIT Dashboard" : "Painel LM FIT"}
+            {language === "en" ? `${storeName} Dashboard` : `Painel ${storeName}`}
           </h1>
           <p className="mt-1" style={{ color: lmfitTokens.textMuted }}>
             {language === "en" 
@@ -251,26 +254,32 @@ export function DashboardClient() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
-            {language === "en" ? "Daily Purchases" : "Compras por dia"}
+            {language === "en" ? "Sales and Purchases" : "Vendas e Compras na semana"}
           </h2>
-          {purchasesDaily?.points?.length ? (
+          {salesAndPurchasesDaily?.points?.length ? (
             <div className="overflow-x-auto pb-2">
-              <div className="flex items-end gap-1 h-36 px-1 min-w-[500px] sm:min-w-0">
-                {purchasesDaily.points.map((p) => (
+              <div className="flex items-end gap-2 h-36 px-1 min-w-[500px] sm:min-w-0">
+                {salesAndPurchasesDaily.points.slice(-7).map((p) => (
                   <div
                     key={p.date}
                     className="flex-1 min-w-0 flex flex-col items-center gap-1"
-                    title={`${p.date}: ${p.purchaseCount} purchase(s)`}
+                    title={`${p.date}\nVendas: ${formatBRL(p.totalSales)}\nCompras: ${formatBRL(p.totalPurchases)}`}
                   >
-                    <div
-                      className="w-full max-w-[2.5rem] mx-auto rounded-t bg-[var(--chart-track)] relative overflow-hidden"
-                      style={{ height: "7rem" }}
-                    >
+                    <div className="flex w-full justify-center gap-1 items-end h-[7rem]">
+                      {/* Barra de Vendas */}
                       <div
-                        className="absolute bottom-0 left-0 right-0 rounded-t transition-all"
+                        className="w-1/2 max-w-[2rem] rounded-t transition-all"
                         style={{
-                          height: `${Math.max(8, (p.purchaseCount / maxPurchases) * 100)}%`,
-                          backgroundColor: lmfitTokens.primary,
+                          height: `${Math.max(8, (p.totalSales / maxSalesAndPurchases) * 100)}%`,
+                          backgroundColor: "#0ea5e9", // azul
+                        }}
+                      />
+                      {/* Barra de Compras */}
+                      <div
+                        className="w-1/2 max-w-[2rem] rounded-t transition-all"
+                        style={{
+                          height: `${Math.max(8, (p.totalPurchases / maxSalesAndPurchases) * 100)}%`,
+                          backgroundColor: "#f59e0b", // amarelo/laranja
                         }}
                       />
                     </div>
@@ -280,17 +289,23 @@ export function DashboardClient() {
                     >
                       {shortDate(p.date)}
                     </span>
-                    <span className="text-xs font-semibold tabular-nums" style={{ color: lmfitTokens.text }}>
-                      {p.purchaseCount}
-                    </span>
                   </div>
                 ))}
+              </div>
+              <div className="flex justify-center gap-4 text-xs mt-2" style={{ color: lmfitTokens.textMuted }}>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-[#0ea5e9]"></div>
+                  {language === "en" ? "Sales" : "Vendas"}
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-[#f59e0b]"></div>
+                  {language === "en" ? "Purchases" : "Compras"}
+                </div>
               </div>
             </div>
           ) : (
             <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
-              {language === "en" ? "No daily purchase data. When API exposes " : "Sem dados de compras diárias. Quando a API expuser "}
-              <code className="text-xs bg-[var(--chart-track)] px-1 rounded">GET /reports/purchases-daily</code>, {language === "en" ? "the chart will appear here automatically." : "o gráfico aparece aqui automaticamente."}
+              {language === "en" ? "No data. " : "Sem dados. "}
             </p>
           )}
         </section>

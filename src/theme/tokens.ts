@@ -3,29 +3,29 @@
  * Neutrals and semantic colors stay aligned with the storefront where applicable.
  */
 export const lmfitLogoSrc =
-  "https://d1a9qnv764bsoo.cloudfront.net/stores/006/316/201/themes/common/logo-813858800-1750428827-d18edfd75754df23704c77cbd129bbc91750428827-1024-1024.webp?w=1400" as const;
+  "/kivoni-symbol.svg" as const;
 
 export const lmfitTokens = {
-  /** Brand orange from the official logo */
-  primary: "var(--lmfit-primary)",
+  /** Brand purple from the official logo */
+  primary: "var(--kivoni-primary)",
   /** Darkened for hover / pressed states */
-  primaryDark: "var(--lmfit-primary-dark)",
-  /** `--accent_color` → rgb(0, 0, 0) */
-  accentBlue: "var(--lmfit-accent)",
+  primaryDark: "var(--kivoni-primary-dark)",
+  /** `--accent_color` */
+  accentBlue: "var(--kivoni-accent)",
   /** Secondary text on black accents */
-  accentBlueLight: "var(--lmfit-accent-light)",
+  accentBlueLight: "var(--kivoni-accent-light)",
   /** `--text_color` */
-  text: "var(--lmfit-text)",
-  textMuted: "var(--lmfit-text-muted)",
+  text: "var(--kivoni-text)",
+  textMuted: "var(--kivoni-text-muted)",
   /** `rgba(var(--main-foreground), 0.1)` on white */
-  border: "var(--lmfit-border)",
-  surface: "var(--lmfit-surface)",
+  border: "var(--kivoni-border)",
+  surface: "var(--kivoni-surface)",
   background: "var(--background)",
-  /** `--color-success` → rgb(60, 175, 101) */
-  success: "var(--lmfit-success)",
-  warningBg: "var(--lmfit-warning-bg)",
-  /** `--color-error` → rgb(204, 72, 69) */
-  error: "var(--lmfit-error)",
+  /** `--color-success` */
+  success: "var(--kivoni-success)",
+  warningBg: "var(--kivoni-warning-bg)",
+  /** `--color-error` */
+  error: "var(--kivoni-error)",
 } as const;
 
 export type LmfitTokenKey = keyof typeof lmfitTokens;

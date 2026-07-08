@@ -515,7 +515,7 @@ export function ResourceList({
         params: { format: "xlsx" },
       });
       const blob = res.data as Blob;
-      const ct = (res.headers["content-type"] ?? "").toLowerCase();
+      const ct = String(res.headers["content-type"] ?? "").toLowerCase();
       const looksLikeSheet =
         ct.includes("spreadsheetml") ||
         ct.includes("ms-excel") ||

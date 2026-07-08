@@ -52,6 +52,11 @@ function CartRow({ line, onRemove }: { line: CartLine; onRemove: () => void }) {
             <span className="text-sm font-medium truncate" style={{ color: lmfitTokens.text }}>
               {line.productName}
             </span>
+            {line.isOrder && (
+              <Badge variant="pendente" size="xs">
+                Encomenda
+              </Badge>
+            )}
             <Badge variant={line.mode === "atacado" ? "atacado" : "varejo"} size="xs">
               {line.mode === "atacado" ? "Atacado" : "Varejo"}
             </Badge>
@@ -120,7 +125,7 @@ export function QuickCart({
       {lines.length > 0 ? (
         <ul className="max-h-60 overflow-y-auto">
           {lines.map((l) => (
-            <CartRow key={l.variantId} line={l} onRemove={() => remove(l.variantId)} />
+            <CartRow key={`${l.variantId}-${l.isOrder}`} line={l} onRemove={() => remove(l.variantId, l.isOrder)} />
           ))}
         </ul>
       ) : (

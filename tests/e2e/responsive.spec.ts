@@ -19,7 +19,7 @@ for (const vp of viewports) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await page.goto("/catalog", { waitUntil: "domcontentloaded" });
     await expect(
-      page.getByRole("heading", { name: "Catálogo LM FIT" }),
+      page.getByRole("heading", { name: "Catálogo Kivoni" }),
     ).toBeVisible({ timeout: 30_000 });
   });
 }
