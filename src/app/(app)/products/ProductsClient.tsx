@@ -271,13 +271,19 @@ export function ProductsClient() {
             <span
               className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
               style={{
-                backgroundColor: isActive ? "#dcfce7" : "#f3f4f6",
-                color: isActive ? "#166534" : "#6b7280",
+                backgroundColor: isActive
+                  ? "color-mix(in srgb, var(--kivoni-success) 15%, transparent)"
+                  : "var(--chart-track)",
+                color: isActive ? "var(--kivoni-success)" : "var(--kivoni-text-muted)",
               }}
             >
               <span
                 className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: isActive ? "#16a34a" : "#9ca3af" }}
+                style={{
+                  backgroundColor: isActive
+                    ? "var(--kivoni-success)"
+                    : "var(--kivoni-text-muted)",
+                }}
               />
               {isActive ? "Ativo" : "Inativo"}
             </span>

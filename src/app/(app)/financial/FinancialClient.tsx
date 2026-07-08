@@ -236,13 +236,13 @@ function PreviewModal({
             <p className="text-xs mb-1" style={{ color: lmfitTokens.textMuted }}>
               {lang === "en" ? "Incomes" : "Entradas"}
             </p>
-            <p className="text-lg font-bold" style={{ color: "#065f46" }}>{formatBRL(totalIn)}</p>
+            <p className="text-lg font-bold" style={{ color: "var(--kivoni-success)" }}>{formatBRL(totalIn)}</p>
           </div>
           <div className="text-center">
             <p className="text-xs mb-1" style={{ color: lmfitTokens.textMuted }}>
               {lang === "en" ? "Expenses" : "Saídas"}
             </p>
-            <p className="text-lg font-bold" style={{ color: "#991b1b" }}>{formatBRL(totalOut)}</p>
+            <p className="text-lg font-bold" style={{ color: "var(--kivoni-error)" }}>{formatBRL(totalOut)}</p>
           </div>
           <div className="text-center">
             <p className="text-xs mb-1" style={{ color: lmfitTokens.textMuted }}>
@@ -282,7 +282,7 @@ function PreviewModal({
                   className="border-b transition-colors"
                   style={{
                     borderColor: lmfitTokens.border,
-                    backgroundColor: selected.has(i) ? "transparent" : "#f9fafb",
+                    backgroundColor: selected.has(i) ? "transparent" : "var(--hover-bg)",
                     opacity: selected.has(i) ? 1 : 0.6,
                   }}
                 >
@@ -303,7 +303,7 @@ function PreviewModal({
                     </span>
                   </td>
                   <td className="py-1.5 pr-2 max-w-[150px] truncate" style={{ color: lmfitTokens.text }}>{tx.name}</td>
-                  <td className="py-1.5 text-right tabular-nums font-medium" style={{ color: tx.amount >= 0 ? "#065f46" : "#991b1b" }}>
+                  <td className="py-1.5 text-right tabular-nums font-medium" style={{ color: tx.amount >= 0 ? "var(--kivoni-success)" : "var(--kivoni-error)" }}>
                     {tx.amount >= 0 ? "+" : ""}{formatBRL(tx.amount)}
                   </td>
                 </tr>
@@ -719,11 +719,11 @@ export function FinancialClient() {
           className="rounded-lg px-4 py-3 text-sm"
           style={{
             backgroundColor: importMsg.startsWith("✅") || importMsg.startsWith("✨")
-              ? "#d1fae5"
-              : "#fee2e2",
+              ? "color-mix(in srgb, var(--kivoni-success) 15%, transparent)"
+              : "color-mix(in srgb, var(--kivoni-error) 15%, transparent)",
             color: importMsg.startsWith("✅") || importMsg.startsWith("✨")
-              ? "#065f46"
-              : "#991b1b",
+              ? "var(--kivoni-success)"
+              : "var(--kivoni-error)",
           }}
         >
           {importMsg}
@@ -842,7 +842,7 @@ export function FinancialClient() {
                                     {entry.aiAnalysis.entityType.replace('_', ' ')}
                                   </span>
                                 )}
-                                <span className="block text-[10px]" style={{ color: entry.aiAnalysis.confidence && entry.aiAnalysis.confidence > 0.7 ? "#065f46" : "#6b7280" }}>
+                                <span className="block text-[10px]" style={{ color: entry.aiAnalysis.confidence && entry.aiAnalysis.confidence > 0.7 ? "var(--kivoni-success)" : "var(--kivoni-text-muted)" }}>
                                   ({Math.round((entry.aiAnalysis.confidence ?? 0) * 100)}%)
                                 </span>
                               </span>
@@ -850,7 +850,7 @@ export function FinancialClient() {
                               <span className="text-[10px]">—</span>
                             )}
                           </td>
-                          <td className="py-2.5 px-4 text-right tabular-nums font-medium" style={{ color: getRawNumber(entry.amount) >= 0 ? "#065f46" : "#991b1b" }}>
+                          <td className="py-2.5 px-4 text-right tabular-nums font-medium" style={{ color: getRawNumber(entry.amount) >= 0 ? "var(--kivoni-success)" : "var(--kivoni-error)" }}>
                             {getRawNumber(entry.amount) >= 0 ? "+" : ""}{formatBRL(entry.amount)}
                           </td>
                           <td className="py-2.5 px-4 text-right whitespace-nowrap">
@@ -906,8 +906,8 @@ export function FinancialClient() {
                   </p>
                 </div>
                 <div className="flex gap-4 text-sm">
-                  <span style={{ color: "#065f46" }}>+{formatBRL(b.totalIn)}</span>
-                  <span style={{ color: "#991b1b" }}>-{formatBRL(b.totalOut)}</span>
+                  <span style={{ color: "var(--kivoni-success)" }}>+{formatBRL(b.totalIn)}</span>
+                  <span style={{ color: "var(--kivoni-error)" }}>-{formatBRL(b.totalOut)}</span>
                 </div>
                 <div className="flex gap-2">
 
