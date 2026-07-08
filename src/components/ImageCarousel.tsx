@@ -54,7 +54,7 @@ export function ImageCarousel({ urls, size = "sm", onRemoveIndex, className }: P
   return (
     <div className={[wrap, "group", className].filter(Boolean).join(" ")}>
       <div
-        className="h-full w-full overflow-hidden rounded-md border bg-neutral-100"
+        className="h-full w-full overflow-hidden rounded-md border bg-[var(--chart-track)]"
         style={{ borderColor: lmfitTokens.border }}
       >
         {broken[safeIdx] ? (

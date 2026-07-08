@@ -29,7 +29,7 @@ export function AtacadoClient() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow-sm border" style={{ borderColor: lmfitTokens.border }}>
+    <div className="max-w-md mx-auto mt-10 p-6 bg-[var(--card-bg)] rounded-xl shadow-sm border" style={{ borderColor: lmfitTokens.border }}>
       <h1 className="text-2xl font-bold text-center mb-2" style={{ color: lmfitTokens.text }}>
         Área do Atacado
       </h1>

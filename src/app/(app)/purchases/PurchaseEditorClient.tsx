@@ -599,7 +599,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
 
     {showSupplierModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white rounded-xl shadow-lg p-5 w-full max-w-sm" style={{ color: lmfitTokens.text }}>
+          <div className="bg-[var(--card-bg)] rounded-xl shadow-lg p-5 w-full max-w-sm" style={{ color: lmfitTokens.text }}>
             <h3 className="text-lg font-medium mb-4">Novo fornecedor</h3>
             <div className="space-y-3">
               <label className="block text-sm">
