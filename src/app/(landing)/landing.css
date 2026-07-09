@@ -837,13 +837,45 @@
   .kivo-theme-toggle { width: 32px; height: 32px; border-radius: 8px; }
   .kivo-theme-toggle svg { width: 16px; height: 16px; }
   .kivo-nav-actions .kivo-btn--sm { padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 8px; }
-  .kivo-hero { padding: 8rem 1.25rem 4rem; }
-  .kivo-browser-content { grid-template-columns: repeat(2, 1fr); }
+
+  /* Hero mais compacto */
+  .kivo-hero { padding: 7rem 1.25rem 3.5rem; }
+  .kivo-hero h1 { font-size: clamp(2.125rem, 10vw, 3rem); }
+  .kivo-hero-sub { font-size: 1rem; margin-bottom: 2rem; }
+  .kivo-hero-actions { width: 100%; flex-direction: column; }
+  .kivo-hero-actions .kivo-btn { width: 100%; }
+  .kivo-hero-badge { font-size: 0.75rem; text-align: center; }
+
+  /* Mockup do navegador */
+  .kivo-browser-mockup { margin-top: 2.5rem; }
+  .kivo-browser-content { grid-template-columns: repeat(2, 1fr); padding: 1rem; gap: 0.75rem; min-height: 0; }
   .kivo-browser-content .kivo-mock-product:last-child { display: none; }
+
+  /* Seções com menos respiro vertical */
+  .kivo-section { padding: 3.5rem 1.25rem; }
+  .kivo-section--center .kivo-section-desc { margin-bottom: 2rem; }
+
+  /* Bento grid: tudo empilhado em 1 coluna */
+  .kivo-bento-grid { grid-template-columns: 1fr; gap: 1rem; margin-top: 2rem; }
+  .kivo-bento-card--large,
+  .kivo-bento-card--large-rev,
+  .kivo-bento-card--medium,
+  .kivo-bento-card--half { grid-column: span 1; flex-direction: column; }
+  .kivo-bento-content { padding: 1.5rem; }
+  .kivo-bento-visual { padding: 0 1.5rem 1.5rem; }
+
   .kivo-steps { grid-template-columns: 1fr; gap: 1rem; }
   .kivo-pricing-grid { grid-template-columns: 1fr; max-width: 380px; margin-left: auto; margin-right: auto; }
   .kivo-features-grid { grid-template-columns: 1fr; }
-  .kivo-cta { margin: 2rem 1rem 4rem; padding: 2.5rem 1.5rem; }
+
+  /* CTA final + formulário */
+  .kivo-cta { margin: 2rem 1rem 4rem; padding: 2.5rem 1.25rem; }
+  .kivo-cta h2 { font-size: 1.5rem; }
+  .kivo-cta-form { padding: 1.5rem 1.25rem; }
+  .kivo-cta-form .domain-input-wrapper input { padding-right: 108px; }
+  .kivo-cta-form .domain-input-wrapper span { font-size: 0.6875rem; right: 0.75rem; }
+
+  .kivo-footer { padding: 2.5rem 1.25rem; }
 }
 
 /* ── Light Mode Specific Overrides ── */
