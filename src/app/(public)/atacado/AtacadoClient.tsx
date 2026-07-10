@@ -18,7 +18,7 @@ export function AtacadoClient() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.phone || !form.cnpj) return;
+    if (!form.name || !form.phone) return;
     
     cart.setCustomer({
       name: form.name,
@@ -55,11 +55,10 @@ export function AtacadoClient() {
         
         <div>
           <label className="block text-sm font-medium mb-1" style={{ color: lmfitTokens.text }}>
-            CNPJ
+            CNPJ (opcional)
           </label>
           <input
             type="text"
-            required
             className="w-full border rounded-md px-3 py-2 text-sm bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={form.cnpj}
