@@ -12,7 +12,7 @@ const GREETING: DisplayMessage = {
   content: "Oi! Posso ajudar a encontrar um produto, ver preços de atacado ou tirar dúvidas sobre a loja. O que você procura?",
 };
 
-type DisplayMessage = ChatMessage & { addedToCart?: boolean };
+type DisplayMessage = ChatMessage & { addedToCart?: boolean; isOrder?: boolean };
 
 // API responses format monetary fields as pt-BR strings (e.g. "299,90"); parse defensively
 // since chat actions may carry either a string or a plain number.
@@ -49,10 +49,12 @@ export function ChatWidget() {
     setSending(true);
     try {
       const history = next.slice(-MAX_HISTORY).map(({ role, content }) => ({ role, content }));
-      const { reply, action } = await sendPublicChatMessage(text, history);
+      const { reply, actions } = await sendPublicChatMessage(text, history);
 
       let addedToCart = false;
-      if (action?.type === "add_to_cart") {
+      let isOrder = false;
+      for (const action of actions) {
+        if (action.type !== "add_to_cart") continue;
         cart.addOrIncrement(
           {
             variantId: action.variantId,
@@ -67,10 +69,12 @@ export function ChatWidget() {
             imageUrl: action.imageUrl,
           },
           action.quantity,
+          action.isOrder,
         );
         addedToCart = true;
+        if (action.isOrder) isOrder = true;
       }
-      setMessages((prev) => [...prev, { role: "assistant", content: reply, addedToCart }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: reply, addedToCart, isOrder }]);
     } catch {
       setError("Não foi possível enviar sua mensagem agora. Tente novamente.");
     } finally {
@@ -119,7 +123,7 @@ export function ChatWidget() {
                     className="mt-1 text-xs font-medium underline"
                     style={{ color: lmfitTokens.primary }}
                   >
-                    Ver carrinho e finalizar compra →
+                    {m.isOrder ? "Ver carrinho e confirmar encomenda →" : "Ver carrinho e finalizar compra →"}
                   </a>
                 ) : null}
               </div>

@@ -57,6 +57,7 @@ describe("draftsToApiVariants", () => {
         size: "P",
         price: 12,
         quantityInStock: 4,
+        acceptsBackorder: false,
       },
     ]);
     expect(api[0].quantityInStock).toBe(4);
@@ -68,8 +69,8 @@ describe("validateVariantDrafts", () => {
   it("rejects duplicate skus", () => {
     expect(
       validateVariantDrafts([
-        { clientKey: "1", sku: "A", color: "", size: "", price: 1, quantityInStock: 0 },
-        { clientKey: "2", sku: "a", color: "", size: "", price: 1, quantityInStock: 0 },
+        { clientKey: "1", sku: "A", color: "", size: "", price: 1, quantityInStock: 0, acceptsBackorder: false },
+        { clientKey: "2", sku: "a", color: "", size: "", price: 1, quantityInStock: 0, acceptsBackorder: false },
       ]),
     ).toMatch(/duplicado/i);
   });

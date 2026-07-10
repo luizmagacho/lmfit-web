@@ -21,11 +21,12 @@ export type ChatCartAction = {
   minWholesaleQty: number;
   imageUrl: string | null;
   quantity: number;
+  isOrder: boolean;
 };
 
 export type ChatReplyResult = {
   reply: string;
-  action: ChatCartAction | null;
+  actions: ChatCartAction[];
 };
 
 export async function sendPublicChatMessage(

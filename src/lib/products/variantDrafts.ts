@@ -8,6 +8,8 @@ export type ProductVariantDraft = {
   size: string;
   price: number;
   quantityInStock: number;
+  /** Permite vender além do estoque (produção sob encomenda); só tem efeito em planos com produção. */
+  acceptsBackorder: boolean;
 };
 
 let seq = 0;
@@ -42,6 +44,7 @@ export function draftsFromProductRow(row: Record<string, unknown> | null): Produ
         size: "Único",
         price: 0,
         quantityInStock: 0,
+        acceptsBackorder: false,
       },
     ];
   }
@@ -60,6 +63,7 @@ export function draftsFromProductRow(row: Record<string, unknown> | null): Produ
         size: String(v.size ?? "").trim() || "Único",
         price: num(v.price, 0),
         quantityInStock: variantQty(v),
+        acceptsBackorder: v.acceptsBackorder === true,
       });
     }
     return out.length ? out : draftsFromProductRow(null);
@@ -74,6 +78,7 @@ export function draftsFromProductRow(row: Record<string, unknown> | null): Produ
       size: "Único",
       price: num(row.price, 0),
       quantityInStock: variantQty(row),
+      acceptsBackorder: row.acceptsBackorder === true,
     },
   ];
 }
@@ -102,6 +107,7 @@ export function draftsToApiVariants(
       price: d.price,
       quantityInStock: Math.max(0, Math.floor(d.quantityInStock)),
       quantityOnHand: Math.max(0, Math.floor(d.quantityInStock)),
+      acceptsBackorder: d.acceptsBackorder,
     };
     if (d.serverId) o._id = d.serverId;
     return o;
