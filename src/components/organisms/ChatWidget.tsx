@@ -4,16 +4,31 @@ import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Send, X, Loader2 } from "lucide-react";
 import { lmfitTokens } from "@/theme/tokens";
 import { sendPublicChatMessage, type ChatMessage } from "@/lib/publicChat";
+import { useCartStore } from "@/stores/useCartStore";
 
 const MAX_HISTORY = 20;
-const GREETING: ChatMessage = {
+const GREETING: DisplayMessage = {
   role: "assistant",
   content: "Oi! Posso ajudar a encontrar um produto, ver preços de atacado ou tirar dúvidas sobre a loja. O que você procura?",
 };
 
+type DisplayMessage = ChatMessage & { addedToCart?: boolean };
+
+// API responses format monetary fields as pt-BR strings (e.g. "299,90"); parse defensively
+// since chat actions may carry either a string or a plain number.
+function extractPrice(val: unknown): number {
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const parsed = parseFloat(val.replace(/\./g, "").replace(",", "."));
+    if (!isNaN(parsed)) return parsed;
+  }
+  return 0;
+}
+
 export function ChatWidget() {
+  const cart = useCartStore();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([GREETING]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,13 +44,33 @@ export function ChatWidget() {
     if (!text || sending) return;
     setError(null);
     setInput("");
-    const next = [...messages, { role: "user", content: text } as ChatMessage];
+    const next: DisplayMessage[] = [...messages, { role: "user", content: text }];
     setMessages(next);
     setSending(true);
     try {
-      const history = next.slice(-MAX_HISTORY);
-      const reply = await sendPublicChatMessage(text, history);
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      const history = next.slice(-MAX_HISTORY).map(({ role, content }) => ({ role, content }));
+      const { reply, action } = await sendPublicChatMessage(text, history);
+
+      let addedToCart = false;
+      if (action?.type === "add_to_cart") {
+        cart.addOrIncrement(
+          {
+            variantId: action.variantId,
+            productId: action.productId,
+            productName: action.productName,
+            sku: action.sku,
+            color: action.color,
+            size: action.size,
+            priceRetail: extractPrice(action.priceRetail),
+            priceWholesale: action.priceWholesale === null ? null : extractPrice(action.priceWholesale),
+            minWholesaleQty: action.minWholesaleQty,
+            imageUrl: action.imageUrl,
+          },
+          action.quantity,
+        );
+        addedToCart = true;
+      }
+      setMessages((prev) => [...prev, { role: "assistant", content: reply, addedToCart }]);
     } catch {
       setError("Não foi possível enviar sua mensagem agora. Tente novamente.");
     } finally {
@@ -67,7 +102,7 @@ export function ChatWidget() {
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
                 <div
                   className="max-w-[85%] rounded-xl px-3 py-2 text-sm leading-snug whitespace-pre-wrap"
                   style={
@@ -78,6 +113,15 @@ export function ChatWidget() {
                 >
                   {m.content}
                 </div>
+                {m.addedToCart ? (
+                  <a
+                    href="/checkout"
+                    className="mt-1 text-xs font-medium underline"
+                    style={{ color: lmfitTokens.primary }}
+                  >
+                    Ver carrinho e finalizar compra →
+                  </a>
+                ) : null}
               </div>
             ))}
             {sending ? (

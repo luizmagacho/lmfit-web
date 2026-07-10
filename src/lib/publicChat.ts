@@ -7,13 +7,34 @@ export type ChatMessage = {
   content: string;
 };
 
+export type ChatCartAction = {
+  type: "add_to_cart";
+  variantId: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  color?: string;
+  size?: string;
+  // API formats monetary fields as pt-BR strings (e.g. "299,90"); parsed before use.
+  priceRetail: number | string;
+  priceWholesale: number | string | null;
+  minWholesaleQty: number;
+  imageUrl: string | null;
+  quantity: number;
+};
+
+export type ChatReplyResult = {
+  reply: string;
+  action: ChatCartAction | null;
+};
+
 export async function sendPublicChatMessage(
   message: string,
   history: ChatMessage[],
-): Promise<string> {
-  const { data } = await publicHttp.post<{ reply: string }>("/public/chat", {
+): Promise<ChatReplyResult> {
+  const { data } = await publicHttp.post<ChatReplyResult>("/public/chat", {
     message,
     history,
   });
-  return data.reply;
+  return data;
 }
