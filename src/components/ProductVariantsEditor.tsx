@@ -186,6 +186,7 @@ export function ProductVariantsEditor({
                       price: drafts[0]?.price || 0,
                       quantityInStock: drafts[0]?.quantityInStock || 0,
                       acceptsBackorder: drafts[0]?.acceptsBackorder ?? false,
+                      backorderMinQty: drafts[0]?.backorderMinQty ?? 1,
                     });
                   }
                 }
@@ -308,17 +309,36 @@ export function ProductVariantsEditor({
                   />
                 </td>
                 <td className="px-2 py-1.5 align-middle text-center">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4"
-                    checked={d.acceptsBackorder}
-                    title="Permite vender além do estoque (produção sob encomenda)"
-                    onChange={(e) => {
-                      const next = drafts.slice();
-                      next[i] = { ...d, acceptsBackorder: e.target.checked };
-                      pushDrafts(next);
-                    }}
-                  />
+                  <div className="flex items-center justify-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4"
+                      checked={d.acceptsBackorder}
+                      title="Permite vender além do estoque (produção sob encomenda)"
+                      onChange={(e) => {
+                        const next = drafts.slice();
+                        next[i] = { ...d, acceptsBackorder: e.target.checked };
+                        pushDrafts(next);
+                      }}
+                    />
+                    {d.acceptsBackorder ? (
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        className="w-14 border rounded px-1.5 py-1 text-xs tabular-nums"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                        value={String(d.backorderMinQty)}
+                        title="A partir de quantas peças a encomenda pode ser feita"
+                        onChange={(e) => {
+                          const n = Math.max(1, Math.floor(Number(e.target.value)));
+                          const next = drafts.slice();
+                          next[i] = { ...d, backorderMinQty: Number.isFinite(n) ? n : 1 };
+                          pushDrafts(next);
+                        }}
+                      />
+                    ) : null}
+                  </div>
                 </td>
                 <td className="px-1 py-1.5 align-middle text-center">
                   <button
@@ -357,6 +377,7 @@ export function ProductVariantsEditor({
               price: typeof last?.price === "number" ? last.price : 0,
               quantityInStock: 0,
               acceptsBackorder: false,
+              backorderMinQty: 1,
             },
           ]);
         }}

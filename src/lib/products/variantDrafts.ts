@@ -10,6 +10,8 @@ export type ProductVariantDraft = {
   quantityInStock: number;
   /** Permite vender além do estoque (produção sob encomenda); só tem efeito em planos com produção. */
   acceptsBackorder: boolean;
+  /** Quantidade mínima para aceitar encomenda (ex.: só produz a partir de 3 peças). */
+  backorderMinQty: number;
 };
 
 let seq = 0;
@@ -45,6 +47,7 @@ export function draftsFromProductRow(row: Record<string, unknown> | null): Produ
         price: 0,
         quantityInStock: 0,
         acceptsBackorder: false,
+        backorderMinQty: 1,
       },
     ];
   }
@@ -64,6 +67,7 @@ export function draftsFromProductRow(row: Record<string, unknown> | null): Produ
         price: num(v.price, 0),
         quantityInStock: variantQty(v),
         acceptsBackorder: v.acceptsBackorder === true,
+        backorderMinQty: Math.max(1, Math.floor(num(v.backorderMinQty, 1))),
       });
     }
     return out.length ? out : draftsFromProductRow(null);
@@ -79,6 +83,7 @@ export function draftsFromProductRow(row: Record<string, unknown> | null): Produ
       price: num(row.price, 0),
       quantityInStock: variantQty(row),
       acceptsBackorder: row.acceptsBackorder === true,
+      backorderMinQty: Math.max(1, Math.floor(num(row.backorderMinQty, 1))),
     },
   ];
 }
@@ -108,6 +113,7 @@ export function draftsToApiVariants(
       quantityInStock: Math.max(0, Math.floor(d.quantityInStock)),
       quantityOnHand: Math.max(0, Math.floor(d.quantityInStock)),
       acceptsBackorder: d.acceptsBackorder,
+      backorderMinQty: Math.max(1, Math.floor(d.backorderMinQty || 1)),
     };
     if (d.serverId) o._id = d.serverId;
     return o;
