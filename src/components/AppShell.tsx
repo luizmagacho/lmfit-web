@@ -31,13 +31,16 @@ import {
   Settings,
   Scissors,
   Star,
-  Store
+  Store,
+  Warehouse,
+  Receipt
 } from "lucide-react";
 
 const navKeys = [
   { href: "/dashboard", key: "nav.dashboard", icon: LayoutDashboard },
   { href: "/pdv", key: "nav.pdv", icon: Smartphone },
   { href: "/inventory", key: "nav.inventory", icon: Layers },
+  { href: "/locations", key: "nav.locations", icon: Warehouse },
   { href: "/customers", key: "nav.customers", icon: Users },
   // { href: "/crm/pipeline", key: "nav.pipeline", icon: Filter },
   // { href: "/crm/tasks", key: "nav.tasks", icon: CheckSquare },
@@ -49,6 +52,7 @@ const navKeys = [
   { href: "/purchases", key: "nav.purchases", icon: CreditCard },
   { href: "/production", key: "nav.production", icon: Scissors },
   { href: "/invoices", key: "nav.invoices", icon: FileText },
+  { href: "/fiscal", key: "nav.fiscal", icon: Receipt },
   { href: "/financial", key: "nav.financial", icon: Wallet },
   { href: "/reports", key: "nav.reports", icon: BarChart },
   { href: "/escalations", key: "nav.escalations", icon: MessageSquare },
@@ -70,6 +74,10 @@ const tourStepsInfo: Record<string, { title: string; desc: string }> = {
   "nav.inventory": {
     title: "Controle de Estoque",
     desc: "Edição rápida em lote de preços, custos e quantidade dos produtos em estoque."
+  },
+  "nav.locations": {
+    title: "Estoque Multi-local",
+    desc: "Cadastre depósitos e lojas físicas e transfira estoque entre eles, com o saldo separado por local."
   },
   "nav.customers": {
     title: "Clientes",
@@ -100,8 +108,12 @@ const tourStepsInfo: Record<string, { title: string; desc: string }> = {
     desc: "Controle as etapas de corte, costura e acabamento. Calcule o custo real de fabricação de cada peça."
   },
   "nav.invoices": {
-    title: "Notas Fiscais (NF-e/NFC-e)",
-    desc: "Emita e acompanhe notas fiscais de venda integradas diretamente à SEFAZ."
+    title: "Contas a Receber",
+    desc: "Acompanhe títulos, vencimentos e status de pagamento das suas vendas a prazo."
+  },
+  "nav.fiscal": {
+    title: "Módulo Fiscal",
+    desc: "Configure CNPJ e credenciais Nuvem Fiscal, emita NF-e/NFC-e por pedido e acompanhe o histórico de notas."
   },
   "nav.financial": {
     title: "Financeiro & DRE",
@@ -261,7 +273,8 @@ function HelpDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
         { icon: LayoutDashboard, title: "Início (Dashboard)", desc: "Gráficos de vendas diárias, KPIs de faturamento e alertas de ações." },
         { icon: Smartphone, title: "PDV Mobile", desc: "Interface de caixa rápida otimizada para celulares e tablets." },
         { icon: ShoppingCart, title: "Pedidos", desc: "Acompanhe todo o status da venda: Separando, Enviado, Concluído ou Cancelado." },
-        { icon: Layers, title: "Edição em Lote", desc: "Ajuste preços, estoque e custos de vários produtos ao mesmo tempo." }
+        { icon: Layers, title: "Edição em Lote", desc: "Ajuste preços, estoque e custos de vários produtos ao mesmo tempo." },
+        { icon: Warehouse, title: "Estoque Multi-local", desc: "Cadastre depósitos e lojas físicas e transfira estoque entre eles." }
       ]
     },
     {
@@ -286,7 +299,8 @@ function HelpDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       category: "💸 CONTROLE FINANCEIRO & FISCAL",
       items: [
         { icon: Wallet, title: "Financeiro", desc: "Fluxo de caixa diário, importador de PDFs InfinitePay e DRE automático com Simples Nacional." },
-        { icon: FileText, title: "Notas Fiscais", desc: "Geração e emissão de notas fiscais (NF-e/NFC-e) integradas à SEFAZ." },
+        { icon: FileText, title: "Contas a Receber", desc: "Acompanhe títulos, vencimentos e status de pagamento das vendas a prazo." },
+        { icon: Receipt, title: "Módulo Fiscal", desc: "Configure CNPJ e credenciais Nuvem Fiscal e emita notas fiscais (NF-e/NFC-e) por pedido, integradas à SEFAZ." },
         { icon: BarChart, title: "Relatórios", desc: "Análise gerencial detalhada de lucratividade, exportações Excel e curva ABC." },
         { icon: MessageSquare, title: "WhatsApp", desc: "Automação de alertas de cobrança, códigos Pix e status de envio." }
       ]

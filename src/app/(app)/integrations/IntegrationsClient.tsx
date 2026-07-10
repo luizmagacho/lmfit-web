@@ -35,6 +35,8 @@ interface Integration {
 const PLATFORMS = [
   { id: 'bagy', name: 'Bagy', logo: 'B', desc: 'Integração oficial com a Bagy.', color: '#00d2ff' },
   { id: 'nuvemshop', name: 'Nuvemshop', logo: 'N', desc: 'Integração oficial com a Nuvemshop.', color: '#0052cc', disabled: false },
+  { id: 'mercadolivre', name: 'Mercado Livre', logo: 'ML', desc: 'Sincronize produtos, estoque e pedidos com o Mercado Livre.', color: '#ffe600' },
+  { id: 'shopee', name: 'Shopee', logo: 'SP', desc: 'Sincronize produtos e estoque com a Shopee.', color: '#ee4d2d' },
   { id: 'tray', name: 'Tray', logo: 'T', desc: 'Em breve: integração com Tray.', color: '#000000', disabled: true },
   { id: 'loja_integrada', name: 'Loja Integrada', logo: 'LI', desc: 'Em breve: integração com Loja Integrada.', color: '#27ae60', disabled: true },
   { id: 'shopify', name: 'Shopify', logo: 'S', desc: 'Em breve: integração com Shopify.', color: '#95bf47', disabled: true },
@@ -51,6 +53,8 @@ export function IntegrationsClient() {
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [apiToken, setApiToken] = useState('');
   const [storeId, setStoreId] = useState('');
+  const [applicationKey, setApplicationKey] = useState('');
+  const [partnerKey, setPartnerKey] = useState('');
   const [label, setLabel] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -81,13 +85,20 @@ export function IntegrationsClient() {
       const res = await http.post('/integrations', {
         platform: selectedPlatform,
         label: label || `Loja ${selectedPlatform}`,
-        credentials: { accessToken: apiToken, storeId: storeId || undefined },
+        credentials: {
+          accessToken: apiToken,
+          storeId: storeId || undefined,
+          applicationKey: applicationKey || undefined,
+          apiKey: partnerKey || undefined,
+        },
         syncStock: true,
       });
       toast.success('Loja conectada com sucesso!');
       setIsModalOpen(false);
       setApiToken('');
       setStoreId('');
+      setApplicationKey('');
+      setPartnerKey('');
       setLabel('');
       fetchIntegrations();
     } catch (err: any) {
@@ -257,8 +268,36 @@ export function IntegrationsClient() {
                   style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                 />
               </div>
+              {selectedPlatform === 'shopee' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">Partner ID</label>
+                    <input
+                      required
+                      value={applicationKey}
+                      onChange={e => setApplicationKey(e.target.value)}
+                      placeholder="ID do seu app no Shopee Open Platform"
+                      className="w-full p-2.5 bg-transparent border rounded-md text-sm focus:ring-2 focus:outline-none"
+                      style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">Partner Key</label>
+                    <input
+                      required
+                      value={partnerKey}
+                      onChange={e => setPartnerKey(e.target.value)}
+                      placeholder="Chave secreta do seu app"
+                      className="w-full p-2.5 bg-transparent border rounded-md text-sm focus:ring-2 focus:outline-none"
+                      style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                    />
+                  </div>
+                </>
+              )}
               <div>
-                <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">API Token (Access Token)</label>
+                <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">
+                  {selectedPlatform === 'shopee' ? 'Access Token (autorização da loja)' : 'API Token (Access Token)'}
+                </label>
                 <input
                   required
                   value={apiToken}
@@ -268,16 +307,22 @@ export function IntegrationsClient() {
                   style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                 />
                 <p className="text-[10px] text-[var(--lmfit-muted)] mt-1">
-                  {selectedPlatform === 'nuvemshop' 
+                  {selectedPlatform === 'nuvemshop'
                     ? "Gere o token criando um App Personalizado no painel de Parceiros Nuvemshop (Meus Aplicativos)."
                     : selectedPlatform === 'bagy'
                     ? "Para gerar o token na Bagy, acesse Configurações > Tokens de API."
+                    : selectedPlatform === 'mercadolivre'
+                    ? "Gere o Access Token pelo fluxo de autorização OAuth do seu app no Mercado Livre Developers."
+                    : selectedPlatform === 'shopee'
+                    ? "Gerado após autorizar a loja pelo fluxo OAuth do Shopee Open Platform."
                     : "Siga as instruções da plataforma para gerar o Token de API."}
                 </p>
               </div>
-              {selectedPlatform === 'nuvemshop' && (
+              {(selectedPlatform === 'nuvemshop' || selectedPlatform === 'mercadolivre' || selectedPlatform === 'shopee') && (
                 <div>
-                  <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">Store ID (ID da Loja)</label>
+                  <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">
+                    {selectedPlatform === 'shopee' ? 'Shop ID' : 'Store ID (ID da Loja)'}
+                  </label>
                   <input
                     required
                     value={storeId}
@@ -287,7 +332,11 @@ export function IntegrationsClient() {
                     style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                   />
                   <p className="text-[10px] text-[var(--lmfit-muted)] mt-1">
-                    Fica visível na URL do seu painel Nuvemshop ou nas configurações do seu App.
+                    {selectedPlatform === 'mercadolivre'
+                      ? "ID do usuário vendedor (seller_id), visível no seu perfil Mercado Livre Developers."
+                      : selectedPlatform === 'shopee'
+                      ? "ID numérico da sua loja Shopee, obtido durante a autorização OAuth."
+                      : "Fica visível na URL do seu painel Nuvemshop ou nas configurações do seu App."}
                   </p>
                 </div>
               )}
