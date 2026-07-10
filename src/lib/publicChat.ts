@@ -7,6 +7,13 @@ export type ChatMessage = {
   content: string;
 };
 
+export type ChatCartLine = {
+  variantId: string;
+  productName: string;
+  quantity: number;
+  isOrder?: boolean;
+};
+
 export type ChatCartAction = {
   type: "add_to_cart";
   variantId: string;
@@ -24,18 +31,36 @@ export type ChatCartAction = {
   isOrder: boolean;
 };
 
+export type ChatRemoveAction = {
+  type: "remove_from_cart";
+  variantId: string;
+  isOrder: boolean;
+  quantity: number | null;
+};
+
+export type ChatLeadAction = {
+  type: "lead_request";
+  productDescription: string;
+  customerName: string;
+  customerPhone: string;
+};
+
+export type ChatAction = ChatCartAction | ChatRemoveAction | ChatLeadAction;
+
 export type ChatReplyResult = {
   reply: string;
-  actions: ChatCartAction[];
+  actions: ChatAction[];
 };
 
 export async function sendPublicChatMessage(
   message: string,
   history: ChatMessage[],
+  cartLines: ChatCartLine[] = [],
 ): Promise<ChatReplyResult> {
   const { data } = await publicHttp.post<ChatReplyResult>("/public/chat", {
     message,
     history,
+    cartLines,
   });
   return data;
 }

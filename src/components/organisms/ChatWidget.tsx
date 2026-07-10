@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { MessageCircle, Send, X, Loader2 } from "lucide-react";
 import { lmfitTokens } from "@/theme/tokens";
-import { sendPublicChatMessage, type ChatMessage } from "@/lib/publicChat";
+import { sendPublicChatMessage, type ChatCartLine, type ChatMessage } from "@/lib/publicChat";
 import { useCartStore } from "@/stores/useCartStore";
 
 const MAX_HISTORY = 20;
@@ -49,30 +50,47 @@ export function ChatWidget() {
     setSending(true);
     try {
       const history = next.slice(-MAX_HISTORY).map(({ role, content }) => ({ role, content }));
-      const { reply, actions } = await sendPublicChatMessage(text, history);
+      const cartLines: ChatCartLine[] = cart.lines.map((l) => ({
+        variantId: l.variantId,
+        productName: l.productName,
+        quantity: l.quantity,
+        isOrder: l.isOrder,
+      }));
+      const { reply, actions } = await sendPublicChatMessage(text, history, cartLines);
 
       let addedToCart = false;
       let isOrder = false;
       for (const action of actions) {
-        if (action.type !== "add_to_cart") continue;
-        cart.addOrIncrement(
-          {
-            variantId: action.variantId,
-            productId: action.productId,
-            productName: action.productName,
-            sku: action.sku,
-            color: action.color,
-            size: action.size,
-            priceRetail: extractPrice(action.priceRetail),
-            priceWholesale: action.priceWholesale === null ? null : extractPrice(action.priceWholesale),
-            minWholesaleQty: action.minWholesaleQty,
-            imageUrl: action.imageUrl,
-          },
-          action.quantity,
-          action.isOrder,
-        );
-        addedToCart = true;
-        if (action.isOrder) isOrder = true;
+        if (action.type === "add_to_cart") {
+          cart.addOrIncrement(
+            {
+              variantId: action.variantId,
+              productId: action.productId,
+              productName: action.productName,
+              sku: action.sku,
+              color: action.color,
+              size: action.size,
+              priceRetail: extractPrice(action.priceRetail),
+              priceWholesale: action.priceWholesale === null ? null : extractPrice(action.priceWholesale),
+              minWholesaleQty: action.minWholesaleQty,
+              imageUrl: action.imageUrl,
+            },
+            action.quantity,
+            action.isOrder,
+          );
+          addedToCart = true;
+          if (action.isOrder) isOrder = true;
+        } else if (action.type === "remove_from_cart") {
+          if (action.quantity === null) {
+            cart.remove(action.variantId, action.isOrder);
+          } else {
+            const current = cart.lines.find(
+              (l) => l.variantId === action.variantId && !!l.isOrder === action.isOrder,
+            );
+            const nextQty = (current?.quantity ?? 0) - action.quantity;
+            cart.setQuantity(action.variantId, nextQty, action.isOrder);
+          }
+        }
       }
       setMessages((prev) => [...prev, { role: "assistant", content: reply, addedToCart, isOrder }]);
     } catch {
@@ -118,13 +136,13 @@ export function ChatWidget() {
                   {m.content}
                 </div>
                 {m.addedToCart ? (
-                  <a
+                  <Link
                     href="/checkout"
                     className="mt-1 text-xs font-medium underline"
                     style={{ color: lmfitTokens.primary }}
                   >
                     {m.isOrder ? "Ver carrinho e confirmar encomenda →" : "Ver carrinho e finalizar compra →"}
-                  </a>
+                  </Link>
                 ) : null}
               </div>
             ))}
