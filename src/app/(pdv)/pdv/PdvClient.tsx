@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { ScanLine } from "lucide-react";
 import { PdvTemplate } from "@/components/templates/PdvTemplate";
 import { VariantGrid } from "@/components/organisms/VariantGrid";
 import { QuickCart } from "@/components/organisms/QuickCart";
+import { BarcodeScannerModal } from "@/components/organisms/BarcodeScannerModal";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Badge } from "@/components/atoms/Badge";
 import { OrderWarningsPanel } from "@/components/OrderWarningsPanel";
@@ -13,7 +15,7 @@ import { StockConflictPanel } from "@/components/StockConflictPanel";
 import { NewCustomerModal } from "@/components/organisms/NewCustomerModal";
 import { PaymentModal, type PaymentMethod } from "@/components/organisms/PaymentModal";
 import type { VariantRowData } from "@/components/molecules/VariantQtyRow";
-import { pdvSearchProducts, type PdvProduct } from "@/lib/pdv/searchProducts";
+import { pdvSearchProducts, pdvLookupByBarcode, type PdvProduct } from "@/lib/pdv/searchProducts";
 import { createBatch } from "@/lib/production/productionApi";
 import { resolvePrimaryImageUrl } from "@/lib/productImageUrl";
 import { documentId, extractListItems } from "@/lib/normalizeApiList";
@@ -54,6 +56,8 @@ export function PdvClient() {
   const [customerSearch, setCustomerSearch] = useState("");
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [orderData, setOrderData] = useState<{ variant: VariantRowData; product: Record<string, unknown> } | null>(null);
 
   useEffect(() => {
@@ -91,7 +95,27 @@ export function PdvClient() {
       pdv.setSearch("");
       queueMicrotask(() => setLoadingVariants(false));
     },
-    [pdv],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const handleBarcodeDetected = useCallback(
+    async (code: string) => {
+      setIsScannerOpen(false);
+      setScanning(true);
+      try {
+        const { product, variantId } = await pdvLookupByBarcode(code);
+        pickProduct(product);
+        const variant = product.variants?.find((v) => String((v as { _id?: string })._id) === variantId);
+        const label = variant ? [variant.color, variant.size].filter(Boolean).join(" · ") : null;
+        toast.success(label ? `${product.name} · ${label}` : `${product.name}`);
+      } catch (e: any) {
+        toast.error(e?.response?.data?.message || `Código ${code} não encontrado.`);
+      } finally {
+        setScanning(false);
+      }
+    },
+    [pickProduct],
   );
 
   useEffect(() => {
@@ -323,16 +347,32 @@ export function PdvClient() {
       )}
 
 
-        <div className="relative mb-2 mt-4">
+        <div className="relative mb-2 mt-4 flex gap-2">
           <input
             type="search"
             inputMode="search"
             placeholder="Buscar por Produto, SKU, Cor..."
             className="w-full border rounded-md py-2 px-3 text-sm min-h-12 bg-[var(--card-bg)]"
+            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={pdv.search}
             onChange={(e) => pdv.setSearch(e.target.value)}
           />
+          <button
+            type="button"
+            onClick={() => setIsScannerOpen(true)}
+            disabled={scanning}
+            aria-label="Escanear código de barras"
+            title="Escanear código de barras"
+            className="flex-none min-h-12 min-w-12 rounded-md border flex items-center justify-center disabled:opacity-50 touch-manipulation"
+            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.primary }}
+          >
+            <ScanLine className="h-5 w-5" />
+          </button>
         </div>
+
+        {isScannerOpen ? (
+          <BarcodeScannerModal onClose={() => setIsScannerOpen(false)} onDetected={handleBarcodeDetected} />
+        ) : null}
 
         <div
           className="rounded-lg border bg-[var(--card-bg)] overflow-hidden"

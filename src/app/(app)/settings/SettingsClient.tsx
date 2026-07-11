@@ -206,7 +206,10 @@ export function SettingsClient() {
         {user?.role === "admin" && (
           <section className="rounded-2xl border p-6 md:p-8 bg-[var(--card-bg)] shadow-sm" style={{ borderColor: lmfitTokens.border }}>
             <div className="flex items-start gap-3.5 mb-6">
-              <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-500 flex-shrink-0">
+              <div
+                className="p-2.5 rounded-xl flex-shrink-0 transition-colors"
+                style={{ backgroundColor: `color-mix(in srgb, ${primaryColor} 12%, transparent)`, color: primaryColor }}
+              >
                 <Palette size={22} />
               </div>
               <div>
@@ -449,9 +452,9 @@ export function SettingsClient() {
                         <div className="flex justify-center items-center py-1.5">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src="/kivoni-symbol.svg"
+                            src={logoUrl || "/kivoni-symbol.svg"}
                             alt="Logo Mockup"
-                            className="h-6 w-6 object-contain"
+                            className="h-6 max-w-[64px] object-contain"
                           />
                         </div>
                         {/* Nav Items Mockup */}
