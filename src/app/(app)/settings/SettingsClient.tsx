@@ -4,7 +4,7 @@ import { useTheme } from "next-themes";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens, lmfitLogoSrc } from "@/theme/tokens";
 import { useEffect, useState } from "react";
-import { Moon, Sun, Monitor, Languages, Palette, Upload } from "lucide-react";
+import { Moon, Sun, Monitor, Languages, Palette, Upload, Gift } from "lucide-react";
 import { useTenant } from "@/context/TenantContext";
 import { useTenantStore } from "@/stores/useTenantStore";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -30,6 +30,10 @@ export function SettingsClient() {
   const [metaWhatsappVerifyToken, setMetaWhatsappVerifyToken] = useState("");
   const [metaWhatsappPhoneNumberId, setMetaWhatsappPhoneNumberId] = useState("");
   const [metaWhatsappAccessToken, setMetaWhatsappAccessToken] = useState("");
+
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(false);
+  const [loyaltyPointsPerBRL, setLoyaltyPointsPerBRL] = useState(1);
+  const [loyaltyRedeemValue, setLoyaltyRedeemValue] = useState(0.01);
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
@@ -68,6 +72,11 @@ export function SettingsClient() {
             setMetaWhatsappVerifyToken(data.metaWhatsappVerifyToken || "");
             setMetaWhatsappPhoneNumberId(data.metaWhatsappPhoneNumberId || "");
             setMetaWhatsappAccessToken(data.metaWhatsappAccessToken || "");
+            if (data.loyalty) {
+              setLoyaltyEnabled(data.loyalty.enabled ?? false);
+              setLoyaltyPointsPerBRL(data.loyalty.pointsPerBRL ?? 1);
+              setLoyaltyRedeemValue(data.loyalty.redeemValuePerPoint ?? 0.01);
+            }
           }
         })
         .catch((err) => {
@@ -153,6 +162,31 @@ export function SettingsClient() {
     }
   };
 
+  const handleSaveLoyalty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (user?.role !== "admin") return;
+    if (!user?.tenantId) return;
+
+    setSaving(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      await http.patch(`/tenants/${user.tenantId}/loyalty`, {
+        enabled: loyaltyEnabled,
+        pointsPerBRL: loyaltyPointsPerBRL,
+        redeemValuePerPoint: loyaltyRedeemValue
+      });
+      setSuccessMsg(language === "en" ? "Loyalty settings saved successfully!" : "Fidelidade salva com sucesso!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.message || "Erro ao salvar as configurações de fidelidade.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl space-y-8">
       <div>
@@ -172,7 +206,10 @@ export function SettingsClient() {
         {user?.role === "admin" && (
           <section className="rounded-2xl border p-6 md:p-8 bg-[var(--card-bg)] shadow-sm" style={{ borderColor: lmfitTokens.border }}>
             <div className="flex items-start gap-3.5 mb-6">
-              <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-500 flex-shrink-0">
+              <div
+                className="p-2.5 rounded-xl flex-shrink-0 transition-colors"
+                style={{ backgroundColor: `color-mix(in srgb, ${primaryColor} 12%, transparent)`, color: primaryColor }}
+              >
                 <Palette size={22} />
               </div>
               <div>
@@ -415,9 +452,9 @@ export function SettingsClient() {
                         <div className="flex justify-center items-center py-1.5">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src="/kivoni-symbol.svg"
+                            src={logoUrl || "/kivoni-symbol.svg"}
                             alt="Logo Mockup"
-                            className="h-6 w-6 object-contain"
+                            className="h-6 max-w-[64px] object-contain"
                           />
                         </div>
                         {/* Nav Items Mockup */}
@@ -490,6 +527,91 @@ export function SettingsClient() {
                     </span>
                   ) : "Salvar Customização"}
                 </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {/* Loyalty Section (Admin Only) */}
+        {user?.role === "admin" && (
+          <section className="rounded-2xl border p-6 md:p-8 bg-[var(--card-bg)] shadow-sm" style={{ borderColor: lmfitTokens.border }}>
+            <form onSubmit={handleSaveLoyalty}>
+              <div className="flex items-start gap-3.5 mb-6">
+                <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-500 flex-shrink-0">
+                  <Gift size={22} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold" style={{ color: lmfitTokens.text }}>
+                    {language === "en" ? "Loyalty & Cashback" : "Fidelidade & Cashback"}
+                  </h2>
+                  <p className="text-xs mt-0.5" style={{ color: lmfitTokens.textMuted }}>
+                    {language === "en"
+                      ? "Configure how your customers earn and use points on your store."
+                      : "Configure como seus clientes ganham e utilizam pontos na sua loja."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {/* Enabled Toggle */}
+                <div className="flex items-center justify-between border p-4 rounded-xl bg-gray-50/50 dark:bg-neutral-900/50" style={{ borderColor: lmfitTokens.border }}>
+                  <div>
+                    <h3 className="text-sm font-semibold" style={{ color: lmfitTokens.text }}>
+                      {language === "en" ? "Enable Loyalty Program" : "Habilitar Programa de Fidelidade"}
+                    </h3>
+                    <p className="text-xs mt-0.5" style={{ color: lmfitTokens.textMuted }}>
+                      {language === "en" ? "Customers will start earning points on every purchase." : "Seus clientes começarão a ganhar pontos nas compras."}
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={loyaltyEnabled} onChange={(e) => setLoyaltyEnabled(e.target.checked)} className="sr-only peer" />
+                    <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all" style={{ backgroundColor: loyaltyEnabled ? primaryColor : undefined }}></div>
+                  </label>
+                </div>
+
+                {/* Points and Values */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                      {language === "en" ? "Points earned per BRL" : "Pontos ganhos por R$ 1"}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={loyaltyPointsPerBRL}
+                      onChange={(e) => setLoyaltyPointsPerBRL(Number(e.target.value))}
+                      className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                      style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                      {language === "en" ? "Discount value per point (BRL)" : "Valor de desconto por ponto (R$)"}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={loyaltyRedeemValue}
+                      onChange={(e) => setLoyaltyRedeemValue(Number(e.target.value))}
+                      className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                      style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t" style={{ borderColor: lmfitTokens.border }}>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-6 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                    style={{ backgroundColor: lmfitTokens.primary }}
+                  >
+                    {saving ? "Salvando..." : "Salvar Fidelidade"}
+                  </button>
+                </div>
               </div>
             </form>
           </section>

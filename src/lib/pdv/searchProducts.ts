@@ -25,3 +25,13 @@ export async function pdvSearchProducts(term: string, limit = 20): Promise<PdvPr
     return [];
   }
 }
+
+export type BarcodeLookupResult = { product: PdvProduct; variantId?: string };
+
+/** Busca exata por código de barras (scanner de câmera). Lança se não encontrar. */
+export async function pdvLookupByBarcode(code: string): Promise<BarcodeLookupResult> {
+  const { data } = await http.get<BarcodeLookupResult>(
+    `/products/barcode/${encodeURIComponent(code.trim())}`,
+  );
+  return data;
+}

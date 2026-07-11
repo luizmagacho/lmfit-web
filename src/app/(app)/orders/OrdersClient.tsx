@@ -11,6 +11,7 @@ import { slugifyFileBase } from "@/lib/slugifyFileBase";
 import { orderChannelLabel, ORDER_CHANNELS } from "@/lib/orders/orderChannel";
 import type { OrderChannel, OrderWithWarnings } from "@/lib/orders/types";
 import { orderStatusLabel } from "@/lib/orders/orderStatus";
+import { parseBRLToNumber } from "@/lib/orders/normalizeLines";
 import { listOrders, updateOrder, ordersExportParams } from "@/lib/orders/ordersApi";
 import { OrdersKanban } from "./OrdersKanban";
 import { useLanguage } from "@/context/LanguageContext";
@@ -283,7 +284,16 @@ export function OrdersClient() {
                       {t(`status.${row.status}`, orderStatusLabel(row.status as string))}
                     </td>
                     <td className="px-3 py-2 align-top tabular-nums" style={{ color: lmfitTokens.text }}>
-                      {typeof row.total === "number" && Number.isFinite(row.total) ? formatBRL(row.total) : "—"}
+                      {row.total != null ? formatBRL(parseBRLToNumber(row.total)) : "—"}
+                      {row.couponCode ? (
+                        <span
+                          className="block text-[10px] font-medium normal-case tracking-normal mt-0.5"
+                          style={{ color: lmfitTokens.success }}
+                          title={`Desconto de ${formatBRL(Number(row.discountTotal ?? 0))} aplicado`}
+                        >
+                          🏷️ {row.couponCode}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.textMuted }}>
                       {created && !Number.isNaN(created.getTime())

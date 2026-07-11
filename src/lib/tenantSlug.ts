@@ -28,6 +28,11 @@ export function getTenantSlug(): string {
     }
   }
 
+  // Domínio raiz da plataforma — nunca herda localStorage de outro tenant
+  if (hostname === "kivoni.com.br" || hostname === "www.kivoni.com.br") {
+    return "kivoni";
+  }
+
   // Domínio legado da LMFit (crm.lmfit.com.br, www.lmfit.com.br, …) → loja lmfit
   if (hostname.endsWith("lmfit.com.br")) {
     return "lmfit";
@@ -41,7 +46,7 @@ export function getTenantSlug(): string {
     return match[2];
   }
 
-  // Último fallback: tenta localStorage (para compatibilidade)
+  // Último fallback: tenta localStorage (apenas em dev/localhost)
   try {
     const stored = localStorage.getItem("kivoni_tenant_slug");
     if (stored) return stored;
@@ -49,7 +54,7 @@ export function getTenantSlug(): string {
     /* ignore */
   }
 
-  return match?.[2] ?? "kivoni";
+  return "kivoni";
 }
 
 /**
@@ -73,6 +78,11 @@ export function isRealTenantResolved(): boolean {
   if (typeof window === "undefined") return false;
 
   const hostname = window.location.hostname;
+
+  // Domínio raiz da plataforma: não carrega tenant (não há subdomain para resolver)
+  if (hostname === "kivoni.com.br" || hostname === "www.kivoni.com.br") {
+    return false;
+  }
 
   // 1. Subdomínio
   if (hostname.includes(".localhost")) {

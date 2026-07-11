@@ -22,7 +22,7 @@ export type PublicPaymentResponse = {
 export async function createPublicDraftWithLines(params: {
   customer: { name: string; phone: string; email?: string | null };
   lines: Array<{ variantId: string; quantity: number; unitPrice: number }>;
-  shipping?: { method: string; address?: unknown };
+  shipping?: { method: string; address?: unknown; cost?: number };
 }): Promise<{ sessionToken: string; draft: PublicDraft }> {
   const { data } = await publicHttp.post<{ sessionToken: string }>("/public/order-drafts", {
     waId: params.customer.phone.replace(/\D/g, "") || undefined,
@@ -35,6 +35,8 @@ export async function createPublicDraftWithLines(params: {
   const { data: draft } = await publicHttp.patch<PublicDraft>(`/public/order-drafts/${token}`, {
     lines: params.lines,
     status: "review",
+    shippingMethod: params.shipping?.method,
+    shippingCost: params.shipping?.cost ?? 0,
   });
   return { sessionToken: token, draft };
 }

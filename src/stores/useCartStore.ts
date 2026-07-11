@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type { CustomerRole, PriceMode } from "@/lib/pricing";
 import { resolveUnitPrice } from "@/lib/pricing";
 
@@ -74,87 +75,96 @@ function totals(lines: CartLine[]) {
   return { items, subtotal };
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
-  lines: [],
-  customer: null,
-  role: "guest",
+export const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
+      lines: [],
+      customer: null,
+      role: "guest",
 
-  setRole: (r) => set((s) => ({ role: r, lines: recalc(s.lines, r) })),
-  setCustomer: (c) => set({ customer: c }),
+      setRole: (r) => set((s) => ({ role: r, lines: recalc(s.lines, r) })),
+      setCustomer: (c) => set({ customer: c }),
 
-  addOrIncrement: (line, qty, isOrder) =>
-    set((s) => {
-      const q = Math.max(1, Math.floor(qty || 1));
-      const existing = s.lines.find((l) => l.variantId === line.variantId && l.isOrder === isOrder);
-      let next: CartLine[];
-      if (existing) {
-        next = s.lines.map((l) =>
-          l.variantId === line.variantId && l.isOrder === isOrder ? { ...l, quantity: l.quantity + q } : l,
-        );
-      } else {
-        next = [
-          ...s.lines,
-          { ...line, quantity: q, unitPrice: line.priceRetail, mode: "varejo", isOrder },
-        ];
-      }
-      return { lines: recalc(next, s.role) };
-    }),
+      addOrIncrement: (line, qty, isOrder) =>
+        set((s) => {
+          const q = Math.max(1, Math.floor(qty || 1));
+          const existing = s.lines.find((l) => l.variantId === line.variantId && l.isOrder === isOrder);
+          let next: CartLine[];
+          if (existing) {
+            next = s.lines.map((l) =>
+              l.variantId === line.variantId && l.isOrder === isOrder ? { ...l, quantity: l.quantity + q } : l,
+            );
+          } else {
+            next = [
+              ...s.lines,
+              { ...line, quantity: q, unitPrice: line.priceRetail, mode: "varejo", isOrder },
+            ];
+          }
+          return { lines: recalc(next, s.role) };
+        }),
 
-  setQuantity: (variantId, qty, isOrder) =>
-    set((s) => {
-      if (qty <= 0) {
-        return {
+      setQuantity: (variantId, qty, isOrder) =>
+        set((s) => {
+          if (qty <= 0) {
+            return {
+              lines: recalc(
+                s.lines.filter((l) => !(l.variantId === variantId && l.isOrder === isOrder)),
+                s.role,
+              ),
+            };
+          }
+          return {
+            lines: recalc(
+              s.lines.map((l) =>
+                l.variantId === variantId && l.isOrder === isOrder ? { ...l, quantity: qty } : l,
+              ),
+              s.role,
+            ),
+          };
+        }),
+
+      increment: (variantId, delta, isOrder) =>
+        set((s) => {
+          let remove = false;
+          const next = s.lines.map((l) => {
+            if (l.variantId === variantId && l.isOrder === isOrder) {
+              const q = l.quantity + delta;
+              if (q <= 0) remove = true;
+              return { ...l, quantity: q };
+            }
+            return l;
+          });
+          if (remove) {
+            return {
+              lines: recalc(
+                next.filter((l) => l.quantity > 0),
+                s.role,
+              ),
+            };
+          }
+          return { lines: recalc(next, s.role) };
+        }),
+
+      remove: (variantId, isOrder) =>
+        set((s) => ({
           lines: recalc(
             s.lines.filter((l) => !(l.variantId === variantId && l.isOrder === isOrder)),
             s.role,
           ),
-        };
-      }
-      return {
-        lines: recalc(
-          s.lines.map((l) =>
-            l.variantId === variantId && l.isOrder === isOrder ? { ...l, quantity: qty } : l,
-          ),
-          s.role,
-        ),
-      };
+        })),
+
+      clear: () => set({ lines: [], customer: null }),
+
+      snapshot: () => {
+        const { lines, customer, role } = get();
+        const { items, subtotal } = totals(lines);
+        return { lines, customer, role, items, subtotal };
+      },
     }),
-
-  increment: (variantId, delta, isOrder) =>
-    set((s) => {
-      let remove = false;
-      const next = s.lines.map((l) => {
-        if (l.variantId === variantId && l.isOrder === isOrder) {
-          const q = l.quantity + delta;
-          if (q <= 0) remove = true;
-          return { ...l, quantity: q };
-        }
-        return l;
-      });
-      if (remove) {
-        return {
-          lines: recalc(
-            next.filter((l) => l.quantity > 0),
-            s.role,
-          ),
-        };
-      }
-      return { lines: recalc(next, s.role) };
-    }),
-
-  remove: (variantId, isOrder) =>
-    set((s) => ({
-      lines: recalc(
-        s.lines.filter((l) => !(l.variantId === variantId && l.isOrder === isOrder)),
-        s.role,
-      ),
-    })),
-
-  clear: () => set({ lines: [], customer: null }),
-
-  snapshot: () => {
-    const { lines, customer, role } = get();
-    const { items, subtotal } = totals(lines);
-    return { lines, customer, role, items, subtotal };
-  },
-}));
+    {
+      name: "kivoni-cart",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ lines: state.lines, customer: state.customer, role: state.role }),
+    },
+  ),
+);

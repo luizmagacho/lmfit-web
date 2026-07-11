@@ -58,10 +58,10 @@ export function InvoicesClient() {
 
   return (
     <ResourceList
-      title="Notas fiscais"
+      title="Contas a receber"
       endpoint="/invoices"
       columns={columns}
-      exportFileBase="notas-fiscais"
+      exportFileBase="contas-a-receber"
       extraListParams={listExtra}
       cellRender={{ status: (row) => <InvoiceStatusBadge row={row} /> }}
       toolbarExtras={

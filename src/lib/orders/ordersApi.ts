@@ -36,10 +36,18 @@ export type CreateOrderBody = {
   notes?: string | null;
   lines?: OrderLineInput[];
   paymentMethod?: "pix" | "cash" | "card";
+  couponCode?: string;
+  discountTotal?: number;
 };
 
 export async function createOrder(body: CreateOrderBody) {
   const { data } = await http.post<OrderWithWarnings>("/orders", body);
+  return data;
+}
+
+/** Valida um cupom contra o subtotal atual — não confirma o uso (isso só acontece ao criar o pedido). */
+export async function validatePromotion(code: string, subtotal: number) {
+  const { data } = await http.post<{ discountAmount: number }>("/promotions/validate", { code, subtotal });
   return data;
 }
 

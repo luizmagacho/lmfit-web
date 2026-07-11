@@ -18,7 +18,7 @@ export function AtacadoClient() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.phone || !form.cnpj) return;
+    if (!form.name || !form.phone) return;
     
     cart.setCustomer({
       name: form.name,
@@ -45,7 +45,7 @@ export function AtacadoClient() {
           <input
             type="text"
             required
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className="w-full border rounded-md px-3 py-2 text-sm bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -55,12 +55,11 @@ export function AtacadoClient() {
         
         <div>
           <label className="block text-sm font-medium mb-1" style={{ color: lmfitTokens.text }}>
-            CNPJ
+            CNPJ (opcional)
           </label>
           <input
             type="text"
-            required
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className="w-full border rounded-md px-3 py-2 text-sm bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={form.cnpj}
             onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
@@ -75,7 +74,7 @@ export function AtacadoClient() {
           <input
             type="tel"
             required
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className="w-full border rounded-md px-3 py-2 text-sm bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -89,7 +88,7 @@ export function AtacadoClient() {
           </label>
           <input
             type="email"
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className="w-full border rounded-md px-3 py-2 text-sm bg-[var(--card-bg)]"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}

@@ -32,12 +32,42 @@ interface Integration {
   lastSyncError?: string;
 }
 
+function PlatformIcon({ domain, logo, color, name }: { domain: string; logo: string; color: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div
+        className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-inner"
+        style={{ backgroundColor: color }}
+      >
+        {logo}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-white shadow-inner overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
+        alt={name}
+        className="w-full h-full object-contain p-1.5"
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
 const PLATFORMS = [
-  { id: 'bagy', name: 'Bagy', logo: 'B', desc: 'Integração oficial com a Bagy.', color: '#00d2ff' },
-  { id: 'nuvemshop', name: 'Nuvemshop', logo: 'N', desc: 'Integração oficial com a Nuvemshop.', color: '#0052cc', disabled: false },
-  { id: 'tray', name: 'Tray', logo: 'T', desc: 'Em breve: integração com Tray.', color: '#000000', disabled: true },
-  { id: 'loja_integrada', name: 'Loja Integrada', logo: 'LI', desc: 'Em breve: integração com Loja Integrada.', color: '#27ae60', disabled: true },
-  { id: 'shopify', name: 'Shopify', logo: 'S', desc: 'Em breve: integração com Shopify.', color: '#95bf47', disabled: true },
+  { id: 'bagy', name: 'Bagy', logo: 'B', domain: 'bagy.com.br', desc: 'Integração oficial com a Bagy.', color: '#00d2ff' },
+  { id: 'nuvemshop', name: 'Nuvemshop', logo: 'N', domain: 'nuvemshop.com.br', desc: 'Integração oficial com a Nuvemshop.', color: '#0052cc', disabled: false },
+  { id: 'mercadolivre', name: 'Mercado Livre', logo: 'ML', domain: 'mercadolivre.com.br', desc: 'Sincronize produtos, estoque e pedidos com o Mercado Livre.', color: '#ffe600' },
+  { id: 'shopee', name: 'Shopee', logo: 'SP', domain: 'shopee.com.br', desc: 'Sincronize produtos e estoque com a Shopee.', color: '#ee4d2d' },
+  { id: 'tiktok', name: 'TikTok Shop', logo: 'TT', domain: 'tiktok.com', desc: 'Importa pedidos, emite a NF-e automaticamente e sobe a nota pro pedido.', color: '#000000' },
+  { id: 'tray', name: 'Tray', logo: 'T', domain: 'tray.com.br', desc: 'Em breve: integração com Tray.', color: '#000000', disabled: true },
+  { id: 'loja_integrada', name: 'Loja Integrada', logo: 'LI', domain: 'lojaintegrada.com.br', desc: 'Em breve: integração com Loja Integrada.', color: '#27ae60', disabled: true },
+  { id: 'shopify', name: 'Shopify', logo: 'S', domain: 'shopify.com', desc: 'Em breve: integração com Shopify.', color: '#95bf47', disabled: true },
 ];
 
 export function IntegrationsClient() {
@@ -51,6 +81,9 @@ export function IntegrationsClient() {
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [apiToken, setApiToken] = useState('');
   const [storeId, setStoreId] = useState('');
+  const [applicationKey, setApplicationKey] = useState('');
+  const [partnerKey, setPartnerKey] = useState('');
+  const [authCode, setAuthCode] = useState('');
   const [label, setLabel] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -72,26 +105,49 @@ export function IntegrationsClient() {
     }
   }
 
+  function resetConnectForm() {
+    setIsModalOpen(false);
+    setApiToken('');
+    setStoreId('');
+    setApplicationKey('');
+    setPartnerKey('');
+    setAuthCode('');
+    setLabel('');
+  }
+
   async function handleConnect(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedPlatform || !apiToken) return;
+    if (!selectedPlatform) return;
 
     setSaving(true);
     try {
-      const res = await http.post('/integrations', {
-        platform: selectedPlatform,
-        label: label || `Loja ${selectedPlatform}`,
-        credentials: { accessToken: apiToken, storeId: storeId || undefined },
-        syncStock: true,
-      });
+      if (selectedPlatform === 'tiktok') {
+        if (!applicationKey || !partnerKey || !authCode) return;
+        await http.post('/integrations/tiktok/connect', {
+          label: label || undefined,
+          applicationKey,
+          apiKey: partnerKey,
+          authCode,
+        });
+      } else {
+        if (!apiToken) return;
+        await http.post('/integrations', {
+          platform: selectedPlatform,
+          label: label || `Loja ${selectedPlatform}`,
+          credentials: {
+            accessToken: apiToken,
+            storeId: storeId || undefined,
+            applicationKey: applicationKey || undefined,
+            apiKey: partnerKey || undefined,
+          },
+          syncStock: true,
+        });
+      }
       toast.success('Loja conectada com sucesso!');
-      setIsModalOpen(false);
-      setApiToken('');
-      setStoreId('');
-      setLabel('');
+      resetConnectForm();
       fetchIntegrations();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erro ao conectar com a loja. Verifique o token.');
+      toast.error(err.response?.data?.message || 'Erro ao conectar com a loja. Verifique as credenciais.');
     } finally {
       setSaving(false);
     }
@@ -153,9 +209,7 @@ export function IntegrationsClient() {
               )}
               <div className="p-5">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-inner" style={{ backgroundColor: platform.color }}>
-                    {platform.logo}
-                  </div>
+                  <PlatformIcon domain={platform.domain} logo={platform.logo} color={platform.color} name={platform.name} />
                   <div>
                     <h3 className="font-semibold text-[var(--lmfit-text)]">{platform.name}</h3>
                     {connected ? (
@@ -244,7 +298,7 @@ export function IntegrationsClient() {
           <div className="bg-[var(--card-bg)] rounded-xl shadow-2xl w-full max-w-md overflow-hidden border" style={{ borderColor: lmfitTokens.border }}>
             <div className="p-5 border-b flex justify-between items-center" style={{ borderColor: lmfitTokens.border }}>
               <h3 className="font-bold text-lg text-[var(--lmfit-text)]">Conectar {PLATFORMS.find(p => p.id === selectedPlatform)?.name}</h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+              <button type="button" onClick={resetConnectForm} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
             </div>
             <form onSubmit={handleConnect} className="p-5 space-y-4">
               <div>
@@ -257,27 +311,86 @@ export function IntegrationsClient() {
                   style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">API Token (Access Token)</label>
-                <input
-                  required
-                  value={apiToken}
-                  onChange={e => setApiToken(e.target.value)}
-                  placeholder="Insira o Token de Acesso da plataforma"
-                  className="w-full p-2.5 bg-transparent border rounded-md text-sm focus:ring-2 focus:outline-none"
-                  style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-                />
-                <p className="text-[10px] text-[var(--lmfit-muted)] mt-1">
-                  {selectedPlatform === 'nuvemshop' 
-                    ? "Gere o token criando um App Personalizado no painel de Parceiros Nuvemshop (Meus Aplicativos)."
-                    : selectedPlatform === 'bagy'
-                    ? "Para gerar o token na Bagy, acesse Configurações > Tokens de API."
-                    : "Siga as instruções da plataforma para gerar o Token de API."}
-                </p>
-              </div>
-              {selectedPlatform === 'nuvemshop' && (
+              {(selectedPlatform === 'shopee' || selectedPlatform === 'tiktok') && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">
+                      {selectedPlatform === 'tiktok' ? 'App Key' : 'Partner ID'}
+                    </label>
+                    <input
+                      required
+                      value={applicationKey}
+                      onChange={e => setApplicationKey(e.target.value)}
+                      placeholder={selectedPlatform === 'tiktok' ? 'App Key do app cadastrado no TikTok Shop Partner Center' : 'ID do seu app no Shopee Open Platform'}
+                      className="w-full p-2.5 bg-transparent border rounded-md text-sm focus:ring-2 focus:outline-none"
+                      style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">
+                      {selectedPlatform === 'tiktok' ? 'App Secret' : 'Partner Key'}
+                    </label>
+                    <input
+                      required
+                      type={selectedPlatform === 'tiktok' ? 'password' : 'text'}
+                      value={partnerKey}
+                      onChange={e => setPartnerKey(e.target.value)}
+                      placeholder="Chave secreta do seu app"
+                      className="w-full p-2.5 bg-transparent border rounded-md text-sm focus:ring-2 focus:outline-none"
+                      style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                    />
+                  </div>
+                </>
+              )}
+              {selectedPlatform === 'tiktok' && (
                 <div>
-                  <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">Store ID (ID da Loja)</label>
+                  <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">Código de autorização</label>
+                  <input
+                    required
+                    value={authCode}
+                    onChange={e => setAuthCode(e.target.value)}
+                    placeholder="auth_code recebido depois de autorizar o app na sua loja"
+                    className="w-full p-2.5 bg-transparent border rounded-md text-sm focus:ring-2 focus:outline-none"
+                    style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                  />
+                  <p className="text-[10px] text-[var(--lmfit-muted)] mt-1">
+                    No Partner Center, gere o link de autorização do seu app, abra como o vendedor da loja e aprove — o TikTok
+                    redireciona de volta com um parâmetro <code>code</code> na URL. Cole esse valor aqui. A troca por access/refresh
+                    token e a leitura do shop_cipher acontecem automaticamente ao conectar.
+                  </p>
+                </div>
+              )}
+              {selectedPlatform !== 'tiktok' && (
+                <div>
+                  <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">
+                    {selectedPlatform === 'shopee' ? 'Access Token (autorização da loja)' : 'API Token (Access Token)'}
+                  </label>
+                  <input
+                    required
+                    value={apiToken}
+                    onChange={e => setApiToken(e.target.value)}
+                    placeholder="Insira o Token de Acesso da plataforma"
+                    className="w-full p-2.5 bg-transparent border rounded-md text-sm focus:ring-2 focus:outline-none"
+                    style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                  />
+                  <p className="text-[10px] text-[var(--lmfit-muted)] mt-1">
+                    {selectedPlatform === 'nuvemshop'
+                      ? "Gere o token criando um App Personalizado no painel de Parceiros Nuvemshop (Meus Aplicativos)."
+                      : selectedPlatform === 'bagy'
+                      ? "Para gerar o token na Bagy, acesse Configurações > Tokens de API."
+                      : selectedPlatform === 'mercadolivre'
+                      ? "Gere o Access Token pelo fluxo de autorização OAuth do seu app no Mercado Livre Developers."
+                      : selectedPlatform === 'shopee'
+                      ? "Gerado após autorizar a loja pelo fluxo OAuth do Shopee Open Platform."
+                      : "Siga as instruções da plataforma para gerar o Token de API."}
+                  </p>
+                </div>
+              )}
+              {(selectedPlatform === 'nuvemshop' || selectedPlatform === 'mercadolivre' || selectedPlatform === 'shopee') && (
+                <div>
+                  <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">
+                    {selectedPlatform === 'shopee' ? 'Shop ID' : 'Store ID (ID da Loja)'}
+                  </label>
                   <input
                     required
                     value={storeId}
@@ -287,7 +400,11 @@ export function IntegrationsClient() {
                     style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                   />
                   <p className="text-[10px] text-[var(--lmfit-muted)] mt-1">
-                    Fica visível na URL do seu painel Nuvemshop ou nas configurações do seu App.
+                    {selectedPlatform === 'mercadolivre'
+                      ? "ID do usuário vendedor (seller_id), visível no seu perfil Mercado Livre Developers."
+                      : selectedPlatform === 'shopee'
+                      ? "ID numérico da sua loja Shopee, obtido durante a autorização OAuth."
+                      : "Fica visível na URL do seu painel Nuvemshop ou nas configurações do seu App."}
                   </p>
                 </div>
               )}
@@ -295,7 +412,7 @@ export function IntegrationsClient() {
               <div className="pt-4 flex justify-end gap-3 border-t mt-4" style={{ borderColor: lmfitTokens.border }}>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={resetConnectForm}
                   className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-gray-50 dark:hover:bg-neutral-800 cursor-pointer"
                   style={{ borderColor: lmfitTokens.border }}
                 >
