@@ -57,6 +57,7 @@ export function CheckoutClient() {
         shipping: {
           method: checkout.shipping,
           address: checkout.shipping === "pickup" ? null : checkout.address,
+          cost: shippingValue,
         },
         lines: snap.lines.map((l) => ({
           variantId: l.variantId,

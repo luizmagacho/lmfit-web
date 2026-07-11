@@ -33,7 +33,8 @@ import {
   Star,
   Store,
   Warehouse,
-  Receipt
+  Receipt,
+  Tag
 } from "lucide-react";
 
 const navKeys = [
@@ -49,6 +50,7 @@ const navKeys = [
   { href: "/products", key: "nav.products", icon: Package },
   { href: "/materials", key: "nav.materials", icon: Layers },
   { href: "/orders", key: "nav.orders", icon: ShoppingCart },
+  { href: "/promotions", key: "nav.promotions", icon: Tag },
   { href: "/purchases", key: "nav.purchases", icon: CreditCard },
   { href: "/production", key: "nav.production", icon: Scissors },
   { href: "/invoices", key: "nav.invoices", icon: FileText },
@@ -98,6 +100,10 @@ const tourStepsInfo: Record<string, { title: string; desc: string }> = {
   "nav.orders": {
     title: "Pedidos de Venda",
     desc: "Acompanhe e controle o status das vendas da separação até a expedição e entrega."
+  },
+  "nav.promotions": {
+    title: "Cupons e Promoções",
+    desc: "Crie cupons de desconto (percentual ou valor fixo) aplicáveis no checkout público e no PDV."
   },
   "nav.purchases": {
     title: "Compras de Insumos",
@@ -273,6 +279,7 @@ function HelpDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
         { icon: LayoutDashboard, title: "Início (Dashboard)", desc: "Gráficos de vendas diárias, KPIs de faturamento e alertas de ações." },
         { icon: Smartphone, title: "PDV Mobile", desc: "Interface de caixa rápida otimizada para celulares e tablets." },
         { icon: ShoppingCart, title: "Pedidos", desc: "Acompanhe todo o status da venda: Separando, Enviado, Concluído ou Cancelado." },
+        { icon: Tag, title: "Promoções", desc: "Crie cupons de desconto percentual ou valor fixo pro checkout e PDV." },
         { icon: Layers, title: "Edição em Lote", desc: "Ajuste preços, estoque e custos de vários produtos ao mesmo tempo." },
         { icon: Warehouse, title: "Estoque Multi-local", desc: "Cadastre depósitos e lojas físicas e transfira estoque entre eles." }
       ]
@@ -300,7 +307,7 @@ function HelpDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       items: [
         { icon: Wallet, title: "Financeiro", desc: "Fluxo de caixa diário, importador de PDFs InfinitePay e DRE automático com Simples Nacional." },
         { icon: FileText, title: "Contas a Receber", desc: "Acompanhe títulos, vencimentos e status de pagamento das vendas a prazo." },
-        { icon: Receipt, title: "Módulo Fiscal", desc: "Configure CNPJ e credenciais Nuvem Fiscal e emita notas fiscais (NF-e/NFC-e) por pedido, integradas à SEFAZ." },
+        { icon: Receipt, title: "Módulo Fiscal", desc: "Configure CNPJ e token da Focus NFe e emita notas fiscais (NF-e/NFC-e) por pedido, integradas à SEFAZ." },
         { icon: BarChart, title: "Relatórios", desc: "Análise gerencial detalhada de lucratividade, exportações Excel e curva ABC." },
         { icon: MessageSquare, title: "WhatsApp", desc: "Automação de alertas de cobrança, códigos Pix e status de envio." }
       ]

@@ -11,8 +11,7 @@ type FiscalConfig = {
   inscricaoEstadual?: string;
   regimeTributario?: "simples_nacional" | "lucro_presumido" | "lucro_real" | "";
   ambiente?: "homologacao" | "producao";
-  nuvemFiscalClientId?: string;
-  nuvemFiscalClientSecret?: string;
+  focusNfeToken?: string;
 };
 
 type FiscalDocumentRow = {
@@ -85,8 +84,7 @@ function ConfigSection() {
           inscricaoEstadual: data?.fiscal?.inscricaoEstadual ?? "",
           regimeTributario: data?.fiscal?.regimeTributario ?? "",
           ambiente: data?.fiscal?.ambiente ?? "homologacao",
-          nuvemFiscalClientId: data?.fiscal?.nuvemFiscalClientId ?? "",
-          nuvemFiscalClientSecret: data?.fiscal?.nuvemFiscalClientSecret ?? "",
+          focusNfeToken: data?.fiscal?.focusNfeToken ?? "",
         });
       })
       .catch(() => setMessage({ type: "error", text: "Não foi possível carregar a configuração fiscal." }))
@@ -104,8 +102,7 @@ function ConfigSection() {
         inscricaoEstadual: form.inscricaoEstadual?.trim() || undefined,
         regimeTributario: form.regimeTributario || undefined,
         ambiente: form.ambiente || undefined,
-        nuvemFiscalClientId: form.nuvemFiscalClientId?.trim() || undefined,
-        nuvemFiscalClientSecret: form.nuvemFiscalClientSecret?.trim() || undefined,
+        focusNfeToken: form.focusNfeToken?.trim() || undefined,
       });
       setMessage({ type: "success", text: "Configuração fiscal salva com sucesso." });
     } catch (err: any) {
@@ -179,21 +176,12 @@ function ConfigSection() {
             </select>
           </label>
           <label className="text-xs sm:col-span-2" style={{ color: lmfitTokens.textMuted }}>
-            Nuvem Fiscal — Client ID
-            <input
-              type="text"
-              value={form.nuvemFiscalClientId ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, nuvemFiscalClientId: e.target.value }))}
-              className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-transparent"
-              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-            />
-          </label>
-          <label className="text-xs sm:col-span-2" style={{ color: lmfitTokens.textMuted }}>
-            Nuvem Fiscal — Client Secret
+            Focus NFe — Token do emitente
             <input
               type="password"
-              value={form.nuvemFiscalClientSecret ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, nuvemFiscalClientSecret: e.target.value }))}
+              value={form.focusNfeToken ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, focusNfeToken: e.target.value }))}
+              placeholder="Gerado no painel Focus NFe ao cadastrar a empresa"
               className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-transparent"
               style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             />
@@ -222,20 +210,20 @@ function ConfigSection() {
 function GuideSection() {
   const steps = [
     {
-      title: "1. Crie sua conta na Nuvem Fiscal",
-      body: "Acesse nuvemfiscal.com.br e crie uma conta para sua empresa. É o serviço que efetivamente conversa com a SEFAZ para emitir notas em seu nome.",
+      title: "1. Crie sua conta na Focus NFe",
+      body: "Acesse focusnfe.com.br e crie uma conta para sua empresa. É o serviço que efetivamente conversa com a SEFAZ para emitir notas em seu nome (substitui a Nuvem Fiscal, desativada em 31/07/2026).",
     },
     {
       title: "2. Cadastre a empresa emitente",
-      body: "No painel da Nuvem Fiscal, cadastre o CNPJ da loja, a Inscrição Estadual e envie o certificado digital A1 da empresa (necessário para assinar as notas).",
+      body: "No painel da Focus NFe, cadastre o CNPJ da loja, a Inscrição Estadual e envie o certificado digital A1 da empresa (necessário para assinar as notas).",
     },
     {
-      title: "3. Gere as credenciais de API",
-      body: "Em Configurações > Aplicações (ou API), crie um Client ID e Client Secret. Copie os dois valores.",
+      title: "3. Copie o token de acesso",
+      body: "No painel, na tela da empresa cadastrada, copie o token gerado — é a única credencial que a Focus NFe usa pra autenticar a API.",
     },
     {
       title: "4. Preencha o formulário acima",
-      body: "Cole o CNPJ, Inscrição Estadual, regime tributário, Client ID e Client Secret. Deixe o ambiente em Homologação para testar sem gerar notas reais.",
+      body: "Cole o CNPJ, Inscrição Estadual, regime tributário e o token. Deixe o ambiente em Homologação para testar sem gerar notas reais.",
     },
     {
       title: "5. Emita uma nota de teste",
@@ -466,7 +454,7 @@ export function FiscalClient() {
           Módulo fiscal
         </h1>
         <p className="text-sm mt-1" style={{ color: lmfitTokens.textMuted }}>
-          Configure a integração com a Nuvem Fiscal para emitir NFC-e/NF-e dos seus pedidos.
+          Configure a integração com a Focus NFe para emitir NFC-e/NF-e dos seus pedidos.
         </p>
       </div>
 

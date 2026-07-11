@@ -39,6 +39,8 @@ export type OrderRecord = {
   reference?: string | null;
   notes?: string | null;
   total?: number;
+  couponCode?: string;
+  discountTotal?: number;
   paymentMethod?: "pix" | "cash" | "card" | string;
   lines?: OrderLineInput[] | Record<string, unknown>[];
   createdAt?: string;

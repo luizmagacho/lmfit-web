@@ -16,7 +16,7 @@ import {
 } from "@/lib/normalizeApiList";
 import { DEFAULT_ORDER_CHANNEL, ORDER_CHANNELS } from "@/lib/orders/orderChannel";
 import { normalizeOrderLines } from "@/lib/orders/normalizeLines";
-import { createOrder, getOrder, updateOrder } from "@/lib/orders/ordersApi";
+import { createOrder, getOrder, updateOrder, validatePromotion } from "@/lib/orders/ordersApi";
 import { ORDER_STATUSES } from "@/lib/orders/orderStatus";
 import type { OrderChannel, OrderLineInput, OrderStatus, OrderWarning, StockConflict } from "@/lib/orders/types";
 import { isLinesLockedStatus } from "@/lib/orders/types";
@@ -121,6 +121,13 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "cash" | "card" | "">("");
+
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountTotal: number } | null>(null);
+  const [couponChecking, setCouponChecking] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  /** true quando o cupom já veio do pedido salvo (não pode ser removido no editor). */
+  const [couponIsLocked, setCouponIsLocked] = useState(false);
 
   const linesLocked = isLinesLockedStatus(status);
 
@@ -241,6 +248,10 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         const normalized = normalizeOrderLines(o.lines);
         setLines(linesToLocal(normalized, nextKey, skuToProductionCost, variantById));
         setWarnings(Array.isArray(o.warnings) ? o.warnings : []);
+        if (o.couponCode) {
+          setAppliedCoupon({ code: o.couponCode, discountTotal: Number(o.discountTotal ?? 0) });
+          setCouponIsLocked(true);
+        }
       } catch (e) {
         if (!cancelled) setLoadErr(axiosErrorMessage(e));
       } finally {
@@ -288,6 +299,28 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
     );
   }
 
+  async function handleApplyCoupon() {
+    const code = couponCode.trim();
+    if (!code) return;
+    setCouponError(null);
+    setCouponChecking(true);
+    try {
+      const { discountAmount } = await validatePromotion(code, previewTotal);
+      setAppliedCoupon({ code: code.toUpperCase(), discountTotal: discountAmount });
+    } catch (e) {
+      setAppliedCoupon(null);
+      setCouponError(isAxiosError(e) ? axiosErrorMessage(e) : "Não foi possível validar o cupom.");
+    } finally {
+      setCouponChecking(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError(null);
+  }
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaveErr(null);
@@ -325,6 +358,8 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
           notes: notes.trim() || null,
           lines: payloadLines,
           paymentMethod: paymentMethod || undefined,
+          couponCode: appliedCoupon?.code,
+          discountTotal: appliedCoupon?.discountTotal,
         });
         router.replace(`/orders/${encodeURIComponent(String(created._id))}`);
         return;
@@ -729,10 +764,88 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         )}
       </div>
 
+      <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-2" style={{ borderColor: lmfitTokens.border }}>
+        <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
+          Cupom de desconto
+        </h2>
+        {appliedCoupon ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="inline-flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1"
+              style={{ backgroundColor: lmfitTokens.warningBg, color: lmfitTokens.success }}
+            >
+              {appliedCoupon.code} · -{formatBRL(appliedCoupon.discountTotal)}
+            </span>
+            {!couponIsLocked ? (
+              <button
+                type="button"
+                className="text-xs underline"
+                style={{ color: lmfitTokens.textMuted }}
+                onClick={handleRemoveCoupon}
+              >
+                Remover
+              </button>
+            ) : (
+              <span className="text-xs" style={{ color: lmfitTokens.textMuted }}>
+                Aplicado na criação do pedido — não pode ser alterado aqui.
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="text"
+              className="border rounded-md px-3 py-2 min-h-11 text-sm uppercase placeholder:normal-case max-w-xs"
+              style={{ borderColor: couponError ? lmfitTokens.error : lmfitTokens.border, color: lmfitTokens.text }}
+              placeholder="Código do cupom"
+              value={couponCode}
+              onChange={(e) => {
+                setCouponCode(e.target.value);
+                setCouponError(null);
+              }}
+              disabled={couponChecking || Boolean(orderId)}
+            />
+            <button
+              type="button"
+              disabled={couponChecking || !couponCode.trim() || Boolean(orderId)}
+              onClick={() => void handleApplyCoupon()}
+              className="min-h-11 px-4 rounded-md text-sm font-medium border disabled:opacity-50 touch-manipulation"
+              style={{ borderColor: lmfitTokens.primary, color: lmfitTokens.primary }}
+            >
+              {couponChecking ? "Validando…" : "Aplicar cupom"}
+            </button>
+          </div>
+        )}
+        {couponError ? (
+          <p className="text-sm" style={{ color: lmfitTokens.error }}>
+            {couponError}
+          </p>
+        ) : null}
+        {orderId && !appliedCoupon ? (
+          <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>
+            Cupom só pode ser aplicado na criação do pedido.
+          </p>
+        ) : null}
+      </div>
+
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-base font-medium tabular-nums" style={{ color: lmfitTokens.text }}>
-          Total (preview): {formatBRL(linesLocked ? computeLineTotal(lockedDisplayLines) : previewTotal)}
-        </p>
+        <div className="text-right">
+          {appliedCoupon ? (
+            <>
+              <p className="text-sm tabular-nums" style={{ color: lmfitTokens.textMuted }}>
+                Subtotal: {formatBRL(linesLocked ? computeLineTotal(lockedDisplayLines) : previewTotal)}
+                {" · "}Cupom {appliedCoupon.code}: -{formatBRL(appliedCoupon.discountTotal)}
+              </p>
+              <p className="text-base font-medium tabular-nums" style={{ color: lmfitTokens.text }}>
+                Total (preview): {formatBRL(Math.max(0, (linesLocked ? computeLineTotal(lockedDisplayLines) : previewTotal) - appliedCoupon.discountTotal))}
+              </p>
+            </>
+          ) : (
+            <p className="text-base font-medium tabular-nums" style={{ color: lmfitTokens.text }}>
+              Total (preview): {formatBRL(linesLocked ? computeLineTotal(lockedDisplayLines) : previewTotal)}
+            </p>
+          )}
+        </div>
         <button
           type="submit"
           disabled={saving}

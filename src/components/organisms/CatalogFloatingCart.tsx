@@ -2,6 +2,7 @@
 
 import { ShoppingBag } from "lucide-react";
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { useCartStore } from "@/stores/useCartStore";
 import { QuickCart } from "@/components/organisms/QuickCart";
 import { formatBRL } from "@/lib/formatMoney";
@@ -15,6 +16,7 @@ export function CatalogFloatingCart() {
   const [showForm, setShowForm] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [couponCode, setCouponCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,7 +49,7 @@ export function CatalogFloatingCart() {
     }
     
     if (!customerName.trim() || !customerPhone.trim()) {
-      alert("Por favor, preencha nome e telefone para continuar.");
+      toast.error("Por favor, preencha nome e telefone para continuar.");
       return;
     }
 
@@ -57,20 +59,23 @@ export function CatalogFloatingCart() {
       const res1 = await publicHttp.post("/public/order-drafts", {});
       const token = res1.data.sessionToken;
 
-      // 2. Adicionar itens e cliente
-      await publicHttp.patch(`/public/order-drafts/${token}`, {
+      // 2. Adicionar itens, cliente e cupom (desconto sempre recalculado no servidor)
+      const res2 = await publicHttp.patch(`/public/order-drafts/${token}`, {
         lines: lines.map(l => ({ variantId: l.variantId, quantity: l.quantity })),
         metadata: {
           customer: { name: customerName, phone: customerPhone }
-        }
+        },
+        couponCode: couponCode.trim() || undefined,
       });
+      const discountTotal = Number(res2.data?.discountTotal ?? 0);
+      const total = subtotal - discountTotal;
 
       // 3. Submeter pedido
       const res3 = await publicHttp.post(`/public/order-drafts/${token}/submit`, {});
       const orderId = res3.data.orderId;
 
       // 4. Montar mensagem WhatsApp
-      const storePhone = "5541996770521"; 
+      const storePhone = "5541996770521";
       let text = `Olá! Gostaria de finalizar meu pedido #${orderId} com os itens:\n\n`;
       lines.forEach((l) => {
         text += `🛍️ *${l.quantity}x ${l.productName}*\n`;
@@ -79,20 +84,25 @@ export function CatalogFloatingCart() {
         }
         text += `   • Preço unit.: ${formatBRL(l.unitPrice)}\n\n`;
       });
-      text += `💰 *Subtotal: ${formatBRL(subtotal)}*\n\n`;
-      text += `Nome: ${customerName}\nTelefone: ${customerPhone}\n\n`;
+      text += `💰 *Subtotal: ${formatBRL(subtotal)}*\n`;
+      if (discountTotal > 0) {
+        text += `🏷️ *Cupom ${couponCode.trim().toUpperCase()}: -${formatBRL(discountTotal)}*\n`;
+        text += `💵 *Total: ${formatBRL(total)}*\n`;
+      }
+      text += `\nNome: ${customerName}\nTelefone: ${customerPhone}\n\n`;
       text += "Aguardo retorno para finalizar o pagamento e combinar a entrega/retirada!";
 
       const encodedText = encodeURIComponent(text);
       const url = `https://wa.me/${storePhone}?text=${encodedText}`;
-      
+
       clearCart();
       setIsOpen(false);
       setShowForm(false);
+      setCouponCode("");
       window.open(url, "_blank");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Ocorreu um erro ao gerar o pedido. Tente novamente.");
+      toast.error(e?.response?.data?.message || "Ocorreu um erro ao gerar o pedido. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -137,12 +147,21 @@ export function CatalogFloatingCart() {
               style={{ borderColor: lmfitTokens.border }}
               disabled={isSubmitting}
             />
-            <input 
-              type="tel" 
-              placeholder="Seu WhatsApp (DDD + Número)" 
+            <input
+              type="tel"
+              placeholder="Seu WhatsApp (DDD + Número)"
               className="w-full border rounded-md px-3 py-2 text-sm"
               value={customerPhone}
               onChange={handlePhoneChange}
+              style={{ borderColor: lmfitTokens.border }}
+              disabled={isSubmitting}
+            />
+            <input
+              type="text"
+              placeholder="Cupom de desconto (opcional)"
+              className="w-full border rounded-md px-3 py-2 text-sm uppercase placeholder:normal-case"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value)}
               style={{ borderColor: lmfitTokens.border }}
               disabled={isSubmitting}
             />
