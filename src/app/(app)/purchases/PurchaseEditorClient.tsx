@@ -12,8 +12,8 @@ import {
   documentId,
   extractListItems,
 } from "@/lib/normalizeApiList";
-import { normalizePurchaseLines } from "@/lib/purchases/normalizeLines";
 import { createPurchase, getPurchase, updatePurchase } from "@/lib/purchases/purchasesApi";
+import { generateSkuSuggestion } from "@/components/ProductVariantsEditor";
 
 import { lmfitTokens } from "@/theme/tokens";
 import AsyncCreatableSelect from "react-select/async-creatable";
@@ -31,6 +31,14 @@ type LocalLine = {
   unitPrice: string;
   quantityOrdered: string;
   quantityReceived: string;
+  /** Quando true, este item ainda não existe como ProductVariant — será criado ao salvar. */
+  isNewVariant: boolean;
+  newProductId: string;
+  newProductLabel: string;
+  newColor: string;
+  newSize: string;
+  newSku: string;
+  newPrice: string;
 };
 type MaterialOpt = { id: string; name: string; unit: string };
 
@@ -55,7 +63,23 @@ function parseBRL(value: string) {
   return parseInt(digits, 10) / 100;
 }
 function emptyLine(key: string): LocalLine {
-  return { key, itemType: 'variant', variantId: "", materialId: "", rawName: "", unitPrice: floatToBRL(0), quantityOrdered: "1", quantityReceived: "" };
+  return {
+    key,
+    itemType: 'variant',
+    variantId: "",
+    materialId: "",
+    rawName: "",
+    unitPrice: floatToBRL(0),
+    quantityOrdered: "1",
+    quantityReceived: "",
+    isNewVariant: false,
+    newProductId: "",
+    newProductLabel: "",
+    newColor: "",
+    newSize: "",
+    newSku: "",
+    newPrice: "",
+  };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,6 +95,15 @@ function linesToLocal(lines: any[], nextKey: () => string): LocalLine[] {
     quantityOrdered: String(l.quantityOrdered),
     quantityReceived:
       l.quantityReceived != null && Number.isFinite(l.quantityReceived) ? String(l.quantityReceived) : "",
+    // Uma compra já salva sempre referencia uma variante real (o servidor resolve
+    // `newVariant` no momento de salvar) — o modo "nova variação" só existe no rascunho local.
+    isNewVariant: false,
+    newProductId: "",
+    newProductLabel: "",
+    newColor: "",
+    newSize: "",
+    newSku: "",
+    newPrice: "",
   }));
 }
 
@@ -79,21 +112,34 @@ function parseLinesPayload(rows: LocalLine[]): any[] {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const out: any[] = [];
   for (const r of rows) {
-    if (r.itemType === 'variant' && !r.variantId.trim() && !r.rawName.trim()) continue;
-    if (r.itemType === 'material' && !r.materialId.trim() && !r.rawName.trim()) continue;
-    
+    if (r.itemType === 'variant' && r.isNewVariant) {
+      if (!r.newProductId.trim() || !r.newSku.trim()) continue;
+    } else if (r.itemType === 'variant' && !r.variantId.trim() && !r.rawName.trim()) {
+      continue;
+    } else if (r.itemType === 'material' && !r.materialId.trim() && !r.rawName.trim()) {
+      continue;
+    }
+
     const quantityOrdered = Number(String(r.quantityOrdered).replace(",", "."));
     const unitPrice = parseBRL(r.unitPrice);
     const qrRaw = r.quantityReceived.trim();
     const quantityReceived = qrRaw === "" ? undefined : Number(qrRaw.replace(",", "."));
-    
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const line: any = {
       unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
       quantityOrdered: Number.isFinite(quantityOrdered) ? quantityOrdered : 0,
       quantityReceived: quantityReceived !== undefined && Number.isFinite(quantityReceived) ? quantityReceived : undefined,
     };
-    if (r.itemType === 'variant') {
+    if (r.itemType === 'variant' && r.isNewVariant) {
+      line.newVariant = {
+        productId: r.newProductId.trim(),
+        sku: r.newSku.trim(),
+        color: r.newColor.trim() || undefined,
+        size: r.newSize.trim() || undefined,
+        price: r.newPrice.trim() ? parseBRL(r.newPrice) : undefined,
+      };
+    } else if (r.itemType === 'variant') {
       if (r.variantId) line.variantId = r.variantId.trim();
       else line.rawName = r.rawName.trim();
     } else {
@@ -207,6 +253,21 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
     }
   };
 
+  /** Nível produto (não variante) — usado pra "nova variação", que cria a ProductVariant ao salvar. */
+  const loadNewVariantProductOptions = async (inputValue: string) => {
+    try {
+      const { data } = await http.get<unknown>("/products", { params: { page: 1, limit: 50, search: inputValue } });
+      const items = extractListItems(data) as Array<Record<string, unknown>>;
+      return items.map((p) => ({
+        value: String(documentId(p)),
+        label: String(p.name ?? documentId(p)),
+        priceRetail: typeof p.priceRetail === "number" ? p.priceRetail : typeof p.price === "number" ? p.price : undefined,
+      }));
+    } catch {
+      return [];
+    }
+  };
+
   const loadMaterialOptions = async (inputValue: string) => {
     try {
       const { data } = await http.get<unknown>("/materials", { params: { page: 1, limit: 50, search: inputValue } });
@@ -223,14 +284,8 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
       if (presetVariantId) {
         setLines([
           {
-            key: nextKey(),
-            itemType: 'variant',
+            ...emptyLine(nextKey()),
             variantId: presetVariantId,
-            materialId: "",
-            rawName: "",
-            unitPrice: floatToBRL(0),
-            quantityOrdered: "1",
-            quantityReceived: "",
           },
         ]);
       }
@@ -244,11 +299,16 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
       try {
         const p = await getPurchase(purchaseId);
         if (cancelled) return;
-        setSupplierOpt(p.supplierId ? { value: String(documentId(p.supplierId)), label: (p.supplierId as any).name ? String((p.supplierId as any).name) : String(documentId(p.supplierId)) } : null);
+        const supplierName = (p as any).supplierName;
+        setSupplierOpt(
+          p.supplierId
+            ? { value: String(documentId(p.supplierId)), label: supplierName ? String(supplierName) : String(documentId(p.supplierId)) }
+            : null,
+        );
         setStatus(p.status ? String(p.status) : "pending");
         setReference(p.reference != null ? String(p.reference) : "");
         setNotes(p.notes != null ? String(p.notes) : "");
-        setLines(linesToLocal(normalizePurchaseLines(p.lines), nextKey));
+        setLines(linesToLocal(Array.isArray(p.lines) ? p.lines : [], nextKey));
       } catch (e) {
         if (!cancelled) setLoadErr(axiosErrorMessage(e));
       } finally {
@@ -458,8 +518,103 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                     </select>
                   </td>
                   <td className="py-2 pr-2">
-                    {row.itemType === 'variant' ? (
-                      <div className="w-full min-w-[14rem]">
+                    {row.itemType === 'variant' && row.isNewVariant ? (
+                      <div className="w-full min-w-[16rem] space-y-1.5 p-2 rounded-md border" style={{ borderColor: lmfitTokens.border }}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium" style={{ color: lmfitTokens.textMuted }}>
+                            Nova variação (cor/tamanho)
+                          </span>
+                          <button
+                            type="button"
+                            className="text-xs underline"
+                            style={{ color: lmfitTokens.textMuted }}
+                            onClick={() =>
+                              setLines((prev) =>
+                                prev.map((l) =>
+                                  l.key === row.key
+                                    ? { ...l, isNewVariant: false, newProductId: "", newProductLabel: "", newColor: "", newSize: "", newSku: "", newPrice: "" }
+                                    : l,
+                                ),
+                              )
+                            }
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                        <AsyncSelect
+                          cacheOptions
+                          defaultOptions
+                          loadOptions={loadNewVariantProductOptions}
+                          styles={selectStyles}
+                          placeholder="Produto já cadastrado…"
+                          value={row.newProductId ? { value: row.newProductId, label: row.newProductLabel } : null}
+                          onChange={(opt: any) =>
+                            setLines((prev) =>
+                              prev.map((l) =>
+                                l.key === row.key
+                                  ? {
+                                      ...l,
+                                      newProductId: opt?.value ?? "",
+                                      newProductLabel: opt?.label ?? "",
+                                      newSku: generateSkuSuggestion(opt?.label ?? "", l.newColor, l.newSize),
+                                      newPrice:
+                                        !l.newPrice && typeof opt?.priceRetail === "number" ? floatToBRL(opt.priceRetail) : l.newPrice,
+                                    }
+                                  : l,
+                              ),
+                            )
+                          }
+                        />
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <input
+                            className="w-full border rounded px-2 py-1.5 min-h-9 text-sm"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}
+                            placeholder="Cor"
+                            value={row.newColor}
+                            onChange={(e) =>
+                              setLines((prev) =>
+                                prev.map((l) =>
+                                  l.key === row.key
+                                    ? { ...l, newColor: e.target.value, newSku: generateSkuSuggestion(l.newProductLabel, e.target.value, l.newSize) }
+                                    : l,
+                                ),
+                              )
+                            }
+                          />
+                          <input
+                            className="w-full border rounded px-2 py-1.5 min-h-9 text-sm"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}
+                            placeholder="Tamanho"
+                            value={row.newSize}
+                            onChange={(e) =>
+                              setLines((prev) =>
+                                prev.map((l) =>
+                                  l.key === row.key
+                                    ? { ...l, newSize: e.target.value, newSku: generateSkuSuggestion(l.newProductLabel, l.newColor, e.target.value) }
+                                    : l,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                        <input
+                          className="w-full border rounded px-2 py-1.5 min-h-9 text-sm font-mono"
+                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}
+                          placeholder="SKU"
+                          value={row.newSku}
+                          onChange={(e) => setLines((prev) => prev.map((l) => (l.key === row.key ? { ...l, newSku: e.target.value } : l)))}
+                        />
+                        <input
+                          inputMode="decimal"
+                          className="w-full border rounded px-2 py-1.5 min-h-9 text-sm tabular-nums"
+                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}
+                          placeholder="Preço de venda (R$)"
+                          value={row.newPrice}
+                          onChange={(e) => setLines((prev) => prev.map((l) => (l.key === row.key ? { ...l, newPrice: maskBRL(e.target.value) } : l)))}
+                        />
+                      </div>
+                    ) : row.itemType === 'variant' ? (
+                      <div className="w-full min-w-[14rem] space-y-1">
                         <AsyncCreatableSelect
                           isClearable
                           cacheOptions
@@ -487,6 +642,18 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                             }
                           }}
                         />
+                        <button
+                          type="button"
+                          className="text-xs underline"
+                          style={{ color: lmfitTokens.primary }}
+                          onClick={() =>
+                            setLines((prev) =>
+                              prev.map((l) => (l.key === row.key ? { ...l, isNewVariant: true, variantId: "", rawName: "" } : l)),
+                            )
+                          }
+                        >
+                          + Nova variação (cor/tamanho)
+                        </button>
                       </div>
                     ) : (
                       <div className="w-full min-w-[14rem]">

@@ -76,12 +76,15 @@ export function ProductVariantsEditor({
   productRow,
   productName = "",
   onDraftsChange,
+  applyPriceToAll,
 }: {
   /** Incrementado ao abrir criar/editar — reinicia o estado local. */
   resetKey: number;
   productRow: Row | null;
   productName?: string;
   onDraftsChange: (drafts: ProductVariantDraft[]) => void;
+  /** Muda o `token` pra aplicar `value` como preço de todas as linhas (ex.: calculadora de custo+margem). */
+  applyPriceToAll?: { value: number; token: number };
 }) {
   const [drafts, setDrafts] = useState<ProductVariantDraft[]>(() =>
     cloneDrafts(draftsFromProductRow(productRow)),
@@ -90,6 +93,7 @@ export function ProductVariantsEditor({
   const prevNameRef = useRef(productName);
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
+  const prevApplyTokenRef = useRef(applyPriceToAll?.token);
 
   useEffect(() => {
     if (prevNameRef.current !== productName) {
@@ -114,6 +118,7 @@ export function ProductVariantsEditor({
     const next = cloneDrafts(draftsFromProductRow(productRow));
     setDrafts(next);
     onDraftsChange(next);
+    prevApplyTokenRef.current = applyPriceToAll?.token;
     // resetKey dispara ao reabrir modal; productRow identifica o registro em edição
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onDraftsChange é estável o suficiente (ref no pai)
   }, [resetKey, productRow]);
@@ -125,6 +130,16 @@ export function ProductVariantsEditor({
     },
     [onDraftsChange],
   );
+
+  useEffect(() => {
+    if (!applyPriceToAll) return;
+    if (prevApplyTokenRef.current === applyPriceToAll.token) return;
+    prevApplyTokenRef.current = applyPriceToAll.token;
+    if (!Number.isFinite(applyPriceToAll.value) || applyPriceToAll.value < 0) return;
+    const next = draftsRef.current.map((d) => ({ ...d, price: applyPriceToAll.value }));
+    pushDrafts(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pushDrafts/draftsRef são estáveis o suficiente
+  }, [applyPriceToAll]);
 
   const hint = useMemo(
     () =>

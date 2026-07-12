@@ -3,6 +3,7 @@
 import { useRef, useState, useMemo } from "react";
 import { ProductImageCell } from "@/components/ProductImageCell";
 import { ProductVariantsEditor, generateSkuSuggestion } from "@/components/ProductVariantsEditor";
+import { ReadyMadeItemFields, type ReadyMadeValue } from "@/components/ReadyMadeItemFields";
 import { ResourceList, type ResourceColumn } from "@/components/ResourceList";
 import { formatBRL } from "@/lib/formatMoney";
 import {
@@ -104,8 +105,18 @@ const columns: ResourceColumn[] = [
 /** Only these keys appear in the table — keeps it focused and readable */
 const TABLE_COLUMNS = ["images", "name", "variants", "price", "active"] as const;
 
+const EMPTY_READY_MADE: ReadyMadeValue = {
+  isReadyMade: false,
+  supplierId: "",
+  costPrice: 0,
+  markupPercent: 0,
+  computedPrice: 0,
+};
+
 export function ProductsClient() {
   const variantsRef = useRef<ProductVariantDraft[]>([]);
+  const readyMadeRef = useRef<ReadyMadeValue>(EMPTY_READY_MADE);
+  const [applyPriceToken, setApplyPriceToken] = useState(0);
   const [search, setSearch] = useState("");
 
   const filterRows = useMemo(() => {
@@ -164,22 +175,39 @@ export function ProductsClient() {
         </div>
       }
       formAppendix={(ctx) => (
-        <ProductVariantsEditor
-          resetKey={ctx.formResetKey}
-          productRow={ctx.modal === "edit" ? ctx.editingRow : null}
-          productName={ctx.formValues.name || ""}
-          onDraftsChange={(d) => {
-            variantsRef.current = d;
-            const f = d[0];
-            if (!f) return;
-            ctx.setFormValues((prev) => ({
-              ...prev,
-              sku: f.sku,
-              price: Number.isFinite(f.price) ? f.price.toFixed(2) : prev.price,
-              quantityInStock: String(Math.max(0, Math.floor(f.quantityInStock))),
-            }));
-          }}
-        />
+        <>
+          <ReadyMadeItemFields
+            resetKey={ctx.formResetKey}
+            productRow={ctx.modal === "edit" ? ctx.editingRow : null}
+            onChange={(v) => {
+              readyMadeRef.current = v;
+              if (v.isReadyMade && v.costPrice > 0) {
+                setApplyPriceToken((n) => n + 1);
+              }
+            }}
+          />
+          <ProductVariantsEditor
+            resetKey={ctx.formResetKey}
+            productRow={ctx.modal === "edit" ? ctx.editingRow : null}
+            productName={ctx.formValues.name || ""}
+            applyPriceToAll={
+              readyMadeRef.current.isReadyMade && readyMadeRef.current.costPrice > 0
+                ? { value: readyMadeRef.current.computedPrice, token: applyPriceToken }
+                : undefined
+            }
+            onDraftsChange={(d) => {
+              variantsRef.current = d;
+              const f = d[0];
+              if (!f) return;
+              ctx.setFormValues((prev) => ({
+                ...prev,
+                sku: f.sku,
+                price: Number.isFinite(f.price) ? f.price.toFixed(2) : prev.price,
+                quantityInStock: String(Math.max(0, Math.floor(f.quantityInStock))),
+              }));
+            }}
+          />
+        </>
       )}
       validateBeforeSubmit={(ctx) => {
         const productName = ctx.formValues.name || "";
@@ -189,14 +217,31 @@ export function ProductsClient() {
             d.sku = generateSkuSuggestion(productName, d.color, d.size);
           }
         }
-        return validateVariantDrafts(drafts);
+        const variantsError = validateVariantDrafts(drafts);
+        if (variantsError) return variantsError;
+
+        const rm = readyMadeRef.current;
+        if (rm.isReadyMade) {
+          if (!rm.supplierId) return "Item pronto precisa de um fornecedor.";
+          if (!(rm.costPrice > 0)) return "Item pronto precisa de um preço de custo maior que zero.";
+          if (rm.markupPercent < 0) return "Margem não pode ser negativa.";
+        }
+        return null;
       }}
       mergeSubmitPayload={(body) => {
         const drafts = variantsRef.current;
+        const rm = readyMadeRef.current;
         const first = drafts[0];
-        if (!first) return body;
-        return {
+        const withReadyMade = {
           ...body,
+          sourceType: rm.isReadyMade ? "ready_made" : "manufactured",
+          ...(rm.isReadyMade
+            ? { supplierId: rm.supplierId, costPrice: rm.costPrice, markupPercent: rm.markupPercent }
+            : {}),
+        };
+        if (!first) return withReadyMade;
+        return {
+          ...withReadyMade,
           sku: first.sku.trim(),
           price: first.price,
           quantityInStock: Math.max(0, Math.floor(first.quantityInStock)),
