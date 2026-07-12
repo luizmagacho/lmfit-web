@@ -172,7 +172,6 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
   const [lines, setLines] = useState<LocalLine[]>(() => [emptyLine(`${keyBase}-pl-0`)]);
 
   const [saveErr, setSaveErr] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -327,7 +326,6 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaveErr(null);
-    setSuccessMsg(null);
 
     if (!supplierId.trim()) {
       setSaveErr("Selecione o fornecedor.");
@@ -347,24 +345,24 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
     setSaving(true);
     try {
       if (!purchaseId) {
-        const created = await createPurchase({
+        await createPurchase({
           supplierId: supplierId.trim(),
           status,
           reference: reference.trim() || null,
           notes: notes.trim() || null,
           lines: payloadLines,
         });
-        router.replace(`/purchases/${encodeURIComponent(String(created._id))}`);
-        return;
+      } else {
+        await updatePurchase(purchaseId, {
+          supplierId: supplierId.trim(),
+          status,
+          reference: reference.trim() || null,
+          notes: notes.trim() || null,
+          lines: payloadLines,
+        });
       }
-      await updatePurchase(purchaseId, {
-        supplierId: supplierId.trim(),
-        status,
-        reference: reference.trim() || null,
-        notes: notes.trim() || null,
-        lines: payloadLines,
-      });
-      setSuccessMsg("Compra atualizada.");
+      router.push("/purchases");
+      return;
     } catch (e) {
       setSaveErr(isAxiosError(e) ? JSON.stringify((e as any).response?.data || e.message) : "Não foi possível salvar.");
     } finally {
@@ -403,15 +401,6 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
           Voltar à lista
         </Link>
       </div>
-
-      {successMsg ? (
-        <p
-          className="text-sm rounded-md border px-3 py-2"
-          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.success, backgroundColor: lmfitTokens.warningBg }}
-        >
-          {successMsg}
-        </p>
-      ) : null}
 
       {saveErr ? (
         <p className="text-sm" style={{ color: lmfitTokens.error }}>
