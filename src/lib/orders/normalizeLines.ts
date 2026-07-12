@@ -1,21 +1,7 @@
 import type { OrderLineInput } from "./types";
+import { parseBRLToNumber } from "@/lib/formatMoney";
 
-export function parseBRLToNumber(val: unknown): number {
-  if (val == null) return 0;
-  if (typeof val === "number") return val;
-  const s = String(val).trim();
-  if (!s) return 0;
-  // Strip "R$", spaces, etc.
-  const clean = s.replace(/[^0-9,\.-]/g, "");
-  if (clean.includes(",")) {
-    const noThousands = clean.replace(/\./g, "");
-    const normalized = noThousands.replace(",", ".");
-    const n = parseFloat(normalized);
-    return Number.isFinite(n) ? n : 0;
-  }
-  const n = parseFloat(clean);
-  return Number.isFinite(n) ? n : 0;
-}
+export { parseBRLToNumber };
 
 export function normalizeOrderLines(raw: unknown): OrderLineInput[] {
   if (!Array.isArray(raw)) return [];

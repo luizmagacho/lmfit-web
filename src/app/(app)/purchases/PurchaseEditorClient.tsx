@@ -14,6 +14,7 @@ import {
 } from "@/lib/normalizeApiList";
 import { createPurchase, getPurchase, updatePurchase } from "@/lib/purchases/purchasesApi";
 import { generateSkuSuggestion } from "@/components/ProductVariantsEditor";
+import { parseBRLToNumber } from "@/lib/formatMoney";
 
 import { lmfitTokens } from "@/theme/tokens";
 import AsyncCreatableSelect from "react-select/async-creatable";
@@ -45,8 +46,10 @@ type MaterialOpt = { id: string; name: string; unit: string };
 
 function floatToBRL(value: number | string | null | undefined) {
   if (value == null || value === "") return "";
-  const num = Number(value);
-  if (isNaN(num)) return "";
+  // `value` may be a raw number or a pt-BR formatted string (the API's global money
+  // interceptor turns `unitPrice` into e.g. "45,90") — plain Number() returns NaN on
+  // the comma form, which silently blanked prices when loading a saved purchase.
+  const num = parseBRLToNumber(value);
   return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
@@ -260,7 +263,9 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
       return items.map((p) => ({
         value: String(documentId(p)),
         label: String(p.name ?? documentId(p)),
-        priceRetail: typeof p.priceRetail === "number" ? p.priceRetail : typeof p.price === "number" ? p.price : undefined,
+        // priceRetail/price may come back as pt-BR formatted strings (money interceptor) —
+        // parse either shape instead of only accepting a raw number.
+        priceRetail: p.priceRetail != null ? parseBRLToNumber(p.priceRetail) : p.price != null ? parseBRLToNumber(p.price) : undefined,
       }));
     } catch {
       return [];
@@ -551,7 +556,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                                       newProductLabel: opt?.label ?? "",
                                       newSku: generateSkuSuggestion(opt?.label ?? "", l.newColor, l.newSize),
                                       newPrice:
-                                        !l.newPrice && typeof opt?.priceRetail === "number" ? floatToBRL(opt.priceRetail) : l.newPrice,
+                                        !l.newPrice && opt?.priceRetail != null ? floatToBRL(opt.priceRetail) : l.newPrice,
                                     }
                                   : l,
                               ),
@@ -562,7 +567,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                           <input
                             className="w-full border rounded px-2 py-1.5 min-h-9 text-sm"
                             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}
-                            placeholder="Cor"
+                            placeholder="Cores (ex.: Preto, Branco)"
                             value={row.newColor}
                             onChange={(e) =>
                               setLines((prev) =>
@@ -577,7 +582,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                           <input
                             className="w-full border rounded px-2 py-1.5 min-h-9 text-sm"
                             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}
-                            placeholder="Tamanho"
+                            placeholder="Tamanhos (ex.: P, M, G)"
                             value={row.newSize}
                             onChange={(e) =>
                               setLines((prev) =>
@@ -590,6 +595,52 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                             }
                           />
                         </div>
+                        {(row.newColor.includes(",") || row.newSize.includes(",")) && (
+                          <button
+                            type="button"
+                            className="w-full text-xs min-h-8 rounded border touch-manipulation"
+                            style={{ borderColor: lmfitTokens.primary, color: lmfitTokens.primary }}
+                            disabled={!row.newProductId}
+                            onClick={() => {
+                              const colors = row.newColor.split(",").map((c) => c.trim()).filter(Boolean);
+                              const sizes = row.newSize.split(",").map((s) => s.trim()).filter(Boolean);
+                              const cList = colors.length ? colors : ["Único"];
+                              const sList = sizes.length ? sizes : ["Único"];
+                              const generated: LocalLine[] = [];
+                              for (const c of cList) {
+                                for (const s of sList) {
+                                  generated.push({
+                                    ...emptyLine(nextKey()),
+                                    itemType: "variant",
+                                    isNewVariant: true,
+                                    newProductId: row.newProductId,
+                                    newProductLabel: row.newProductLabel,
+                                    newColor: c,
+                                    newSize: s,
+                                    newSku: generateSkuSuggestion(row.newProductLabel, c, s),
+                                    newPrice: row.newPrice,
+                                    unitPrice: row.unitPrice,
+                                    quantityOrdered: row.quantityOrdered,
+                                  });
+                                }
+                              }
+                              setLines((prev) => {
+                                const idx = prev.findIndex((l) => l.key === row.key);
+                                if (idx === -1) return prev;
+                                const next = prev.slice();
+                                next.splice(idx, 1, ...generated);
+                                return next;
+                              });
+                            }}
+                          >
+                            Gerar {(() => {
+                              const n =
+                                (row.newColor.split(",").map((c) => c.trim()).filter(Boolean).length || 1) *
+                                (row.newSize.split(",").map((s) => s.trim()).filter(Boolean).length || 1);
+                              return `${n} linha${n === 1 ? "" : "s"}`;
+                            })()}
+                          </button>
+                        )}
                         <input
                           className="w-full border rounded px-2 py-1.5 min-h-9 text-sm font-mono"
                           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}
