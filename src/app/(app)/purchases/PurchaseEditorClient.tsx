@@ -300,10 +300,14 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
         const p = await getPurchase(purchaseId);
         if (cancelled) return;
         const supplierName = (p as any).supplierName;
+        // `supplierId` comes back as a plain ObjectId string (not populated) — `documentId`
+        // only extracts `_id`/`id` from an object and returns "" for a bare string, which
+        // silently emptied the supplier field on every edit load and blocked saving
+        // (the form requires a supplier). Use the string directly when it already is one.
+        const supplierIdValue =
+          typeof p.supplierId === "string" ? p.supplierId : documentId(p.supplierId);
         setSupplierOpt(
-          p.supplierId
-            ? { value: String(documentId(p.supplierId)), label: supplierName ? String(supplierName) : String(documentId(p.supplierId)) }
-            : null,
+          supplierIdValue ? { value: supplierIdValue, label: supplierName ? String(supplierName) : supplierIdValue } : null,
         );
         setStatus(p.status ? String(p.status) : "pending");
         setReference(p.reference != null ? String(p.reference) : "");
