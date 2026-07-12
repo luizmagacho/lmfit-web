@@ -353,6 +353,7 @@ export function ResourceList({
   validateBeforeSubmit,
   /** Ajusta o JSON final do POST/PATCH (ex.: anexar `variants`). */
   mergeSubmitPayload,
+  onDataChange,
 }: {
   title: string;
   endpoint: string;
@@ -400,6 +401,8 @@ export function ResourceList({
     payload: Record<string, unknown>,
     ctx: ResourceSubmitHookContext,
   ) => Record<string, unknown>;
+  /** Called with the freshly loaded rows every time the list is fetched (initial load + after create/edit/delete). */
+  onDataChange?: (rows: Row[]) => void;
 }) {
   /** Columns actually rendered in the table (may be a subset). */
   const visibleTableColumns = useMemo(
@@ -457,6 +460,7 @@ export function ResourceList({
         if (!cancelled) {
           setRows(data.items ?? []);
           setTotal(data.total ?? 0);
+          onDataChange?.(data.items ?? []);
         }
       } catch {
         if (!cancelled) {

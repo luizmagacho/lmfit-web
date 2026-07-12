@@ -44,6 +44,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       "nav.products": { "pt-BR": "Produtos", "en": "Products" },
       "nav.materials": { "pt-BR": "Insumos", "en": "Materials" },
       "nav.orders": { "pt-BR": "Pedidos", "en": "Orders" },
+      "nav.returns": { "pt-BR": "Devoluções", "en": "Returns" },
       "nav.promotions": { "pt-BR": "Promoções", "en": "Promotions" },
       "nav.purchases": { "pt-BR": "Compras", "en": "Purchases" },
       "nav.production": { "pt-BR": "Produção", "en": "Production" },

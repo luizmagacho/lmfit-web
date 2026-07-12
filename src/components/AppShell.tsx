@@ -34,7 +34,8 @@ import {
   Store,
   Warehouse,
   Receipt,
-  Tag
+  Tag,
+  Undo2
 } from "lucide-react";
 
 const navKeys = [
@@ -50,6 +51,7 @@ const navKeys = [
   { href: "/products", key: "nav.products", icon: Package },
   { href: "/materials", key: "nav.materials", icon: Layers },
   { href: "/orders", key: "nav.orders", icon: ShoppingCart },
+  { href: "/returns", key: "nav.returns", icon: Undo2 },
   { href: "/promotions", key: "nav.promotions", icon: Tag },
   { href: "/purchases", key: "nav.purchases", icon: CreditCard },
   { href: "/production", key: "nav.production", icon: Scissors },
@@ -100,6 +102,10 @@ const tourStepsInfo: Record<string, { title: string; desc: string }> = {
   "nav.orders": {
     title: "Pedidos de Venda",
     desc: "Acompanhe e controle o status das vendas da separação até a expedição e entrega."
+  },
+  "nav.returns": {
+    title: "Devoluções e Trocas",
+    desc: "Registre devoluções e trocas de pedidos enviados/concluídos, com estorno automático de estoque e crédito de loja."
   },
   "nav.promotions": {
     title: "Cupons e Promoções",

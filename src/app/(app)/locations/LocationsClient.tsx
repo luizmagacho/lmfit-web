@@ -39,8 +39,7 @@ function flattenVariants(products: Array<Record<string, unknown>>): VariantOptio
   return out;
 }
 
-function TransferPanel() {
-  const [locations, setLocations] = useState<LocationRow[]>([]);
+function TransferPanel({ locations }: { locations: LocationRow[] }) {
   const [variants, setVariants] = useState<VariantOption[]>([]);
   const [variantId, setVariantId] = useState("");
   const [fromLocationId, setFromLocationId] = useState("");
@@ -52,7 +51,6 @@ function TransferPanel() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
-    void http.get<{ items: LocationRow[] }>("/locations").then((res) => setLocations(res.data.items ?? []));
     void http.get<{ items: Array<Record<string, unknown>> }>("/products", { params: { limit: 500 } }).then((res) => {
       setVariants(flattenVariants(res.data.items ?? []));
     });
@@ -226,6 +224,8 @@ function TransferPanel() {
 }
 
 export function LocationsClient() {
+  const [locations, setLocations] = useState<LocationRow[]>([]);
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       <div>
@@ -235,6 +235,7 @@ export function LocationsClient() {
         <p className="text-sm mt-1" style={{ color: lmfitTokens.textMuted }}>
           Cadastre depósitos e lojas físicas, e transfira estoque entre eles. O local
           &quot;Loja Principal&quot; é criado automaticamente e concentra o estoque existente.
+          Marque &quot;Padrão&quot; para definir qual local é o principal.
         </p>
       </div>
 
@@ -246,13 +247,14 @@ export function LocationsClient() {
           { key: "_id", label: "ID", editable: false, hiddenOnMobile: true },
           { key: "name", label: "Nome", required: true },
           { key: "address", label: "Endereço" },
-          { key: "isDefault", label: "Padrão", fieldType: "checkbox", editable: false },
+          { key: "isDefault", label: "Padrão", fieldType: "checkbox", defaultValue: "false" },
           { key: "active", label: "Ativo", fieldType: "checkbox", defaultValue: "true" },
         ]}
         tableColumns={["name", "address", "isDefault", "active"]}
+        onDataChange={(rows) => setLocations(rows as LocationRow[])}
       />
 
-      <TransferPanel />
+      <TransferPanel locations={locations} />
     </div>
   );
 }

@@ -48,114 +48,6 @@ const MoonIcon = () => (
   </svg>
 );
 
-const CatalogIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#a78bfa"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <path d="M16 10a4 4 0 0 1-8 0" />
-  </svg>
-);
-
-const WhatsAppIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#a78bfa"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-  </svg>
-);
-
-const StockIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#a78bfa"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-    <line x1="12" y1="22.08" x2="12" y2="12" />
-  </svg>
-);
-
-const ChatbotIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#a78bfa"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 8V4H8" />
-    <rect width="16" height="12" x="4" y="8" rx="2" />
-    <path d="M2 14h2" />
-    <path d="M20 14h2" />
-    <path d="M15 13v2" />
-    <path d="M9 13v2" />
-  </svg>
-);
-
-const CheckoutIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#a78bfa"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect width="20" height="14" x="2" y="5" rx="2" />
-    <line x1="2" y1="10" x2="22" y2="10" />
-  </svg>
-);
-
-const ReportsIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#a78bfa"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="18" y1="20" x2="18" y2="10" />
-    <line x1="12" y1="20" x2="12" y2="4" />
-    <line x1="6" y1="20" x2="6" y2="14" />
-  </svg>
-);
-
 const ClothesIcon1 = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -209,39 +101,6 @@ const ClothesIcon3 = () => (
     <path d="M16 10a4 4 0 0 1-8 0" />
   </svg>
 );
-
-const FEATURES = [
-  {
-    icon: <CatalogIcon />,
-    title: "Catálogo Profissional",
-    desc: "Seus produtos com fotos, variações de cor e tamanho, preços e estoque. Tudo com a sua marca.",
-  },
-  {
-    icon: <WhatsAppIcon />,
-    title: "Pedido via WhatsApp",
-    desc: "Suas clientes montam o carrinho no catálogo e enviam o pedido formatado direto no seu WhatsApp.",
-  },
-  {
-    icon: <StockIcon />,
-    title: "Controle de Estoque",
-    desc: "Gerencie quantidades por variação, receba alertas de estoque baixo e nunca perca uma venda.",
-  },
-  {
-    icon: <ChatbotIcon />,
-    title: "Chatbot IA",
-    desc: "Atendimento automático 24/7 no WhatsApp. Responde perguntas, organiza pedidos e calcula totais.",
-  },
-  {
-    icon: <CheckoutIcon />,
-    title: "Checkout no App",
-    desc: "Receba pagamentos direto pela loja com PIX, Stripe e Mercado Pago. Sem redirecionar a cliente.",
-  },
-  {
-    icon: <ReportsIcon />,
-    title: "Relatórios Inteligentes",
-    desc: "Dashboard com vendas do dia, curva ABC de produtos, receita por período e muito mais.",
-  },
-];
 
 const STEPS = [
   { num: "1", title: "Crie sua loja", desc: "Escolha o nome, suba seu logo e defina as cores da sua marca em minutos." },
@@ -504,8 +363,8 @@ export default function KivoLandingPage() {
         <div className="kivo-section-label">⚡ Recursos</div>
         <h2 className="kivo-section-title">Tudo que você precisa para vender mais</h2>
         <p className="kivo-section-desc">
-          Ferramentas profissionais que grandes e-commerces usam — agora
-          acessíveis para qualquer lojista.
+          Do catálogo à nota fiscal — as mesmas ferramentas que grandes operações
+          usam, agora num só lugar para qualquer lojista.
         </p>
 
         <div className="kivo-bento-grid">
@@ -532,76 +391,126 @@ export default function KivoLandingPage() {
             </div>
           </div>
 
-          {/* Card 2: WhatsApp (Medium) */}
+          {/* Card 2: Venda em todo canal (Medium) */}
           <div className="kivo-bento-card kivo-bento-card--medium">
             <div className="kivo-bento-content">
-              <div className="kivo-bento-icon">💬</div>
-              <h3>Pedido via WhatsApp</h3>
-              <p>Seu cliente monta o carrinho e envia o pedido formatado direto para o seu número.</p>
+              <div className="kivo-bento-icon">🛒</div>
+              <h3>Venda em Todo Canal</h3>
+              <p>Conecte TikTok Shop, Mercado Livre e Shopee — pedidos importados e pagos com PIX, cartão ou Mercado Pago sem sair da plataforma.</p>
             </div>
-            <div className="kivo-bento-visual" style={{ minHeight: "150px" }}>
-              <div style={{ background: "#25D366", color: "#fff", padding: "0.75rem 1rem", borderRadius: "16px 16px 16px 0", maxWidth: "80%", fontSize: "0.875rem", boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)" }}>
-                Novo pedido #1024 📦<br/>Valor: R$ 149,90
-              </div>
+            <div className="kivo-bento-visual" style={{ minHeight: "150px", display: "flex", flexWrap: "wrap", alignContent: "flex-start", gap: "0.5rem" }}>
+              {["TikTok Shop", "Mercado Livre", "Shopee", "WhatsApp"].map((ch) => (
+                <span
+                  key={ch}
+                  style={{
+                    background: "var(--kv-card)",
+                    border: "1px solid var(--kv-border)",
+                    borderRadius: "999px",
+                    padding: "0.4rem 0.85rem",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    color: "var(--kv-text)",
+                  }}
+                >
+                  {ch}
+                </span>
+              ))}
             </div>
           </div>
 
-          {/* Card 3: Dashboard (Large Reversed) */}
+          {/* Card 3: PDV com scanner (Large Reversed) */}
           <div className="kivo-bento-card kivo-bento-card--large-rev">
             <div className="kivo-bento-content">
-              <div className="kivo-bento-icon">📊</div>
-              <h3>Dashboard de Gestão</h3>
-              <p>Acompanhe suas vendas, faturamento e estoque em gráficos intuitivos e relatórios inteligentes.</p>
+              <div className="kivo-bento-icon">🔫</div>
+              <h3>PDV com Leitor de Código de Barras</h3>
+              <p>Venda no balcão pela câmera do celular ou tablet: bipa o produto, confere o preço e já dá baixa no estoque na hora.</p>
             </div>
             <div className="kivo-bento-visual">
-              <div className="kivo-bento-mockup-dash">
-                <div style={{ display: "flex", gap: "1rem" }}>
-                  <div style={{ flex: 1, height: "60px", background: "var(--kv-border)", borderRadius: "8px" }}></div>
-                  <div style={{ flex: 1, height: "60px", background: "var(--kv-border)", borderRadius: "8px" }}></div>
-                  <div style={{ flex: 1, height: "60px", background: "var(--kv-border)", borderRadius: "8px" }}></div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%" }}>
+                <div
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "2.25rem",
+                    letterSpacing: "3px",
+                    color: "var(--kv-text)",
+                    opacity: 0.7,
+                    lineHeight: 1,
+                  }}
+                >
+                  ▌│▌▌│││▌│▌▌▌│▌│▌▌│││▌
                 </div>
-                <div style={{ display: "flex", gap: "1rem", alignItems: "flex-end", height: "120px", marginTop: "1rem" }}>
-                  <div className="kivo-mockup-bar" style={{ flex: 1, height: "40%" }}></div>
-                  <div className="kivo-mockup-bar" style={{ flex: 1, height: "70%" }}></div>
-                  <div className="kivo-mockup-bar" style={{ flex: 1, height: "100%" }}></div>
-                  <div className="kivo-mockup-bar" style={{ flex: 1, height: "85%" }}></div>
-                  <div className="kivo-mockup-bar" style={{ flex: 1, height: "60%" }}></div>
+                <div
+                  style={{
+                    background: "var(--kv-card)",
+                    border: "1px solid var(--kv-border)",
+                    borderRadius: "12px",
+                    padding: "0.75rem 1rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    fontSize: "0.85rem",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                  }}
+                >
+                  <span style={{ color: "#22c55e" }}>✓</span>
+                  <span>Camiseta Dry Fit P — R$ 59,90</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Card 4: Checkout (Medium) */}
+          {/* Card 4: Nota fiscal automática (Medium) */}
           <div className="kivo-bento-card kivo-bento-card--medium">
             <div className="kivo-bento-content">
-              <div className="kivo-bento-icon">💳</div>
-              <h3>Checkout no App</h3>
-              <p>Aceite cartão e PIX de forma segura e rápida sem sair da sua plataforma.</p>
+              <div className="kivo-bento-icon">🧾</div>
+              <h3>Nota Fiscal Automática</h3>
+              <p>NF-e e NFC-e emitidas sozinhas a cada venda — inclusive nos pedidos que chegam de marketplace.</p>
+            </div>
+            <div className="kivo-bento-visual" style={{ minHeight: "150px" }}>
+              <div style={{ background: "var(--kv-card)", border: "1px solid var(--kv-border)", borderRadius: "12px", padding: "1rem", width: "100%" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "0.6rem" }}>
+                  <span style={{ color: "var(--kv-text)" }}>NF-e nº 001.234</span>
+                  <span style={{ color: "#22c55e", fontWeight: 600 }}>✓ Autorizada</span>
+                </div>
+                <div className="kivo-mockup-line" style={{ width: "100%" }}></div>
+                <div className="kivo-mockup-line" style={{ width: "70%", marginTop: "0.5rem" }}></div>
+              </div>
             </div>
           </div>
 
-          {/* Card 5: Kanban (Half) */}
+          {/* Card 5: Estoque multi-local (Half) */}
           <div className="kivo-bento-card kivo-bento-card--half">
             <div className="kivo-bento-content">
-              <div className="kivo-bento-icon">📋</div>
-              <h3>Kanban de Pedidos</h3>
-              <p>Organize o fluxo de separação, envio e entrega dos seus pedidos facilmente.</p>
-            </div>
-            <div className="kivo-bento-visual" style={{ minHeight: "200px" }}>
-               <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
-                  <div style={{ flex: 1, background: "var(--kv-border)", borderRadius: "8px", height: "120px", opacity: 0.5 }}></div>
-                  <div style={{ flex: 1, background: "var(--kv-border)", borderRadius: "8px", height: "150px", opacity: 0.8 }}></div>
-                  <div style={{ flex: 1, background: "var(--kv-gradient)", borderRadius: "8px", height: "90px" }}></div>
-               </div>
+              <div className="kivo-bento-icon">🏬</div>
+              <h3>Estoque em Vários Locais</h3>
+              <p>Cadastre depósitos e lojas físicas e transfira estoque entre eles com um clique, sem planilha paralela.</p>
             </div>
           </div>
 
-          {/* Card 6: IA (Half) */}
+          {/* Card 6: Cupons & fidelidade (Half) */}
+          <div className="kivo-bento-card kivo-bento-card--half">
+            <div className="kivo-bento-content">
+              <div className="kivo-bento-icon">🎁</div>
+              <h3>Cupons & Fidelidade</h3>
+              <p>Cupons de desconto no checkout e cashback que vira crédito automático na próxima compra do cliente.</p>
+            </div>
+          </div>
+
+          {/* Card 7: Devoluções & trocas (Half) */}
+          <div className="kivo-bento-card kivo-bento-card--half">
+            <div className="kivo-bento-content">
+              <div className="kivo-bento-icon">↩️</div>
+              <h3>Devoluções & Trocas</h3>
+              <p>Registrou a devolução, o estoque volta e o crédito de loja é lançado pro cliente — tudo automático.</p>
+            </div>
+          </div>
+
+          {/* Card 8: Chatbot IA (Half) */}
           <div className="kivo-bento-card kivo-bento-card--half">
             <div className="kivo-bento-content">
               <div className="kivo-bento-icon">🤖</div>
-              <h3>Chatbot IA</h3>
-              <p>Atenda seus clientes automaticamente e aumente a conversão, 24 horas por dia.</p>
+              <h3>Chatbot IA no WhatsApp</h3>
+              <p>Atendimento automático 24/7: responde dúvidas, monta o pedido e calcula o total sem intervenção sua.</p>
             </div>
           </div>
         </div>
