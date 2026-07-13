@@ -24,7 +24,7 @@ type StockBreakdownRow = {
   quantity: number;
 };
 
-function flattenVariants(products: Array<Record<string, unknown>>): VariantOption[] {
+export function flattenVariants(products: Array<Record<string, unknown>>): VariantOption[] {
   const out: VariantOption[] = [];
   for (const p of products) {
     const name = String(p.name ?? "");
@@ -37,6 +37,16 @@ function flattenVariants(products: Array<Record<string, unknown>>): VariantOptio
     }
   }
   return out;
+}
+
+/** The only real validation rule for a transfer besides required-fields: can't move stock
+ * from a location to itself. Required-fields are just a silent no-op in the form, not an
+ * error message, so they're not part of this. */
+export function transferErrorMessage(fromLocationId: string, toLocationId: string): string | null {
+  if (fromLocationId && toLocationId && fromLocationId === toLocationId) {
+    return "Origem e destino não podem ser o mesmo local.";
+  }
+  return null;
 }
 
 function TransferPanel({ locations }: { locations: LocationRow[] }) {
@@ -73,8 +83,9 @@ function TransferPanel({ locations }: { locations: LocationRow[] }) {
     e.preventDefault();
     setMessage(null);
     if (!variantId || !fromLocationId || !toLocationId || quantity < 1) return;
-    if (fromLocationId === toLocationId) {
-      setMessage({ type: "error", text: "Origem e destino não podem ser o mesmo local." });
+    const transferError = transferErrorMessage(fromLocationId, toLocationId);
+    if (transferError) {
+      setMessage({ type: "error", text: transferError });
       return;
     }
     setSubmitting(true);

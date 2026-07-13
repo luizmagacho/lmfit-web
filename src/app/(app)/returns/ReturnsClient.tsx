@@ -9,7 +9,7 @@ import type { OrderWithWarnings } from "@/lib/orders/types";
 import { formatBRL } from "@/lib/formatMoney";
 import { lmfitTokens } from "@/theme/tokens";
 
-type ReturnableLine = {
+export type ReturnableLine = {
   variantId: string;
   description?: string | null;
   quantity: number;
@@ -17,7 +17,9 @@ type ReturnableLine = {
   returnedQty: number;
 };
 
-function returnableLines(order: OrderWithWarnings): ReturnableLine[] {
+/** Which order lines can still be returned: excludes backorder lines (stock was never
+ * deducted for them, so there's nothing to reverse) and lines already fully returned. */
+export function returnableLines(order: OrderWithWarnings): ReturnableLine[] {
   const raw = (order.lines ?? []) as Array<Record<string, unknown>>;
   return raw
     .filter((l) => !l.isOrder)
@@ -29,6 +31,12 @@ function returnableLines(order: OrderWithWarnings): ReturnableLine[] {
       returnedQty: Number(l.returnedQty ?? 0),
     }))
     .filter((l) => l.quantity - l.returnedQty > 0);
+}
+
+/** Keeps a typed return quantity within [0, available] — never negative, never more than
+ * what's actually left to return for that line. */
+export function clampReturnQty(value: number, max: number): number {
+  return Math.max(0, Math.min(max, value));
 }
 
 function NewReturnPanel({ onCreated }: { onCreated: () => void }) {
@@ -78,7 +86,7 @@ function NewReturnPanel({ onCreated }: { onCreated: () => void }) {
   }
 
   function setQty(variantId: string, value: number, max: number) {
-    setQtyByVariant((prev) => ({ ...prev, [variantId]: Math.max(0, Math.min(max, value)) }));
+    setQtyByVariant((prev) => ({ ...prev, [variantId]: clampReturnQty(value, max) }));
   }
 
   async function handleSubmit(e: React.FormEvent) {

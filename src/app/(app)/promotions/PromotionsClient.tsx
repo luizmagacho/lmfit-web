@@ -4,6 +4,21 @@ import { ResourceList, type ResourceColumn } from "@/components/ResourceList";
 import { formatBRL } from "@/lib/formatMoney";
 import { lmfitTokens } from "@/theme/tokens";
 
+/** "10" reads as "10%" for a percent coupon, or "R$ 10,00" for a fixed-value one — the
+ * same ambiguous `value` field means something different depending on `type`. */
+export function formatPromotionValue(type: unknown, value: unknown): string {
+  const v = Number(value ?? 0);
+  return type === "percent" ? `${v}%` : formatBRL(v);
+}
+
+export function formatMinSubtotal(minSubtotal: unknown): string {
+  return minSubtotal !== undefined && minSubtotal !== null ? formatBRL(Number(minSubtotal)) : "—";
+}
+
+export function formatMaxUses(maxUses: unknown): string {
+  return maxUses ? String(maxUses) : "Ilimitado";
+}
+
 const columns: ResourceColumn[] = [
   { key: "_id", label: "ID", editable: false, hiddenOnMobile: true },
   {
@@ -68,15 +83,9 @@ export function PromotionsClient() {
         columns={columns}
         tableColumns={["code", "type", "value", "usedCount", "maxUses", "active"]}
         cellRender={{
-          value: (row) => {
-            const v = Number(row.value ?? 0);
-            return row.type === "percent" ? `${v}%` : formatBRL(v);
-          },
-          minSubtotal: (row) =>
-            row.minSubtotal !== undefined && row.minSubtotal !== null
-              ? formatBRL(Number(row.minSubtotal))
-              : "—",
-          maxUses: (row) => (row.maxUses ? String(row.maxUses) : "Ilimitado"),
+          value: (row) => formatPromotionValue(row.type, row.value),
+          minSubtotal: (row) => formatMinSubtotal(row.minSubtotal),
+          maxUses: (row) => formatMaxUses(row.maxUses),
         }}
       />
     </div>

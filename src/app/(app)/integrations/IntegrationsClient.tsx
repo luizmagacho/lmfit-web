@@ -59,6 +59,64 @@ function PlatformIcon({ domain, logo, color, name }: { domain: string; logo: str
   );
 }
 
+export type ConnectFormValues = {
+  apiToken: string;
+  storeId: string;
+  applicationKey: string;
+  partnerKey: string;
+  authCode: string;
+  label: string;
+};
+
+/** Whether the connect form needs App Key/Secret fields — TikTok Shop and Shopee's
+ * OAuth apps both authenticate with an app key pair instead of a single static token. */
+export function platformNeedsAppKeys(platformId: string): boolean {
+  return platformId === "shopee" || platformId === "tiktok";
+}
+
+/** Whether the connect form needs a numeric store/shop id field. */
+export function platformNeedsStoreId(platformId: string): boolean {
+  return platformId === "nuvemshop" || platformId === "mercadolivre" || platformId === "shopee";
+}
+
+/**
+ * Shapes the connect-form values into the exact POST body for each platform — TikTok has
+ * its own dedicated OAuth-exchange endpoint/shape, everything else goes through the
+ * generic /integrations endpoint with a nested `credentials` object. Getting a field name
+ * wrong here silently breaks the connection (wrong key sent, platform rejects it, or worse,
+ * accepts a malformed credential and fails later during sync).
+ */
+export function buildConnectPayload(
+  platformId: string,
+  values: ConnectFormValues,
+): { endpoint: string; body: Record<string, unknown> } {
+  if (platformId === "tiktok") {
+    return {
+      endpoint: "/integrations/tiktok/connect",
+      body: {
+        label: values.label || undefined,
+        applicationKey: values.applicationKey,
+        apiKey: values.partnerKey,
+        authCode: values.authCode,
+      },
+    };
+  }
+  return {
+    endpoint: "/integrations",
+    body: {
+      platform: platformId,
+      label: values.label || `Loja ${platformId}`,
+      credentials: {
+        accessToken: values.apiToken,
+        storeId: values.storeId || undefined,
+        applicationKey: values.applicationKey || undefined,
+        apiKey: values.partnerKey || undefined,
+      },
+      syncStock: true,
+    },
+  };
+}
+
 const PLATFORMS = [
   { id: 'bagy', name: 'Bagy', logo: 'B', domain: 'bagy.com.br', desc: 'Integração oficial com a Bagy.', color: '#00d2ff' },
   { id: 'nuvemshop', name: 'Nuvemshop', logo: 'N', domain: 'nuvemshop.com.br', desc: 'Integração oficial com a Nuvemshop.', color: '#0052cc', disabled: false },
@@ -119,30 +177,23 @@ export function IntegrationsClient() {
     e.preventDefault();
     if (!selectedPlatform) return;
 
+    if (selectedPlatform === 'tiktok') {
+      if (!applicationKey || !partnerKey || !authCode) return;
+    } else if (!apiToken) {
+      return;
+    }
+
     setSaving(true);
     try {
-      if (selectedPlatform === 'tiktok') {
-        if (!applicationKey || !partnerKey || !authCode) return;
-        await http.post('/integrations/tiktok/connect', {
-          label: label || undefined,
-          applicationKey,
-          apiKey: partnerKey,
-          authCode,
-        });
-      } else {
-        if (!apiToken) return;
-        await http.post('/integrations', {
-          platform: selectedPlatform,
-          label: label || `Loja ${selectedPlatform}`,
-          credentials: {
-            accessToken: apiToken,
-            storeId: storeId || undefined,
-            applicationKey: applicationKey || undefined,
-            apiKey: partnerKey || undefined,
-          },
-          syncStock: true,
-        });
-      }
+      const { endpoint, body } = buildConnectPayload(selectedPlatform, {
+        apiToken,
+        storeId,
+        applicationKey,
+        partnerKey,
+        authCode,
+        label,
+      });
+      await http.post(endpoint, body);
       toast.success('Loja conectada com sucesso!');
       resetConnectForm();
       fetchIntegrations();
@@ -311,7 +362,7 @@ export function IntegrationsClient() {
                   style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                 />
               </div>
-              {(selectedPlatform === 'shopee' || selectedPlatform === 'tiktok') && (
+              {platformNeedsAppKeys(selectedPlatform) && (
                 <>
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">
@@ -386,7 +437,7 @@ export function IntegrationsClient() {
                   </p>
                 </div>
               )}
-              {(selectedPlatform === 'nuvemshop' || selectedPlatform === 'mercadolivre' || selectedPlatform === 'shopee') && (
+              {platformNeedsStoreId(selectedPlatform) && (
                 <div>
                   <label className="block text-sm font-semibold mb-1 text-[var(--lmfit-text)]">
                     {selectedPlatform === 'shopee' ? 'Shop ID' : 'Store ID (ID da Loja)'}
