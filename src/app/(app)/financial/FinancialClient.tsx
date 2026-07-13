@@ -526,6 +526,9 @@ export function FinancialClient() {
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [entries, setEntries] = useState<ApiEntry[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [total, setTotal] = useState(0);
   const [batches, setBatches] = useState<BatchInfo[]>([]);
   const [filterType, setFilterType] = useState("");
   const [loadingData, setLoadingData] = useState(true);
@@ -533,27 +536,52 @@ export function FinancialClient() {
   const [manualEntryOpen, setManualEntryOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Partial<ApiEntry> | null>(null);
 
-  const loadData = useCallback(async () => {
-    setLoadingData(true);
+  const fetchEntries = useCallback(async (p: number, l: number, type: string) => {
     try {
-      const [{ data: sumData }, { data: entData }, { data: batData }, { data: supData }] = await Promise.all([
+      const { data } = await http.get<{ items: ApiEntry[]; total: number }>("/cashflow", {
+        params: { page: p, limit: l, type: type || undefined },
+      });
+      setEntries(data.items ?? []);
+      setTotal(data.total ?? 0);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const loadMetadata = useCallback(async () => {
+    try {
+      const [{ data: sumData }, { data: batData }, { data: supData }] = await Promise.all([
         http.get<SummaryData>("/cashflow/summary"),
-        http.get<{ items: ApiEntry[] }>("/cashflow", { params: { limit: 100 } }),
         http.get<BatchInfo[]>("/cashflow/batches"),
         http.get<Array<{ _id: string; name: string }>>("/suppliers"),
       ]);
       setSummary(sumData);
-      setEntries(entData.items ?? []);
       setBatches(batData ?? []);
       setSuppliers((supData as { items?: Array<{ _id: string; name: string }> }).items ?? supData ?? []);
     } catch {
-      // ignore — no data yet
-    } finally {
-      setLoadingData(false);
+      // ignore
     }
   }, []);
 
-  useEffect(() => { void loadData(); }, [loadData]);
+  const loadData = useCallback(async () => {
+    setLoadingData(true);
+    try {
+      await Promise.all([loadMetadata(), fetchEntries(page, limit, filterType)]);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingData(false);
+    }
+  }, [loadMetadata, fetchEntries, page, limit, filterType]);
+
+  useEffect(() => {
+    setLoadingData(true);
+    void fetchEntries(page, limit, filterType).finally(() => setLoadingData(false));
+  }, [page, limit, filterType, fetchEntries]);
+
+  useEffect(() => {
+    void loadMetadata();
+  }, [loadMetadata]);
 
   useEffect(() => {
     if (tab !== "dre") return;
@@ -680,9 +708,7 @@ export function FinancialClient() {
     });
   };
 
-  const filteredEntries = filterType
-    ? entries.filter((e) => e.type === filterType)
-    : entries;
+  const filteredEntries = entries;
 
   return (
     <div className="space-y-6">
@@ -803,7 +829,10 @@ export function FinancialClient() {
                     className="border rounded-lg px-3 py-1.5 text-sm"
                     style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                     value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
+                    onChange={(e) => {
+                      setFilterType(e.target.value);
+                      setPage(1);
+                    }}
                   >
                     <option value="">{language === "en" ? "All types" : "Todos os tipos"}</option>
                     <option value="deposit_sales">{language === "en" ? "Card Sale" : "Venda Cartão"}</option>
@@ -881,6 +910,40 @@ export function FinancialClient() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {total > limit && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t text-sm bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
+                    <p style={{ color: lmfitTokens.textMuted }}>
+                      {language === "en" 
+                        ? `Showing ${(page - 1) * limit + 1} to ${Math.min(page * limit, total)} of ${total} entries`
+                        : `Mostrando ${(page - 1) * limit + 1} a ${Math.min(page * limit, total)} de ${total} lançamentos`}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={page === 1}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        className="px-3 py-1.5 border rounded-lg hover:bg-black/5 disabled:opacity-50 disabled:hover:bg-transparent transition-colors font-medium"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      >
+                        {language === "en" ? "Previous" : "Anterior"}
+                      </button>
+                      <span className="font-medium" style={{ color: lmfitTokens.text }}>
+                        {page} / {Math.ceil(total / limit)}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={page >= Math.ceil(total / limit)}
+                        onClick={() => setPage((p) => p + 1)}
+                        className="px-3 py-1.5 border rounded-lg hover:bg-black/5 disabled:opacity-50 disabled:hover:bg-transparent transition-colors font-medium"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      >
+                        {language === "en" ? "Next" : "Próximo"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
