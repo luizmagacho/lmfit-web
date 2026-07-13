@@ -94,15 +94,27 @@ function DailyChart({ data, lang }: { data: { date: string; in: number; out: num
   if (!data.length) return null;
   const maxVal = data.reduce((m, d) => Math.max(m, d.in, d.out), 0);
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto pt-16 pb-2">
       <div className="flex items-end gap-1.5" style={{ minWidth: data.length * 36, height: 100 }}>
         {data.map((d) => {
           const dateStr = new Date(d.date).toLocaleDateString(lang === "en" ? "en-US" : "pt-BR", { timeZone: "UTC" });
-          const tooltip = lang === "en" 
-            ? `Date: ${dateStr}\nIncomes: ${formatBRL(d.in)}\nExpenses: ${formatBRL(d.out)}` 
-            : `Data: ${dateStr}\nEntradas: ${formatBRL(d.in)}\nSaídas: ${formatBRL(d.out)}`;
           return (
-            <div key={d.date} className="flex flex-col items-center justify-end gap-1 flex-1 hover:bg-black/5 rounded-t-sm transition-colors cursor-default" style={{ minWidth: 28 }} title={tooltip}>
+            <div key={d.date} className="relative group flex flex-col items-center justify-end gap-1 flex-1 hover:bg-black/5 rounded-t-sm transition-colors cursor-default" style={{ minWidth: 28 }}>
+              {/* Premium Tooltip */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col bg-slate-900 text-white text-xs rounded-lg p-2.5 shadow-xl border border-slate-800 z-50 pointer-events-none min-w-[150px] gap-1">
+                <div className="font-semibold border-b border-slate-700 pb-1 mb-1 text-[10px] text-slate-400 whitespace-nowrap text-center">
+                  {dateStr}
+                </div>
+                <div className="flex justify-between gap-3 text-[11px]">
+                  <span className="text-emerald-400 font-medium">Entradas:</span>
+                  <span className="font-mono">{formatBRL(d.in)}</span>
+                </div>
+                <div className="flex justify-between gap-3 text-[11px]">
+                  <span className="text-rose-400 font-medium">Saídas:</span>
+                  <span className="font-mono">{formatBRL(d.out)}</span>
+                </div>
+              </div>
+
               <div className="flex items-end gap-1 w-full" style={{ height: 80 }}>
                 <div
                   className="flex-1 rounded-sm transition-all shadow-sm"
