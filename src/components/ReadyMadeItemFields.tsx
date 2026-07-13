@@ -17,6 +17,7 @@ export type ReadyMadeValue = {
   costPrice: number;
   markupPercent: number;
   computedPrice: number;
+  isUserEdit?: boolean;
 };
 
 const selectStyles = {
