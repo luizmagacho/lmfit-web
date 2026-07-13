@@ -181,7 +181,7 @@ export function ProductsClient() {
             productRow={ctx.modal === "edit" ? ctx.editingRow : null}
             onChange={(v) => {
               readyMadeRef.current = v;
-              if (v.isReadyMade && v.costPrice > 0) {
+              if (v.isReadyMade && v.costPrice > 0 && v.isUserEdit) {
                 setApplyPriceToken((n) => n + 1);
               }
             }}

@@ -97,6 +97,7 @@ export function ReadyMadeItemFields({
   const [supplierOpt, setSupplierOpt] = useState<SupplierOption | null>(null);
   const [costPriceInput, setCostPriceInput] = useState("");
   const [markupPercentInput, setMarkupPercentInput] = useState("");
+  const isUserEditRef = useRef(false);
 
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState("");
@@ -125,7 +126,9 @@ export function ReadyMadeItemFields({
       costPrice,
       markupPercent,
       computedPrice,
+      isUserEdit: isUserEditRef.current,
     });
+    isUserEditRef.current = false;
   }, [isReadyMade, supplierOpt, costPrice, markupPercent, computedPrice]);
 
   async function handleAddSupplier(e: React.FormEvent) {
@@ -153,7 +156,7 @@ export function ReadyMadeItemFields({
   return (
     <div className="space-y-3 sm:col-span-2 p-3 rounded-lg border" style={{ borderColor: lmfitTokens.border, backgroundColor: "rgba(128,128,128,0.05)" }}>
       <label className="flex items-center gap-2 text-sm font-medium" style={{ color: lmfitTokens.text }}>
-        <input type="checkbox" className="w-4 h-4" checked={isReadyMade} onChange={(e) => setIsReadyMade(e.target.checked)} />
+        <input type="checkbox" className="w-4 h-4" checked={isReadyMade} onChange={(e) => { isUserEditRef.current = true; setIsReadyMade(e.target.checked); }} />
         Item pronto (comprado de fornecedor)
       </label>
 
@@ -192,7 +195,7 @@ export function ReadyMadeItemFields({
               className="w-full min-h-10 border rounded-md px-3 py-2 tabular-nums"
               style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}
               value={formatBRLInputDisplay(costPriceInput)}
-              onChange={(e) => setCostPriceInput(parseBRLMoneyInput(e.target.value))}
+              onChange={(e) => { isUserEditRef.current = true; setCostPriceInput(parseBRLMoneyInput(e.target.value)); }}
               placeholder="0,00"
             />
           </label>
@@ -206,7 +209,7 @@ export function ReadyMadeItemFields({
               className="w-full min-h-10 border rounded-md px-3 py-2 tabular-nums"
               style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}
               value={markupPercentInput}
-              onChange={(e) => setMarkupPercentInput(e.target.value)}
+              onChange={(e) => { isUserEditRef.current = true; setMarkupPercentInput(e.target.value); }}
               placeholder="Ex.: 50"
             />
           </label>
