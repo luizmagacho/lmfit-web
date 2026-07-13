@@ -571,8 +571,8 @@ export function FinancialClient() {
     } catch (e) {
       setImportMsg(
         language === "en"
-          ? "Error reading PDF. Verify it is a valid InfinitePay report."
-          : "Erro ao ler o PDF. Verifique se é um relatório válido da InfinitePay."
+          ? `Error reading PDF: ${(e as Error).message}`
+          : `Erro ao ler o PDF: ${(e as Error).message}`
       );
       console.error(e);
     } finally {

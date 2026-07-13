@@ -102,13 +102,23 @@ export async function parseInfinitePayPdf(file: File): Promise<InfinitepayReport
     const rawDetail = t.detail.trim().toLowerCase();
     
     if (rawType.includes('pix')) {
-      type = rawDetail.includes('enviado') ? 'pix_sent' : 'pix_received';
-    } else if (rawType.includes('depósito') || rawType.includes('deposito')) {
+      type = (rawDetail.includes('enviado') || rawDetail.includes('sent')) ? 'pix_sent' : 'pix_received';
+    } else if (rawType.includes('depósito') || rawType.includes('deposito') || rawType.includes('deposit')) {
       type = 'deposit_sales';
     }
 
-    const cleanedAmount = t.amountRaw.replace(/[^\d.,+-]/g, '').replace(/\./g, '').replace(',', '.');
-    let amount = parseFloat(cleanedAmount);
+    const rawStr = t.amountRaw.replace(/[^\d.,+-]/g, '');
+    let amount = 0;
+    const lastCommaIndex = rawStr.lastIndexOf(',');
+    const lastPeriodIndex = rawStr.lastIndexOf('.');
+
+    if (lastPeriodIndex > lastCommaIndex) {
+      amount = parseFloat(rawStr.replace(/,/g, ''));
+    } else if (lastCommaIndex > lastPeriodIndex) {
+      amount = parseFloat(rawStr.replace(/\./g, '').replace(',', '.'));
+    } else {
+      amount = parseFloat(rawStr);
+    }
 
     if (type === 'deposit_sales' || type === 'pix_received') {
       amount = Math.abs(amount);
