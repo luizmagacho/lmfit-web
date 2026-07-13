@@ -116,7 +116,7 @@ function parseLinesPayload(rows: LocalLine[]): any[] {
   const out: any[] = [];
   for (const r of rows) {
     if (r.itemType === 'variant' && r.isNewVariant) {
-      if (!r.newProductId.trim() || !r.newSku.trim()) continue;
+      if ((!r.newProductId.trim() && !r.newProductLabel.trim()) || !r.newSku.trim()) continue;
     } else if (r.itemType === 'variant' && !r.variantId.trim() && !r.rawName.trim()) {
       continue;
     } else if (r.itemType === 'material' && !r.materialId.trim() && !r.rawName.trim()) {
@@ -136,7 +136,7 @@ function parseLinesPayload(rows: LocalLine[]): any[] {
     };
     if (r.itemType === 'variant' && r.isNewVariant) {
       line.newVariant = {
-        productId: r.newProductId.trim(),
+        ...(r.newProductId.trim() ? { productId: r.newProductId.trim() } : { newProductName: r.newProductLabel.trim() }),
         sku: r.newSku.trim(),
         color: r.newColor.trim() || undefined,
         size: r.newSize.trim() || undefined,
@@ -520,7 +520,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                       <div className="w-full min-w-[16rem] space-y-1.5 p-2 rounded-md border" style={{ borderColor: lmfitTokens.border }}>
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-medium" style={{ color: lmfitTokens.textMuted }}>
-                            Nova variação (cor/tamanho)
+                            Novo produto ou variação
                           </span>
                           <button
                             type="button"
@@ -539,24 +539,35 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                             Cancelar
                           </button>
                         </div>
-                        <AsyncSelect
+                        <AsyncCreatableSelect
+                          isClearable
                           cacheOptions
+                          createOptionPosition="first"
                           defaultOptions
                           loadOptions={loadNewVariantProductOptions}
                           styles={selectStyles}
-                          placeholder="Produto já cadastrado…"
-                          value={row.newProductId ? { value: row.newProductId, label: row.newProductLabel } : null}
+                          placeholder="Produto (ou digite um nome novo)…"
+                          formatCreateLabel={(val) => `Criar produto "${val}"`}
+                          value={
+                            row.newProductId || row.newProductLabel
+                              ? { value: row.newProductId || row.newProductLabel, label: row.newProductLabel }
+                              : null
+                          }
                           onChange={(opt: any) =>
                             setLines((prev) =>
                               prev.map((l) =>
                                 l.key === row.key
                                   ? {
                                       ...l,
-                                      newProductId: opt?.value ?? "",
+                                      // A criado agora ("__isNew__") não tem _id ainda — guardamos só o
+                                      // nome; o backend cria o produto ao salvar (resolveNewVariants).
+                                      newProductId: !opt || opt.__isNew__ ? "" : opt.value,
                                       newProductLabel: opt?.label ?? "",
                                       newSku: generateSkuSuggestion(opt?.label ?? "", l.newColor, l.newSize),
                                       newPrice:
-                                        !l.newPrice && opt?.priceRetail != null ? floatToBRL(opt.priceRetail) : l.newPrice,
+                                        !l.newPrice && !opt?.__isNew__ && opt?.priceRetail != null
+                                          ? floatToBRL(opt.priceRetail)
+                                          : l.newPrice,
                                     }
                                   : l,
                               ),
@@ -600,7 +611,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                             type="button"
                             className="w-full text-xs min-h-8 rounded border touch-manipulation"
                             style={{ borderColor: lmfitTokens.primary, color: lmfitTokens.primary }}
-                            disabled={!row.newProductId}
+                            disabled={!row.newProductId && !row.newProductLabel}
                             onClick={() => {
                               const colors = row.newColor.split(",").map((c) => c.trim()).filter(Boolean);
                               const sizes = row.newSize.split(",").map((s) => s.trim()).filter(Boolean);
@@ -696,7 +707,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
                             )
                           }
                         >
-                          + Nova variação (cor/tamanho)
+                          + Produto novo ou nova variação
                         </button>
                       </div>
                     ) : (
