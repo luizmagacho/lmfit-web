@@ -214,12 +214,26 @@ export function ReadyMadeItemFields({
             />
           </label>
 
-          <div className="text-sm space-y-1">
-            <span style={{ color: lmfitTokens.textMuted }}>Preço de venda calculado</span>
-            <p className="min-h-10 flex items-center font-semibold tabular-nums" style={{ color: lmfitTokens.success }}>
-              {formatBRL(computedPrice)}
-            </p>
-          </div>
+          <label className="text-sm space-y-1">
+            <span style={{ color: lmfitTokens.textMuted }}>Preço de venda (R$) *</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              className="w-full min-h-10 border rounded-md px-3 py-2 tabular-nums font-semibold"
+              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.success, backgroundColor: "var(--card-bg)" }}
+              value={formatBRLInputDisplay(computedPrice > 0 ? computedPrice.toFixed(2) : "")}
+              onChange={(e) => {
+                isUserEditRef.current = true;
+                const raw = parseBRLMoneyInput(e.target.value);
+                const newSalePrice = raw ? Number(raw) || 0 : 0;
+                if (costPrice > 0) {
+                  const computedMarkup = ((newSalePrice / costPrice) - 1) * 100;
+                  setMarkupPercentInput(Number.isFinite(computedMarkup) ? computedMarkup.toFixed(1) : "0");
+                }
+              }}
+              placeholder="0,00"
+            />
+          </label>
         </div>
       ) : (
         <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>
