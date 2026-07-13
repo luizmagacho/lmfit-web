@@ -101,7 +101,7 @@ function DailyChart({ data, lang }: { data: { date: string; in: number; out: num
           return (
             <div key={d.date} className="relative group flex flex-col items-center justify-end gap-1 flex-1 hover:bg-black/5 rounded-t-sm transition-colors cursor-default" style={{ minWidth: 28 }}>
               {/* Premium Tooltip */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col bg-slate-900 text-white text-xs rounded-lg p-2.5 shadow-xl border border-slate-800 z-50 pointer-events-none min-w-[150px] gap-1">
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 flex flex-col bg-slate-900 text-white text-xs rounded-lg p-2.5 shadow-xl border border-slate-800 z-50 pointer-events-none min-w-[150px] gap-1">
                 <div className="font-semibold border-b border-slate-700 pb-1 mb-1 text-[10px] text-slate-400 whitespace-nowrap text-center">
                   {dateStr}
                 </div>
