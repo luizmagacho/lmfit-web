@@ -206,7 +206,7 @@ export function ReadyMadeItemFields({
             <input
               type="number"
               min={0}
-              step="0.1"
+              step="0.01"
               className="w-full min-h-10 border rounded-md px-3 py-2 tabular-nums"
               style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}
               value={markupPercentInput}
@@ -229,7 +229,7 @@ export function ReadyMadeItemFields({
                 const newSalePrice = raw ? Number(raw) || 0 : 0;
                 if (costPrice > 0) {
                   const computedMarkup = ((newSalePrice / costPrice) - 1) * 100;
-                  setMarkupPercentInput(Number.isFinite(computedMarkup) ? computedMarkup.toFixed(1) : "0");
+                  setMarkupPercentInput(Number.isFinite(computedMarkup) ? computedMarkup.toFixed(2) : "0");
                 }
               }}
               placeholder="0,00"
