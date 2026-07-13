@@ -304,7 +304,7 @@ function PreviewModal({
                   </td>
                   <td className="py-1.5 pr-2 max-w-[150px] truncate" style={{ color: lmfitTokens.text }}>{tx.name}</td>
                   <td className="py-1.5 text-right tabular-nums font-medium" style={{ color: tx.amount >= 0 ? "var(--kivoni-success)" : "var(--kivoni-error)" }}>
-                    {tx.amount >= 0 ? "+" : ""}{formatBRL(tx.amount)}
+                    {tx.amount >= 0 ? "+" : "-"}{formatBRL(tx.amount)}
                   </td>
                 </tr>
               ))}
@@ -851,7 +851,7 @@ export function FinancialClient() {
                             )}
                           </td>
                           <td className="py-2.5 px-4 text-right tabular-nums font-medium" style={{ color: getRawNumber(entry.amount) >= 0 ? "var(--kivoni-success)" : "var(--kivoni-error)" }}>
-                            {getRawNumber(entry.amount) >= 0 ? "+" : ""}{formatBRL(entry.amount)}
+                            {getRawNumber(entry.amount) >= 0 ? "+" : "-"}{formatBRL(entry.amount)}
                           </td>
                           <td className="py-2.5 px-4 text-right whitespace-nowrap">
                             <button
