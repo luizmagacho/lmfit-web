@@ -8,8 +8,8 @@ import { formatBRLInputDisplay, parseBRLMoneyInput } from "@/lib/inputMasks";
 import { formatBRL } from "@/lib/formatMoney";
 import { lmfitTokens } from "@/theme/tokens";
 
-type Row = Record<string, unknown>;
-type SupplierOption = { value: string; label: string };
+export type Row = Record<string, unknown>;
+export type SupplierOption = { value: string; label: string };
 
 export type ReadyMadeValue = {
   isReadyMade: boolean;
@@ -38,6 +38,33 @@ const selectStyles = {
     cursor: "pointer",
   }),
 };
+
+/** Mirrors the server-side calculation in products.service.ts resolveReadyMadePricing —
+ * the sale price shown here is a preview, but must match what the server actually saves. */
+export function computeReadyMadePrice(costPrice: number, markupPercent: number): number {
+  return Math.round(costPrice * (1 + markupPercent / 100) * 100) / 100;
+}
+
+/** Derives the form's initial state from a product row (create modal → productRow is null;
+ * edit modal → the saved product). Kept pure so field-mapping bugs are unit-testable. */
+export function deriveInitialState(productRow: Row | null): {
+  isReadyMade: boolean;
+  supplierOpt: SupplierOption | null;
+  costPriceInput: string;
+  markupPercentInput: string;
+} {
+  const isReadyMade = productRow?.sourceType === "ready_made";
+  const supId = productRow?.supplierId != null ? String(productRow.supplierId) : "";
+  const supName = productRow?.supplierName != null ? String(productRow.supplierName) : "";
+  const cost = productRow?.costPrice;
+  const markup = productRow?.markupPercent;
+  return {
+    isReadyMade,
+    supplierOpt: supId ? { value: supId, label: supName || supId } : null,
+    costPriceInput: typeof cost === "number" ? cost.toFixed(2) : "",
+    markupPercentInput: markup != null && markup !== "" ? String(markup) : "",
+  };
+}
 
 async function loadSupplierOptions(inputValue: string): Promise<SupplierOption[]> {
   try {
@@ -78,20 +105,16 @@ export function ReadyMadeItemFields({
   const [savingSupplier, setSavingSupplier] = useState(false);
 
   useEffect(() => {
-    const ready = productRow?.sourceType === "ready_made";
-    setIsReadyMade(ready);
-    const supId = productRow?.supplierId != null ? String(productRow.supplierId) : "";
-    const supName = productRow?.supplierName != null ? String(productRow.supplierName) : "";
-    setSupplierOpt(supId ? { value: supId, label: supName || supId } : null);
-    const cost = productRow?.costPrice;
-    setCostPriceInput(typeof cost === "number" ? cost.toFixed(2) : "");
-    const markup = productRow?.markupPercent;
-    setMarkupPercentInput(markup != null && markup !== "" ? String(markup) : "");
+    const initial = deriveInitialState(productRow);
+    setIsReadyMade(initial.isReadyMade);
+    setSupplierOpt(initial.supplierOpt);
+    setCostPriceInput(initial.costPriceInput);
+    setMarkupPercentInput(initial.markupPercentInput);
   }, [resetKey, productRow]);
 
   const costPrice = costPriceInput ? Number(parseBRLMoneyInput(costPriceInput)) || 0 : 0;
   const markupPercent = markupPercentInput ? Number(markupPercentInput) || 0 : 0;
-  const computedPrice = Math.round(costPrice * (1 + markupPercent / 100) * 100) / 100;
+  const computedPrice = computeReadyMadePrice(costPrice, markupPercent);
 
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;

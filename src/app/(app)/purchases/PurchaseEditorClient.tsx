@@ -23,7 +23,7 @@ import AsyncSelect from "react-select/async";
 type SupplierRow = { _id: string; name?: string };
 type VariantOpt = { id: string; label: string; sku: string };
 
-type LocalLine = {
+export type LocalLine = {
   key: string;
   itemType: 'variant' | 'material';
   variantId: string;
@@ -44,7 +44,7 @@ type LocalLine = {
 type MaterialOpt = { id: string; name: string; unit: string };
 
 
-function floatToBRL(value: number | string | null | undefined) {
+export function floatToBRL(value: number | string | null | undefined) {
   if (value == null || value === "") return "";
   // `value` may be a raw number or a pt-BR formatted string (the API's global money
   // interceptor turns `unitPrice` into e.g. "45,90") — plain Number() returns NaN on
@@ -53,19 +53,19 @@ function floatToBRL(value: number | string | null | undefined) {
   return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function maskBRL(value: string) {
+export function maskBRL(value: string) {
   const digits = String(value).replace(/\D/g, "");
   if (!digits) return "";
   const amount = parseInt(digits, 10) / 100;
   return amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function parseBRL(value: string) {
+export function parseBRL(value: string) {
   const digits = String(value).replace(/\D/g, "");
   if (!digits) return 0;
   return parseInt(digits, 10) / 100;
 }
-function emptyLine(key: string): LocalLine {
+export function emptyLine(key: string): LocalLine {
   return {
     key,
     itemType: 'variant',
@@ -86,7 +86,7 @@ function emptyLine(key: string): LocalLine {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function linesToLocal(lines: any[], nextKey: () => string): LocalLine[] {
+export function linesToLocal(lines: any[], nextKey: () => string): LocalLine[] {
   if (!lines.length) return [emptyLine(nextKey())];
   return lines.map((l) => ({
     key: nextKey(),
@@ -111,7 +111,7 @@ function linesToLocal(lines: any[], nextKey: () => string): LocalLine[] {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseLinesPayload(rows: LocalLine[]): any[] {
+export function parseLinesPayload(rows: LocalLine[]): any[] {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const out: any[] = [];
   for (const r of rows) {

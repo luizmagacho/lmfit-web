@@ -24,9 +24,9 @@ import { lmfitTokens } from "@/theme/tokens";
 import { formatBRLInputDisplay, parseBRLMoneyInput } from "@/lib/inputMasks";
 
 type CustomerRow = { _id: string; name?: string };
-type VariantOpt = { id: string; label: string; sku: string; price: number };
+export type VariantOpt = { id: string; label: string; sku: string; price: number };
 
-type LocalLine = {
+export type LocalLine = {
   key: string;
   variantId: string;
   quantity: string;
@@ -35,11 +35,11 @@ type LocalLine = {
   description: string;
 };
 
-function emptyLine(key: string): LocalLine {
+export function emptyLine(key: string): LocalLine {
   return { key, variantId: "", quantity: "1", unitPrice: "0", productionPrice: "0", description: "" };
 }
 
-function linesToLocal(
+export function linesToLocal(
   lines: OrderLineInput[],
   nextKey: () => string,
   skuToCost?: Map<string, number>,
@@ -64,7 +64,7 @@ function linesToLocal(
   });
 }
 
-function parseLinesPayload(rows: LocalLine[]): OrderLineInput[] | undefined {
+export function parseLinesPayload(rows: LocalLine[]): OrderLineInput[] | undefined {
   const out: OrderLineInput[] = [];
   for (const r of rows) {
     if (!r.variantId.trim()) continue;
@@ -82,8 +82,13 @@ function parseLinesPayload(rows: LocalLine[]): OrderLineInput[] | undefined {
   return out;
 }
 
-function computeLineTotal(lines: OrderLineInput[]): number {
+export function computeLineTotal(lines: OrderLineInput[]): number {
   return lines.reduce((acc, l) => acc + l.quantity * l.unitPrice, 0);
+}
+
+/** Subtotal minus an applied coupon's discount, floored at 0 — never a negative total. */
+export function computeFinalTotal(subtotal: number, discountTotal?: number | null): number {
+  return Math.max(0, subtotal - (discountTotal ?? 0));
 }
 
 export function OrderEditorClient({ orderId }: { orderId: string | null }) {
@@ -837,7 +842,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
                 {" · "}Cupom {appliedCoupon.code}: -{formatBRL(appliedCoupon.discountTotal)}
               </p>
               <p className="text-base font-medium tabular-nums" style={{ color: lmfitTokens.text }}>
-                Total (preview): {formatBRL(Math.max(0, (linesLocked ? computeLineTotal(lockedDisplayLines) : previewTotal) - appliedCoupon.discountTotal))}
+                Total (preview): {formatBRL(computeFinalTotal(linesLocked ? computeLineTotal(lockedDisplayLines) : previewTotal, appliedCoupon.discountTotal))}
               </p>
             </>
           ) : (

@@ -27,6 +27,7 @@ import { createOrder } from "@/lib/orders/ordersApi";
 import { axiosErrorMessage, getStockConflictsFromAxiosError } from "@/lib/apiErrors";
 import { http } from "@/lib/http";
 import type { OrderWarning, StockConflict } from "@/lib/orders/types";
+import type { CartLine } from "@/stores/useCartStore";
 import { lmfitTokens } from "@/theme/tokens";
 
 function productName(p: PdvProduct | null): string {
@@ -35,6 +36,36 @@ function productName(p: PdvProduct | null): string {
 
 function productSku(p: PdvProduct | null): string {
   return p ? String(p.sku ?? "") : "";
+}
+
+/** Cart lines → the order-creation payload. A line's description is built from
+ * product/color/size since the API stores line descriptions as free text, not a
+ * structured reference back to color/size. */
+export function buildOrderLinesPayload(lines: CartLine[]) {
+  return lines.map((l) => ({
+    variantId: l.variantId,
+    quantity: l.quantity,
+    unitPrice: l.unitPrice,
+    description: [l.productName, l.color, l.size].filter(Boolean).join(" · "),
+    isOrder: l.isOrder,
+  }));
+}
+
+/** A sale with any backorder ("encomenda") line can't be marked completed — stock for
+ * that line doesn't exist yet — so the whole order stays "open" until it's fulfilled. */
+export function deriveOrderStatus(lines: CartLine[]): "open" | "completed" {
+  return lines.some((l) => l.isOrder) ? "open" : "completed";
+}
+
+/** Builds the "cor · tamanho" toast label for a barcode-matched variant, mirroring what
+ * the scan handler shows the operator so they can confirm they scanned the right piece. */
+export function matchBarcodeVariantLabel(
+  product: PdvProduct,
+  variantId: string | undefined,
+): string | null {
+  const variant = product.variants?.find((v) => String((v as { _id?: string })._id) === variantId);
+  if (!variant) return null;
+  return [variant.color, variant.size].filter(Boolean).join(" · ");
 }
 
 export function PdvClient() {
@@ -106,8 +137,7 @@ export function PdvClient() {
       try {
         const { product, variantId } = await pdvLookupByBarcode(code);
         pickProduct(product);
-        const variant = product.variants?.find((v) => String((v as { _id?: string })._id) === variantId);
-        const label = variant ? [variant.color, variant.size].filter(Boolean).join(" · ") : null;
+        const label = matchBarcodeVariantLabel(product, variantId);
         toast.success(label ? `${product.name} · ${label}` : `${product.name}`);
       } catch (e: any) {
         toast.error(e?.response?.data?.message || `Código ${code} não encontrado.`);
@@ -172,16 +202,10 @@ export function PdvClient() {
       const order = await createOrder({
         customerId: snap.customer.id,
         channel: "in_person",
-        status: snap.lines.some(l => l.isOrder) ? "open" : "completed",
+        status: deriveOrderStatus(snap.lines),
         paymentMethod: method,
         notes: notes ? `PDV mobile - ${notes}` : "PDV mobile",
-        lines: snap.lines.map((l) => ({
-          variantId: l.variantId,
-          quantity: l.quantity,
-          unitPrice: l.unitPrice,
-          description: [l.productName, l.color, l.size].filter(Boolean).join(" · "),
-          isOrder: l.isOrder,
-        })),
+        lines: buildOrderLinesPayload(snap.lines),
       });
 
       const orderLines = snap.lines.filter(l => l.isOrder);
