@@ -96,31 +96,35 @@ function DailyChart({ data, lang }: { data: { date: string; in: number; out: num
   return (
     <div className="overflow-x-auto">
       <div className="flex items-end gap-1.5" style={{ minWidth: data.length * 36, height: 100 }}>
-        {data.map((d) => (
-          <div key={d.date} className="flex flex-col items-center justify-end gap-1 flex-1" style={{ minWidth: 28 }}>
-            <div className="flex items-end gap-1 w-full" style={{ height: 80 }}>
-              <div
-                className="flex-1 rounded-sm transition-all shadow-sm"
-                style={{
-                  height: maxVal && d.in > 0 ? `${Math.max(2, Math.round((d.in / maxVal) * 100))}%` : "0%",
-                  backgroundColor: "#10b981",
-                }}
-                title={lang === "en" ? `Incomes: ${formatBRL(d.in)}` : `Entradas: ${formatBRL(d.in)}`}
-              />
-              <div
-                className="flex-1 rounded-sm transition-all shadow-sm"
-                style={{
-                  height: maxVal && d.out > 0 ? `${Math.max(2, Math.round((d.out / maxVal) * 100))}%` : "0%",
-                  backgroundColor: "#ef4444",
-                }}
-                title={lang === "en" ? `Expenses: ${formatBRL(d.out)}` : `Saídas: ${formatBRL(d.out)}`}
-              />
+        {data.map((d) => {
+          const dateStr = new Date(d.date).toLocaleDateString(lang === "en" ? "en-US" : "pt-BR", { timeZone: "UTC" });
+          const tooltip = lang === "en" 
+            ? `Date: ${dateStr}\nIncomes: ${formatBRL(d.in)}\nExpenses: ${formatBRL(d.out)}` 
+            : `Data: ${dateStr}\nEntradas: ${formatBRL(d.in)}\nSaídas: ${formatBRL(d.out)}`;
+          return (
+            <div key={d.date} className="flex flex-col items-center justify-end gap-1 flex-1 hover:bg-black/5 rounded-t-sm transition-colors cursor-default" style={{ minWidth: 28 }} title={tooltip}>
+              <div className="flex items-end gap-1 w-full" style={{ height: 80 }}>
+                <div
+                  className="flex-1 rounded-sm transition-all shadow-sm"
+                  style={{
+                    height: maxVal && d.in > 0 ? `${Math.max(2, Math.round((d.in / maxVal) * 100))}%` : "0%",
+                    backgroundColor: "#10b981",
+                  }}
+                />
+                <div
+                  className="flex-1 rounded-sm transition-all shadow-sm"
+                  style={{
+                    height: maxVal && d.out > 0 ? `${Math.max(2, Math.round((d.out / maxVal) * 100))}%` : "0%",
+                    backgroundColor: "#ef4444",
+                  }}
+                />
+              </div>
+              <span className="text-[10px] tabular-nums font-semibold" style={{ color: lmfitTokens.text }}>
+                {d.date.split("-").slice(2).join("")}
+              </span>
             </div>
-            <span className="text-[10px] tabular-nums font-semibold" style={{ color: lmfitTokens.text }}>
-              {d.date.split("-").slice(2).join("")}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className="flex gap-5 mt-4 text-xs font-semibold" style={{ color: lmfitTokens.textMuted }}>
         <span className="flex items-center gap-2">
