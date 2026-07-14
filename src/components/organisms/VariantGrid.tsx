@@ -37,7 +37,7 @@ function productPriceWholesale(p: Product): number | null {
 
 function productMinWholesale(p: Product): number {
   const anyp = p as { minWholesaleQty?: number };
-  const n = typeof anyp.minWholesaleQty === "number" ? anyp.minWholesaleQty : 6;
+  const n = typeof anyp.minWholesaleQty === "number" ? anyp.minWholesaleQty : 1;
   return Math.max(1, Math.floor(n));
 }
 

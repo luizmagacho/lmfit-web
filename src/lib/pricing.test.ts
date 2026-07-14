@@ -24,6 +24,21 @@ describe("pricing.resolveUnitPrice", () => {
     const r = resolveUnitPrice({ price: 50 }, 10, "guest");
     expect(r.price).toBe(50);
   });
+
+  // Regression: minWholesaleQty left unset must default to 1 (no minimum), not the old
+  // hardcoded 6 — so a shopkeeper who sets a wholesale price without configuring a
+  // minimum gets that price from a single unit, and a plain product (no wholesale price
+  // at all) is completely unaffected either way since baseWholesale falls back to retail.
+  it("defaults minWholesaleQty to 1 when not configured — no minimum blocks a sale", () => {
+    const r = resolveUnitPrice({ priceRetail: 100, priceWholesale: 80 }, 1, "guest");
+    expect(r.mode).toBe("atacado");
+    expect(r.price).toBe(80);
+  });
+
+  it("a single unit is always sellable even with no wholesale config at all", () => {
+    const r = resolveUnitPrice({ priceRetail: 100 }, 1, "guest");
+    expect(r.price).toBe(100);
+  });
 });
 
 describe("computeCartTotals", () => {

@@ -77,6 +77,19 @@ const columns: ResourceColumn[] = [
     placeholder: "Preço original antes do desconto (opcional)",
   },
   {
+    key: "priceWholesale",
+    label: "Preço de atacado",
+    fieldType: "number",
+    numberStep: "0.01",
+    placeholder: "Opcional — deixe em branco pra não ter preço de atacado",
+  },
+  {
+    key: "minWholesaleQty",
+    label: "Qtd. mínima para o atacado",
+    fieldType: "number",
+    placeholder: "Opcional — em branco = 1 (sem mínimo, qualquer quantidade vende normal)",
+  },
+  {
     key: "category",
     label: "Categoria",
     required: true,

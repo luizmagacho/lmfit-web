@@ -3,7 +3,7 @@ export type PriceMode = "atacado" | "varejo";
 export type PricingInput = {
   priceRetail?: number | null;
   priceWholesale?: number | null;
-  /** Quantidade mínima para ativar preço de atacado (por item). Padrão 6. */
+  /** Quantidade mínima para ativar preço de atacado (por item). Padrão 1 (sem mínimo). */
   minWholesaleQty?: number | null;
   /** Preço flat (produto sem distinção). */
   price?: number | null;
@@ -23,7 +23,7 @@ export function resolveUnitPrice(input: PricingInput, quantity: number, role: Cu
   const qty = Math.max(1, Math.floor(quantity || 1));
   const baseRetail = firstFinite([input.priceRetail, input.price, 0]);
   const baseWholesale = firstFinite([input.priceWholesale, input.priceRetail, input.price, 0]);
-  const minQty = Math.max(1, Math.floor(input.minWholesaleQty ?? 6));
+  const minQty = Math.max(1, Math.floor(input.minWholesaleQty ?? 1));
   const userMode = inferModeForUser(role);
   if (userMode === "atacado" || qty >= minQty) {
     return { price: baseWholesale, mode: "atacado" };
