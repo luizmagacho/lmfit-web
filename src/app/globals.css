@@ -32,6 +32,7 @@
     --kivoni-success: #3caf65;
     --kivoni-error: #cc4845;
     --kivoni-warning-bg: #fdf6ec;
+    --lmfit-surface: var(--kivoni-surface);
   }
 
   .dark {

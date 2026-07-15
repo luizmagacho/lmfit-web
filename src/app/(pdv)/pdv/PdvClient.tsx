@@ -337,7 +337,7 @@ export function PdvClient() {
             <input
               type="search"
               inputMode="search"
-              className="w-full border rounded px-2 py-1.5 min-h-10 text-sm"
+              className="w-full border rounded px-2 py-1.5 min-h-10 text-sm bg-[var(--card-bg)]"
               style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
               placeholder={cart.customer ? customerLabel : "Buscar por nome ou telefone"}
               value={customerSearch}
@@ -346,7 +346,7 @@ export function PdvClient() {
             <button
               type="button"
               onClick={() => setIsNewCustomerOpen(true)}
-              className="text-xs font-medium px-2 py-1 border rounded-md whitespace-nowrap hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              className="text-xs font-medium px-2 py-1 border rounded-md whitespace-nowrap hover:bg-black/5 dark:hover:bg-white/5 transition-colors bg-transparent"
               style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
             >
               + Novo
@@ -354,7 +354,7 @@ export function PdvClient() {
             <button
               type="button"
               onClick={() => void selectWalkIn()}
-              className="text-xs font-medium px-2 py-1 border rounded-md whitespace-nowrap hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              className="text-xs font-medium px-2 py-1 border rounded-md whitespace-nowrap hover:bg-black/5 dark:hover:bg-white/5 transition-colors bg-transparent"
               style={{ borderColor: lmfitTokens.border, color: lmfitTokens.primary }}
               title="Venda sem cadastro — comprador não informa nenhum dado"
             >
@@ -454,7 +454,7 @@ export function PdvClient() {
             disabled={scanning}
             aria-label="Escanear código de barras"
             title="Escanear código de barras"
-            className="flex-none min-h-12 min-w-12 rounded-md border flex items-center justify-center disabled:opacity-50 touch-manipulation"
+            className="flex-none min-h-12 min-w-12 rounded-md border flex items-center justify-center disabled:opacity-50 touch-manipulation bg-transparent"
             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.primary }}
           >
             <ScanLine className="h-5 w-5" />
