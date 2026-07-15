@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import AsyncSelect from "react-select/async";
 import { http } from "@/lib/http";
 import { documentId, extractListItems } from "@/lib/normalizeApiList";
+import { computeReadyMadePrice } from "@/lib/products/variantDrafts";
 import { formatBRLInputDisplay, parseBRLMoneyInput } from "@/lib/inputMasks";
 import { formatBRL } from "@/lib/formatMoney";
 import { lmfitTokens } from "@/theme/tokens";
@@ -42,9 +43,7 @@ const selectStyles = {
 
 /** Mirrors the server-side calculation in products.service.ts resolveReadyMadePricing —
  * the sale price shown here is a preview, but must match what the server actually saves. */
-export function computeReadyMadePrice(costPrice: number, markupPercent: number): number {
-  return Math.round(costPrice * (1 + markupPercent / 100) * 100) / 100;
-}
+export { computeReadyMadePrice };
 
 /** Derives the form's initial state from a product row (create modal → productRow is null;
  * edit modal → the saved product). Kept pure so field-mapping bugs are unit-testable. */

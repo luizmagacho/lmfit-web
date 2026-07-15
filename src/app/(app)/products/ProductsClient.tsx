@@ -9,6 +9,7 @@ import { formatBRL } from "@/lib/formatMoney";
 import {
   draftsToApiVariants,
   flattenFirstVariantOnRow,
+  priceRangeFromRow,
   validateVariantDrafts,
   type ProductVariantDraft,
 } from "@/lib/products/variantDrafts";
@@ -302,7 +303,12 @@ export function ProductsClient() {
         },
 
         price: (row: Row) => {
-          const currentPrice = row.priceRetail ?? row.price;
+          // Variações com preços diferentes: mostra a faixa "55,00/80,00".
+          const range = priceRangeFromRow(row);
+          const priceLabel =
+            range && range.min !== range.max
+              ? `${formatPriceCell(range.min)}/${formatPriceCell(range.max)}`
+              : formatPriceCell(range ? range.min : (row.priceRetail ?? row.price));
           return (
             <div className="tabular-nums flex flex-col justify-center">
               {row.compareAtPrice ? (
@@ -313,11 +319,11 @@ export function ProductsClient() {
                   {formatPriceCell(row.compareAtPrice)}
                 </span>
               ) : null}
-              <span 
-                className={`font-semibold ${row.compareAtPrice ? 'text-sm' : 'text-sm'}`} 
+              <span
+                className="font-semibold text-sm whitespace-nowrap"
                 style={{ color: row.compareAtPrice ? lmfitTokens.success : lmfitTokens.text }}
               >
-                {formatPriceCell(currentPrice)}
+                {priceLabel}
               </span>
             </div>
           );

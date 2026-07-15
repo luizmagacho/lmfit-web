@@ -136,7 +136,10 @@ export function ProductVariantsEditor({
     if (prevApplyTokenRef.current === applyPriceToAll.token) return;
     prevApplyTokenRef.current = applyPriceToAll.token;
     if (!Number.isFinite(applyPriceToAll.value) || applyPriceToAll.value < 0) return;
-    const next = draftsRef.current.map((d) => ({ ...d, price: applyPriceToAll.value }));
+    // Preço ajustado à mão numa variação não é sobrescrito pela calculadora.
+    const next = draftsRef.current.map((d) =>
+      d.priceManuallySet ? d : { ...d, price: applyPriceToAll.value },
+    );
     pushDrafts(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- pushDrafts/draftsRef são estáveis o suficiente
   }, [applyPriceToAll]);
@@ -202,6 +205,7 @@ export function ProductVariantsEditor({
                       quantityInStock: drafts[0]?.quantityInStock || 0,
                       acceptsBackorder: drafts[0]?.acceptsBackorder ?? false,
                       backorderMinQty: drafts[0]?.backorderMinQty ?? 1,
+                      priceManuallySet: drafts[0]?.priceManuallySet ?? false,
                     });
                   }
                 }
@@ -298,14 +302,34 @@ export function ProductVariantsEditor({
                     className="w-full min-w-[6rem] border rounded px-2 py-1.5 min-h-9 text-sm tabular-nums"
                     style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                     value={formatBRLInputDisplay(Number.isFinite(d.price) ? d.price.toFixed(2) : "")}
+                    title={
+                      d.priceManuallySet
+                        ? "Preço ajustado manualmente — a calculadora de custo+margem não altera esta variação"
+                        : undefined
+                    }
                     onChange={(e) => {
                       const raw = parseBRLMoneyInput(e.target.value);
                       const n = raw === "" ? 0 : Number(raw);
                       const next = drafts.slice();
-                      next[i] = { ...d, price: Number.isFinite(n) ? n : 0 };
+                      next[i] = { ...d, price: Number.isFinite(n) ? n : 0, priceManuallySet: true };
                       pushDrafts(next);
                     }}
                   />
+                  {d.priceManuallySet ? (
+                    <button
+                      type="button"
+                      className="block text-[10px] underline mt-0.5"
+                      style={{ color: lmfitTokens.textMuted }}
+                      title="Voltar a seguir o preço da calculadora de custo+margem"
+                      onClick={() => {
+                        const next = drafts.slice();
+                        next[i] = { ...d, priceManuallySet: false };
+                        pushDrafts(next);
+                      }}
+                    >
+                      manual
+                    </button>
+                  ) : null}
                 </td>
                 <td className="px-2 py-1.5 align-middle">
                   <input
@@ -393,6 +417,8 @@ export function ProductVariantsEditor({
               quantityInStock: 0,
               acceptsBackorder: false,
               backorderMinQty: 1,
+              // preço copiado da última linha carrega junto o ajuste manual dela
+              priceManuallySet: last?.priceManuallySet ?? false,
             },
           ]);
         }}

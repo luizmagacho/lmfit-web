@@ -86,6 +86,7 @@ export function PdvClient() {
   const [customerResults, setCustomerResults] = useState<Array<{ id: string; name: string }>>([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -181,18 +182,62 @@ export function PdvClient() {
     };
   }, [customerSearch]);
 
-  const onFinalize = useCallback(() => {
+  /** Cria um cliente só com o nome digitado e já o seleciona — o comprador que
+   * não quer dar CPF/telefone/e-mail sai do caixa em um toque. */
+  const quickCreateCustomer = useCallback(async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || creatingCustomer) return;
+    setCreatingCustomer(true);
+    try {
+      const { data } = await http.post<{ _id?: string; id?: string; name?: string }>("/customers", {
+        name: trimmed,
+      });
+      const id = String(data._id ?? data.id ?? "");
+      cart.setCustomer({ id, name: data.name ?? trimmed });
+      setCustomerSearch("");
+      setCustomerResults([]);
+      toast.success(`Cliente "${trimmed}" criado`);
+    } catch (e) {
+      toast.error(axiosErrorMessage(e));
+    } finally {
+      setCreatingCustomer(false);
+    }
+  }, [cart, creatingCustomer]);
+
+  /** Venda sem cadastro: usa o "Consumidor Final" do tenant (criado sob demanda na API). */
+  const selectWalkIn = useCallback(async (): Promise<{ id: string; name: string } | null> => {
+    try {
+      const { data } = await http.post<{ _id?: string; id?: string; name?: string }>(
+        "/customers/walk-in",
+      );
+      const customer = {
+        id: String(data._id ?? data.id ?? ""),
+        name: data.name ?? "Consumidor Final",
+      };
+      cart.setCustomer(customer);
+      setCustomerSearch("");
+      setCustomerResults([]);
+      return customer;
+    } catch (e) {
+      setSubmitErr(axiosErrorMessage(e));
+      return null;
+    }
+  }, [cart]);
+
+  const onFinalize = useCallback(async () => {
     const snap = cart.snapshot();
     if (snap.items === 0) return;
+    // Sem cliente selecionado a venda segue como "Consumidor Final" — o caso
+    // mais comum no balcão é o comprador que não quer se cadastrar.
     if (!snap.customer?.id) {
-      setSubmitErr("Informe o cliente antes de finalizar.");
-      return;
+      const walkIn = await selectWalkIn();
+      if (!walkIn) return;
     }
     setSubmitErr(null);
     setStockConflicts(null);
     setOrderWarnings([]);
     setIsPaymentOpen(true);
-  }, [cart]);
+  }, [cart, selectWalkIn]);
 
   const handleConfirmPayment = useCallback(async (method: PaymentMethod, notes: string) => {
     const snap = cart.snapshot();
@@ -306,7 +351,16 @@ export function PdvClient() {
             >
               + Novo
             </button>
-            {customerResults.length ? (
+            <button
+              type="button"
+              onClick={() => void selectWalkIn()}
+              className="text-xs font-medium px-2 py-1 border rounded-md whitespace-nowrap hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.primary }}
+              title="Venda sem cadastro — comprador não informa nenhum dado"
+            >
+              Consumidor Final
+            </button>
+            {customerSearch.trim().length >= 2 ? (
               <ul
                 className="absolute z-10 left-0 right-0 top-full mt-1 rounded-md border bg-[var(--card-bg)] shadow"
                 style={{ borderColor: lmfitTokens.border }}
@@ -326,6 +380,19 @@ export function PdvClient() {
                     </button>
                   </li>
                 ))}
+                <li className="border-t" style={{ borderColor: lmfitTokens.border }}>
+                  <button
+                    type="button"
+                    disabled={creatingCustomer}
+                    className="w-full text-left px-3 py-2 text-sm font-medium hover:bg-[var(--hover-bg)] disabled:opacity-50"
+                    style={{ color: lmfitTokens.primary }}
+                    onClick={() => quickCreateCustomer(customerSearch)}
+                  >
+                    {creatingCustomer
+                      ? "Criando..."
+                      : `+ Criar "${customerSearch.trim()}" e vender`}
+                  </button>
+                </li>
               </ul>
             ) : null}
           </div>
