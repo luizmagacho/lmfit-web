@@ -465,43 +465,45 @@ export function PdvClient() {
           <BarcodeScannerModal onClose={() => setIsScannerOpen(false)} onDetected={handleBarcodeDetected} />
         ) : null}
 
-        <div
-          className="rounded-lg border bg-[var(--card-bg)] overflow-hidden"
-        >
-          {searching ? (
-            <div className="p-3 space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-          ) : results.length === 0 ? (
-            <div className="p-4 text-center text-sm">
-              Nenhum produto encontrado.
-            </div>
-          ) : (
-            <ul>
-              {results.map((p) => {
-                const id = documentId(p);
-                return (
-                  <li key={id} className="border-b last:border-0">
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 hover:bg-[var(--hover-bg)] min-h-11"
-                      onClick={() => pickProduct(p)}
-                    >
-                      <span className="block text-sm font-semibold">
-                        {productName(p)}
-                      </span>
-                      <span className="block text-xs mt-0.5">
-                        {productSku(p)}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+        {term.length >= 2 ? (
+          <div
+            className="rounded-lg border bg-[var(--card-bg)] overflow-hidden"
+          >
+            {searching ? (
+              <div className="p-3 space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : results.length === 0 ? (
+              <div className="p-4 text-center text-sm">
+                Nenhum produto encontrado.
+              </div>
+            ) : (
+              <ul>
+                {results.map((p) => {
+                  const id = documentId(p);
+                  return (
+                    <li key={id} className="border-b last:border-0">
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-[var(--hover-bg)] min-h-11"
+                        onClick={() => pickProduct(p)}
+                      >
+                        <span className="block text-sm font-semibold">
+                          {productName(p)}
+                        </span>
+                        <span className="block text-xs mt-0.5">
+                          {productSku(p)}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        ) : null}
 
       {pdv.activeProduct ? (
         <section className="space-y-2">
