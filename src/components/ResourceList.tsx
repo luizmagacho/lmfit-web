@@ -53,7 +53,8 @@ export type ResourceColumn = {
   required?: boolean;
   /** Required when `fieldType` is `select` */
   selectOptions?: { value: string; label: string; description?: string }[];
-  /** Initial value for create form (e.g. invoice `status` → `pending`) */
+  /** Initial value for create form (e.g. invoice `status` → `pending`; checkbox: `"true"`/`"false"`,
+   *  defaults to `"false"` when unset — set this to match the backend schema's own default. */
   defaultValue?: string;
   /** Map legacy stored values to a canonical option `value` (e.g. `open` → `pending`) */
   legacyValueMap?: Record<string, string>;
@@ -169,7 +170,7 @@ function emptyFormValues(columns: ResourceColumn[], idKey: string): Record<strin
       out[c.key] = "[]";
       continue;
     }
-    out[c.key] = ft === "checkbox" ? "false" : "";
+    out[c.key] = ft === "checkbox" ? (c.defaultValue ?? "false") : "";
   }
   return out;
 }

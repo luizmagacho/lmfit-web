@@ -113,7 +113,7 @@ const columns: ResourceColumn[] = [
     placeholder: "Descrição para o site (opcional)",
   },
   { key: "slug", label: "Slug (URL)", placeholder: "opcional — gerado a partir do nome se vazio" },
-  { key: "active", label: "Ativo na loja", fieldType: "checkbox" },
+  { key: "active", label: "Ativo na loja", fieldType: "checkbox", defaultValue: "true" },
 ];
 
 /** Only these keys appear in the table — keeps it focused and readable */

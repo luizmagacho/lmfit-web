@@ -7,8 +7,12 @@ import type { InfinitepayReport, TransactionType } from './types';
 // Lazy-load pdfjs to avoid SSR issues
 async function getPdfjs() {
   const pdfjs = await import('pdfjs-dist');
-  // Use jsdelivr CDN since it synchronizes faster with new npm versions
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+  // Worker served from our own origin (public/pdf.worker.min.mjs), not a third-party CDN —
+  // a jsdelivr fetch from the browser is exactly the kind of thing corporate firewalls, ad/
+  // content blockers, or a transient CDN outage break in production while working fine on a
+  // developer's own machine. Re-copy this file from `node_modules/pdfjs-dist/build/` whenever
+  // `pdfjs-dist` is upgraded (pdf.js tolerates minor worker/main version skew, not major).
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   return pdfjs;
 }
 
