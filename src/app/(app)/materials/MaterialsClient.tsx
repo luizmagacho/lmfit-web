@@ -4,7 +4,13 @@ import { ResourceList, type ResourceColumn } from "@/components/ResourceList";
 import { useLanguage } from "@/context/LanguageContext";
 
 const columns: ResourceColumn[] = [
-  { key: "_id", label: "ID", editable: false, hiddenOnMobile: true, hideInForm: true },
+  // `excel: false` — Materiais não tem endpoint de import em lote no backend, então uma planilha
+  // reimportada cai no fallback ingênuo linha-a-linha do ResourceList, que trata qualquer "ID"
+  // presente como PATCH (atualização) em vez de POST (criação). Um "ID" em branco preenchido pelo
+  // usuário com 1, 2, 3... (natural ao ver a coluna no modelo baixado) então tenta atualizar
+  // materiais que não existem e falha 100% das linhas. Sem a coluna no modelo/import, toda linha
+  // vira criação — o único caso de uso real hoje (cadastro em massa de insumos novos).
+  { key: "_id", label: "ID", editable: false, hiddenOnMobile: true, hideInForm: true, excel: false },
   { key: "name", label: "Name", required: true },
   { key: "unit", label: "Unit (un, m, kg)", required: false },
   { key: "quantityOnHand", label: "Stock Qty", fieldType: "number", required: true, numberStep: "0.01" },
