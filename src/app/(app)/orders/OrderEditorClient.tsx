@@ -121,11 +121,15 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
   const [lines, setLines] = useState<LocalLine[]>(() => [emptyLine(`${keyBase}-line-0`)]);
 
   const [warnings, setWarnings] = useState<OrderWarning[]>([]);
+  const [autoBackorderNote, setAutoBackorderNote] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [stockErr, setStockErr] = useState<{ message: string; conflicts?: StockConflict[] } | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "cash" | "card" | "">("");
+  const [carrier, setCarrier] = useState("");
+  const [trackingCode, setTrackingCode] = useState("");
+  const [trackingUrl, setTrackingUrl] = useState("");
 
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountTotal: number } | null>(null);
@@ -250,9 +254,13 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         setOrderNumber(o.number ?? null);
         setReference(o.reference != null ? String(o.reference) : "");
         setNotes(o.notes != null ? String(o.notes) : "");
+        setCarrier(o.carrier ?? "");
+        setTrackingCode(o.trackingCode ?? "");
+        setTrackingUrl(o.trackingUrl ?? "");
         const normalized = normalizeOrderLines(o.lines);
         setLines(linesToLocal(normalized, nextKey, skuToProductionCost, variantById));
         setWarnings(Array.isArray(o.warnings) ? o.warnings : []);
+        setAutoBackorderNote(o.autoBackorderedAt ? (o.autoBackorderNote ?? "") : null);
         if (o.couponCode) {
           setAppliedCoupon({ code: o.couponCode, discountTotal: Number(o.discountTotal ?? 0) });
           setCouponIsLocked(true);
@@ -376,6 +384,9 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         reference: reference.trim() || null,
         notes: notes.trim() || null,
         paymentMethod: paymentMethod || undefined,
+        carrier: carrier.trim() || undefined,
+        trackingCode: trackingCode.trim() || undefined,
+        trackingUrl: trackingUrl.trim() || undefined,
       };
       if (!linesLocked && payloadLines && payloadLines.length > 0) {
         body.lines = payloadLines;
@@ -386,6 +397,9 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
       setWarnings(Array.isArray(updated.warnings) ? updated.warnings : []);
       setSuccessMsg("Alterações salvas.");
       if (updated.status) setStatus(updated.status as OrderStatus);
+      setCarrier(updated.carrier ?? "");
+      setTrackingCode(updated.trackingCode ?? "");
+      setTrackingUrl(updated.trackingUrl ?? "");
       if (!linesLocked && updated.lines) {
         setLines(linesToLocal(normalizeOrderLines(updated.lines), nextKey));
       }
@@ -488,6 +502,23 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         />
+      ) : null}
+
+      {autoBackorderNote != null ? (
+        <div
+          className="rounded-lg border px-3 py-3 text-sm"
+          style={{ borderColor: lmfitTokens.border, backgroundColor: lmfitTokens.warningBg }}
+          role="status"
+        >
+          <span className="font-medium" style={{ color: lmfitTokens.text }}>
+            ⚠️ Ajustado na sincronização
+          </span>
+          {autoBackorderNote ? (
+            <p className="mt-1" style={{ color: lmfitTokens.textMuted }}>
+              {autoBackorderNote}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       <OrderWarningsPanel warnings={warnings} />
@@ -601,6 +632,41 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
             placeholder="Opcional"
           />
         </label>
+
+        {(status === "shipped" || status === "completed") && (
+          <>
+            <label className="block text-sm space-y-1">
+              <span style={{ color: lmfitTokens.textMuted }}>Transportadora</span>
+              <input
+                className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
+                style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                value={carrier}
+                onChange={(e) => setCarrier(e.target.value)}
+                placeholder="Ex.: Correios, Jadlog"
+              />
+            </label>
+            <label className="block text-sm space-y-1">
+              <span style={{ color: lmfitTokens.textMuted }}>Código de rastreio</span>
+              <input
+                className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
+                style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                value={trackingCode}
+                onChange={(e) => setTrackingCode(e.target.value)}
+                placeholder="Ex.: BR123456789BR"
+              />
+            </label>
+            <label className="block text-sm space-y-1 sm:col-span-2">
+              <span style={{ color: lmfitTokens.textMuted }}>URL de rastreio</span>
+              <input
+                className="w-full border rounded-md px-3 py-2 min-h-11 bg-[var(--card-bg)]"
+                style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                value={trackingUrl}
+                onChange={(e) => setTrackingUrl(e.target.value)}
+                placeholder="https://rastreamento.correios.com.br/..."
+              />
+            </label>
+          </>
+        )}
       </div>
 
       <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>

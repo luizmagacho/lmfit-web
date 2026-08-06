@@ -12,12 +12,14 @@ import {
   fetchSalesAndPurchasesDaily,
   fetchReportSummary,
   fetchRevenueByProduct,
+  fetchSalesByInfluencer,
   fetchSalesToday,
   rangeIso,
   type AbcResponse,
   type SalesAndPurchasesDailyResponse,
   type ReportSummary,
   type RevenueByProductResponse,
+  type SalesByInfluencerResponse,
   type SalesTodayResponse,
 } from "@/lib/dashboardApi";
 import { readLocalOpportunities } from "@/lib/crm/localStores";
@@ -43,6 +45,7 @@ export function DashboardClient() {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [salesAndPurchasesDaily, setSalesAndPurchasesDaily] = useState<SalesAndPurchasesDailyResponse | null>(null);
   const [revenueByProduct, setRevenueByProduct] = useState<RevenueByProductResponse | null>(null);
+  const [salesByInfluencer, setSalesByInfluencer] = useState<SalesByInfluencerResponse | null>(null);
   const [salesToday, setSalesToday] = useState<SalesTodayResponse | null>(null);
   const [abc, setAbc] = useState<AbcResponse | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
@@ -85,12 +88,13 @@ export function DashboardClient() {
     let cancelled = false;
     setLoadErr(null);
     (async () => {
-      const [s, p, r, today, abcResp] = await Promise.all([
+      const [s, p, r, today, abcResp, influencerRes] = await Promise.all([
         fetchReportSummary(range.from, range.to),
         fetchSalesAndPurchasesDaily(range.from, range.to),
         fetchRevenueByProduct(range.from, range.to, 50),
         fetchSalesToday(),
         fetchAbcCurve(range.from, range.to),
+        fetchSalesByInfluencer(range.from, range.to, 5),
       ]);
       if (cancelled) return;
       setSummary(s);
@@ -98,6 +102,7 @@ export function DashboardClient() {
       setRevenueByProduct(r);
       setSalesToday(today);
       setAbc(abcResp ?? deriveAbcFromRevenue(r));
+      setSalesByInfluencer(influencerRes);
       if (!s) setLoadErr("Resumo indisponível (verifique login e API).");
     })();
     return () => {
@@ -125,6 +130,11 @@ export function DashboardClient() {
     if (!revenueByProduct?.items?.length) return 0;
     return revenueByProduct.items.reduce((m, x) => Math.max(m, x.revenue), 0);
   }, [revenueByProduct]);
+
+  const maxInfluencerRev = useMemo(() => {
+    if (!salesByInfluencer?.items?.length) return 0;
+    return salesByInfluencer.items.reduce((m, x) => Math.max(m, x.revenue), 0);
+  }, [salesByInfluencer]);
 
   const topFromSummary = summary?.topVariants?.slice(0, 6) ?? [];
   const maxVarRev = topFromSummary.reduce((m, v) => Math.max(m, v.revenue), 0);
@@ -356,6 +366,53 @@ export function DashboardClient() {
       <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <div className="flex flex-wrap justify-between gap-2 items-baseline">
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
+            {language === "en" ? "Top Influencers" : "Top Influenciadores"}
+          </h2>
+          <Link href="/reports" className="text-sm underline" style={{ color: lmfitTokens.primary }}>
+            {language === "en" ? "Open reports" : "Abrir relatórios"}
+          </Link>
+        </div>
+        {salesByInfluencer?.items?.length ? (
+          <div className="space-y-3">
+            {salesByInfluencer.items.map((inf) => (
+              <div key={inf.influencerId} className="space-y-1">
+                <div className="flex justify-between text-sm gap-2">
+                  <span className="truncate" style={{ color: lmfitTokens.text }}>
+                    {inf.name}
+                  </span>
+                  <span className="shrink-0 tabular-nums" style={{ color: lmfitTokens.textMuted }}>
+                    {formatBRL(inf.revenue)} · {inf.units} un · {inf.orderCount}{" "}
+                    {language === "en" ? "orders" : "pedidos"}
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-[var(--chart-track)] overflow-hidden" aria-hidden>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${maxInfluencerRev ? Math.round((inf.revenue / maxInfluencerRev) * 100) : 0}%`,
+                      backgroundColor: lmfitTokens.primary,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
+            {language === "en"
+              ? "No influencer sales in this period yet. Link a coupon to an influencer in "
+              : "Nenhuma venda de influenciador neste período ainda. Vincule um cupom a um influenciador em "}
+            <Link href="/promotions" className="underline" style={{ color: lmfitTokens.primary }}>
+              {language === "en" ? "Coupons" : "Promoções"}
+            </Link>
+            .
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+        <div className="flex flex-wrap justify-between gap-2 items-baseline">
+          <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
             {language === "en" ? "ABC Curve (80/15/5)" : "Curva ABC (80/15/5)"}
           </h2>
           <span className="text-xs" style={{ color: lmfitTokens.textMuted }}>
@@ -450,7 +507,11 @@ export function DashboardClient() {
       </section>
 
       <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
-        {language === "en" ? "Public Catalog" : "Catálogo público"}:{" "}
+        {language === "en" ? "Online Store" : "Loja online"}:{" "}
+        <Link href="/loja" className="underline">
+          /loja
+        </Link>{" "}
+        · {language === "en" ? "Wholesale Catalog" : "Catálogo atacado"}:{" "}
         <Link href="/catalogo" className="underline">
           /catalogo
         </Link>{" "}

@@ -15,6 +15,7 @@ import { useCartStore } from "@/stores/useCartStore";
 import { useCheckoutStore } from "@/stores/useCheckoutStore";
 import { lmfitTokens } from "@/theme/tokens";
 import { useTenant } from "@/context/TenantContext";
+import { trackPurchase } from "@/lib/analytics";
 
 export function CheckoutClient() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export function CheckoutClient() {
     }
   }, [tenant]);
 
-  const shippingValue = shippingCost(checkout.shipping);
+  const shippingValue = shippingCost(checkout.shipping, tenant?.shippingConfig, snap.subtotal);
   const total = snap.subtotal + shippingValue;
 
   const canSubmit = useMemo(() => {
@@ -82,6 +83,11 @@ export function CheckoutClient() {
       } else {
         const result = await submitPublicDraft(sessionToken, { payment: { method: "manual" } });
         const orderId = result.orderId;
+        // Caminho manual/WhatsApp nunca gera um Payment (staff confirma o pagamento depois, fora
+        // do site) — é o único caminho de compra que o evento server-side (a partir da confirmação
+        // real de pagamento) nunca cobre, então dispara aqui, no único momento client-side em que
+        // sabemos com certeza que o pedido foi criado.
+        trackPurchase({ orderId, amount: total });
         const msg = `Olá! Gostaria de confirmar meu pedido #${orderId} no valor de ${formatBRL(total)}.\n\nItens:\n${snap.lines.map((l) => `- ${l.productName} (${[l.color, l.size].filter(Boolean).join(" · ")}) x${l.quantity}`).join("\n")}`;
         
         const cleanPhone = (tenant?.whatsappNumber || "").replace(/\D/g, "");
@@ -114,9 +120,9 @@ export function CheckoutClient() {
           className="rounded-lg border bg-[var(--card-bg)] p-6 text-center text-sm"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}
         >
-          Seu carrinho está vazio. Adicione produtos no{" "}
-          <a href="/catalogo" className="underline" style={{ color: lmfitTokens.primary }}>
-            catálogo
+          Seu carrinho está vazio. Adicione produtos na{" "}
+          <a href="/loja" className="underline" style={{ color: lmfitTokens.primary }}>
+            loja
           </a>
           .
         </div>
@@ -175,7 +181,7 @@ export function CheckoutClient() {
             <h2 className="text-base font-semibold" style={{ color: lmfitTokens.text }}>
               Entrega
             </h2>
-            <ShippingPicker />
+            <ShippingPicker subtotal={snap.subtotal} />
             {checkout.shipping !== "pickup" ? (
               <AddressForm onValid={setAddressValid} />
             ) : null}

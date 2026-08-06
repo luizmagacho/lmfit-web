@@ -17,6 +17,8 @@ export type AuthUser = {
   name: string;
   role: string;
   tenantId?: string;
+  /** Local fixo de trabalho (PDV offline) — ausente até um admin atribuir um local. */
+  locationId?: string;
 };
 
 type AuthState = {

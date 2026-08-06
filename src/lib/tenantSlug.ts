@@ -57,6 +57,16 @@ export function getTenantSlug(): string {
   return "kivoni";
 }
 
+/** Loop 4c — "Ver ao vivo" no seletor de tema em Settings: monta a URL real da loja pro tenant/
+ *  host atual, em vez de assumir um domínio fixo. */
+export function buildStorefrontUrl(slug: string, hostname: string, port: string): string {
+  if (hostname.endsWith("localhost")) {
+    const portSuffix = port ? `:${port}` : "";
+    return `http://${slug}.localhost${portSuffix}/loja`;
+  }
+  return `https://${slug}.kivoni.com.br/loja`;
+}
+
 /**
  * Persiste o slug escolhido no localStorage como backup do cookie.
  * Chamado durante o redirecionamento para a loja no login.

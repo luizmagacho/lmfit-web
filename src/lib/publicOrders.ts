@@ -6,6 +6,8 @@ export type PublicDraft = {
   customerId?: string;
   waId?: string;
   status?: string;
+  /** Presente quando a última patch aplicou um cupom válido. */
+  discountTotal?: number;
 };
 
 export type PublicPaymentResponse = {
@@ -17,6 +19,25 @@ export type PublicPaymentResponse = {
   expiresAt?: string | number;
   checkoutUrl?: string;
 };
+
+/** Loop 6 — cria só o rascunho (sem linhas ainda), pra ganhar um `sessionToken` cedo o bastante
+ *  pra o `CartDrawer` aplicar um cupom antes do cliente chegar no checkout. */
+export async function createDraft(phone?: string): Promise<{ sessionToken: string }> {
+  const { data } = await publicHttp.post<{ sessionToken: string }>("/public/order-drafts", {
+    waId: phone ? phone.replace(/\D/g, "") || undefined : undefined,
+  });
+  return data;
+}
+
+/** Loop 6 — patch genérico de rascunho (linhas/cupom/frete/etc.), reaproveitado pelo mesmo token
+ *  tanto pelo `CartDrawer` (aplicar cupom) quanto pelo `/checkout` (submit final). */
+export async function patchDraft(
+  sessionToken: string,
+  patch: Record<string, unknown>,
+): Promise<PublicDraft> {
+  const { data } = await publicHttp.patch<PublicDraft>(`/public/order-drafts/${sessionToken}`, patch);
+  return data;
+}
 
 /** Cria rascunho e já adiciona linhas; idempotente em relação ao token. */
 export async function createPublicDraftWithLines(params: {

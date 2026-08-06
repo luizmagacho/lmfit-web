@@ -59,6 +59,9 @@ export type UpdateOrderBody = {
   total?: number | null;
   lines?: OrderLineInput[];
   paymentMethod?: "pix" | "cash" | "card";
+  carrier?: string;
+  trackingCode?: string;
+  trackingUrl?: string;
 };
 
 export async function updateOrder(id: string, body: UpdateOrderBody) {

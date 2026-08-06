@@ -47,7 +47,7 @@ function NewReturnPanel({ onCreated }: { onCreated: () => void }) {
 
   const [order, setOrder] = useState<OrderWithWarnings | null>(null);
   const [qtyByVariant, setQtyByVariant] = useState<Record<string, number>>({});
-  const [type, setType] = useState<"return" | "exchange">("return");
+  const [type, setType] = useState<"return" | "exchange" | "refund">("return");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -112,7 +112,9 @@ function NewReturnPanel({ onCreated }: { onCreated: () => void }) {
         text:
           type === "return"
             ? `Devolução registrada. Crédito de ${formatBRL(Number(data.creditIssued ?? 0))} lançado no cliente.`
-            : "Troca registrada — venda a nova variante num pedido novo.",
+            : type === "refund"
+              ? `Estorno registrado (${formatBRL(Number(data.creditIssued ?? 0))}). Lembre-se de estornar de fato na InfinitePay ou diretamente com o cliente — isto só registra que foi feito.`
+              : "Troca registrada — venda a nova variante num pedido novo.",
       });
       setOrder(null);
       setOrderQuery("");
@@ -248,11 +250,12 @@ function NewReturnPanel({ onCreated }: { onCreated: () => void }) {
               Tipo
               <select
                 value={type}
-                onChange={(e) => setType(e.target.value as "return" | "exchange")}
+                onChange={(e) => setType(e.target.value as "return" | "exchange" | "refund")}
                 className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-transparent"
                 style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
               >
                 <option value="return">Devolução (gera crédito de loja)</option>
+                <option value="refund">Estorno (registra que foi estornado por fora, sem crédito)</option>
                 <option value="exchange">Troca (sem crédito — venda a nova peça à parte)</option>
               </select>
             </label>
@@ -332,14 +335,14 @@ export function ReturnsClient() {
           { key: "orderNumber", label: "Pedido" },
           { key: "customerName", label: "Cliente" },
           { key: "type", label: "Tipo" },
-          { key: "creditIssued", label: "Crédito emitido" },
+          { key: "creditIssued", label: "Valor" },
           { key: "notes", label: "Observações", hiddenOnMobile: true },
         ]}
         tableColumns={["createdAt", "orderNumber", "customerName", "type", "creditIssued", "notes"]}
         cellRender={{
           createdAt: (row) =>
             row.createdAt ? new Date(String(row.createdAt)).toLocaleString("pt-BR") : "—",
-          type: (row) => (row.type === "return" ? "Devolução" : "Troca"),
+          type: (row) => (row.type === "return" ? "Devolução" : row.type === "refund" ? "Estorno" : "Troca"),
           creditIssued: (row) => formatBRL(Number(row.creditIssued ?? 0)),
           orderNumber: (row) => (row.orderNumber ? `#${row.orderNumber}` : "—"),
         }}

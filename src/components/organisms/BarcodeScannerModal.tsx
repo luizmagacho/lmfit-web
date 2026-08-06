@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { X, ScanLine, AlertTriangle } from "lucide-react";
 import { lmfitTokens } from "@/theme/tokens";

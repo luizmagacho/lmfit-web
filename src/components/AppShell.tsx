@@ -35,7 +35,9 @@ import {
   Warehouse,
   Receipt,
   Tag,
-  Undo2
+  Undo2,
+  MessageCircle,
+  Megaphone
 } from "lucide-react";
 
 const navKeys = [
@@ -52,7 +54,9 @@ const navKeys = [
   { href: "/materials", key: "nav.materials", icon: Layers },
   { href: "/orders", key: "nav.orders", icon: ShoppingCart },
   { href: "/returns", key: "nav.returns", icon: Undo2 },
+  { href: "/reviews", key: "nav.reviews", icon: MessageCircle },
   { href: "/promotions", key: "nav.promotions", icon: Tag },
+  { href: "/influencers", key: "nav.influencers", icon: Megaphone },
   { href: "/purchases", key: "nav.purchases", icon: CreditCard },
   { href: "/production", key: "nav.production", icon: Scissors },
   { href: "/invoices", key: "nav.invoices", icon: FileText },
@@ -107,9 +111,17 @@ const tourStepsInfo: Record<string, { title: string; desc: string }> = {
     title: "Devoluções e Trocas",
     desc: "Registre devoluções e trocas de pedidos enviados/concluídos, com estorno automático de estoque e crédito de loja."
   },
+  "nav.reviews": {
+    title: "Avaliações",
+    desc: "Modere avaliações enviadas por clientes que já receberam o produto antes de publicá-las na loja."
+  },
   "nav.promotions": {
     title: "Cupons e Promoções",
     desc: "Crie cupons de desconto (percentual ou valor fixo) aplicáveis no checkout público e no PDV."
+  },
+  "nav.influencers": {
+    title: "Influenciadores",
+    desc: "Cadastre influenciadores/afiliados e vincule um cupom próprio a cada um em Promoções, pra ver quem vendeu quanto nos relatórios."
   },
   "nav.purchases": {
     title: "Compras de Insumos",

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";

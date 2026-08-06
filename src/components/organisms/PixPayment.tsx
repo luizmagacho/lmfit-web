@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { Badge } from "@/components/atoms/Badge";

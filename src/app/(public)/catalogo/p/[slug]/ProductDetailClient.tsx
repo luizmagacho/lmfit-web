@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { publicHttp } from "@/lib/publicHttp";
 import { resolveProductImageUrls } from "@/lib/productImageUrl";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useCartStore } from "@/stores/useCartStore";
 import { lmfitTokens } from "@/theme/tokens";
 import { VariantGrid } from "@/components/organisms/VariantGrid";
 import { Skeleton } from "@/components/atoms/Skeleton";
@@ -16,7 +16,7 @@ export function ProductDetailClient({ slug }: { slug: string }) {
   const [product, setProduct] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const role = useAuthStore((s) => s.inferredRole());
+  const role = useCartStore((s) => s.role);
 
   useEffect(() => {
     let cancelled = false;

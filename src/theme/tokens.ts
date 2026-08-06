@@ -26,6 +26,10 @@ export const lmfitTokens = {
   warningBg: "var(--kivoni-warning-bg)",
   /** `--color-error` */
   error: "var(--kivoni-error)",
+  /** Loop 4 — fonte de display do preset ativo (títulos/hero), setada por `TenantContext.tsx`. */
+  fontDisplay: "var(--kivoni-font-display)",
+  /** Loop 4 — raio de borda base do preset ativo. */
+  radius: "var(--kivoni-radius)",
 } as const;
 
 export type LmfitTokenKey = keyof typeof lmfitTokens;

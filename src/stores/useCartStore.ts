@@ -20,6 +20,9 @@ export type CartLine = {
   mode: PriceMode;
   imageUrl?: string | null;
   isOrder?: boolean;
+  /** Loop 9 — categoria da linha, usada pelo shelf de cross-sell do `CartDrawer` pra sugerir
+   *  produtos da mesma categoria do último item adicionado. */
+  category?: string;
 };
 
 export type CartCustomer = {
@@ -40,6 +43,8 @@ type CartState = {
   lines: CartLine[];
   customer: CartCustomer | null;
   role: CustomerRole;
+  /** Loop 6 — abre/fecha o `CartDrawer` (`/loja` only); nunca persistido, sempre começa fechado. */
+  isOpen: boolean;
   setRole: (r: CustomerRole) => void;
   setCustomer: (c: CartCustomer | null) => void;
   addOrIncrement: (line: Omit<CartLine, "quantity" | "unitPrice" | "mode">, qty: number, isOrder?: boolean) => void;
@@ -47,6 +52,8 @@ type CartState = {
   increment: (variantId: string, delta: number, isOrder?: boolean) => void;
   remove: (variantId: string, isOrder?: boolean) => void;
   clear: () => void;
+  open: () => void;
+  close: () => void;
   snapshot: () => CartSnapshot;
 };
 
@@ -81,6 +88,7 @@ export const useCartStore = create<CartState>()(
       lines: [],
       customer: null,
       role: "guest",
+      isOpen: false,
 
       setRole: (r) => set((s) => ({ role: r, lines: recalc(s.lines, r) })),
       setCustomer: (c) => set({ customer: c }),
@@ -154,6 +162,9 @@ export const useCartStore = create<CartState>()(
         })),
 
       clear: () => set({ lines: [], customer: null }),
+
+      open: () => set({ isOpen: true }),
+      close: () => set({ isOpen: false }),
 
       snapshot: () => {
         const { lines, customer, role } = get();

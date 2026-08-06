@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { resolvePrimaryImageUrl } from "@/lib/productImageUrl";
 import { draftsFromProductRow } from "@/lib/products/variantDrafts";

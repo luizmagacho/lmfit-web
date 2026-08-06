@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { publicHttp } from "@/lib/publicHttp";
 import { extractListItems } from "@/lib/normalizeApiList";
-import { CatalogFilters } from "@/components/organisms/CatalogFilters";
-import { ProductGrid, type CatalogProduct } from "@/components/organisms/ProductGrid";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { SimpleCatalogFilters } from "@/components/organisms/SimpleCatalogFilters";
+import { SimpleProductGrid } from "@/components/organisms/SimpleProductGrid";
+import type { CatalogProduct } from "@/components/organisms/ProductGrid";
+import { useCartStore } from "@/stores/useCartStore";
 import { lmfitTokens } from "@/theme/tokens";
 import { useTenant } from "@/context/TenantContext";
 
@@ -14,7 +15,7 @@ export function CatalogoClient() {
   const [items, setItems] = useState<CatalogProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const role = useAuthStore((s) => s.inferredRole());
+  const role = useCartStore((s) => s.role);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,13 +51,13 @@ export function CatalogoClient() {
             : "Compre a partir de R$ para levar no atacado; filtros e estoque em tempo real."}
         </p>
       </header>
-      <CatalogFilters />
+      <SimpleCatalogFilters />
       {err ? (
         <p className="text-sm" style={{ color: lmfitTokens.error }}>
           {err}
         </p>
       ) : null}
-      <ProductGrid items={items} loading={loading} role={role} />
+      <SimpleProductGrid items={items} loading={loading} role={role} />
     </div>
   );
 }

@@ -1,12 +1,15 @@
 "use client";
 
+import * as React from "react";
 import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useCartStore, type CartLine } from "@/stores/useCartStore";
 import { Badge } from "@/components/atoms/Badge";
+import { Button } from "@/components/atoms/Button";
 import { IconButton } from "@/components/atoms/IconButton";
 import { formatBRL } from "@/lib/formatMoney";
 import { lmfitTokens } from "@/theme/tokens";
+import type { ButtonStyle } from "@/theme/storefrontPresets";
 
 const SWIPE_REMOVE_PX = 80;
 
@@ -86,10 +89,15 @@ export function QuickCart({
   onFinalize,
   finalizeLabel = "Finalizar",
   busy,
+  finalizeVariant,
 }: {
   onFinalize: () => void;
   finalizeLabel?: string;
   busy?: boolean;
+  /** Loop 4c — opt-in: só o `/loja` (via `CartDrawer`) passa isso, pra ganhar o `buttonStyle` do
+   *  preset. Sem essa prop o botão fica exatamente como antes — PDV e `/catalogo` (via
+   *  `CatalogFloatingCart`) reusam este mesmo componente e não devem ficar preset-aware. */
+  finalizeVariant?: ButtonStyle;
 }) {
   const { lines, snapshot, remove, increment } = useCartStore();
   const focus = useRef<string | null>(null);
@@ -140,15 +148,21 @@ export function QuickCart({
             {formatBRL(snap.subtotal)}
           </div>
         </div>
-        <button
-          type="button"
-          className="min-h-12 px-5 rounded-md text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: lmfitTokens.primary }}
-          disabled={busy || snap.items === 0}
-          onClick={onFinalize}
-        >
-          {busy ? "Enviando…" : finalizeLabel}
-        </button>
+        {finalizeVariant ? (
+          <Button variant={finalizeVariant} disabled={busy || snap.items === 0} onClick={onFinalize} className="min-h-12">
+            {busy ? "Enviando…" : finalizeLabel}
+          </Button>
+        ) : (
+          <button
+            type="button"
+            className="min-h-12 px-5 rounded-md text-sm font-semibold text-white disabled:opacity-60"
+            style={{ backgroundColor: lmfitTokens.primary }}
+            disabled={busy || snap.items === 0}
+            onClick={onFinalize}
+          >
+            {busy ? "Enviando…" : finalizeLabel}
+          </button>
+        )}
       </div>
     </aside>
   );

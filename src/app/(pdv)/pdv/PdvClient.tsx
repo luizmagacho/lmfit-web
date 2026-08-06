@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useRouter } from "next/navigation";
 import { ScanLine } from "lucide-react";
 import { PdvTemplate } from "@/components/templates/PdvTemplate";
 import { VariantGrid } from "@/components/organisms/VariantGrid";
@@ -11,11 +10,14 @@ import { BarcodeScannerModal } from "@/components/organisms/BarcodeScannerModal"
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Badge } from "@/components/atoms/Badge";
 import { OrderWarningsPanel } from "@/components/OrderWarningsPanel";
-import { StockConflictPanel } from "@/components/StockConflictPanel";
 import { NewCustomerModal } from "@/components/organisms/NewCustomerModal";
 import { PaymentModal, type PaymentMethod } from "@/components/organisms/PaymentModal";
 import type { VariantRowData } from "@/components/molecules/VariantQtyRow";
 import { pdvSearchProducts, pdvLookupByBarcode, type PdvProduct } from "@/lib/pdv/searchProducts";
+import { searchLocalAsProducts, lookupLocalByBarcodeAsProduct, refreshSnapshot } from "@/lib/pdv/catalogSnapshot";
+import { enqueueSale } from "@/lib/pdv/outbox";
+import { flushNow } from "@/lib/pdv/syncEngine";
+import { SyncStatusBadge } from "@/components/organisms/SyncStatusBadge";
 import { createBatch } from "@/lib/production/productionApi";
 import { resolvePrimaryImageUrl } from "@/lib/productImageUrl";
 import { documentId, extractListItems } from "@/lib/normalizeApiList";
@@ -23,10 +25,9 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useCartStore } from "@/stores/useCartStore";
 import { usePdvStore } from "@/stores/usePdvStore";
 import { useTenantStore } from "@/stores/useTenantStore";
-import { createOrder } from "@/lib/orders/ordersApi";
-import { axiosErrorMessage, getStockConflictsFromAxiosError } from "@/lib/apiErrors";
+import { axiosErrorMessage } from "@/lib/apiErrors";
 import { http } from "@/lib/http";
-import type { OrderWarning, StockConflict } from "@/lib/orders/types";
+import type { OrderWarning } from "@/lib/orders/types";
 import type { CartLine } from "@/stores/useCartStore";
 import { lmfitTokens } from "@/theme/tokens";
 
@@ -69,8 +70,9 @@ export function matchBarcodeVariantLabel(
 }
 
 export function PdvClient() {
-  const router = useRouter();
   const role = useAuthStore((s) => s.inferredRole());
+  const operatorLocationId = useAuthStore((s) => s.user?.locationId);
+  const [locationNoticeDismissed, setLocationNoticeDismissed] = useState(false);
   const tenantPlan = useTenantStore((s) => s.tenant?.plan);
   const isProductionLocked = tenantPlan !== "pro" && tenantPlan !== "enterprise";
   const cart = useCartStore();
@@ -82,7 +84,6 @@ export function PdvClient() {
   const [submitErr, setSubmitErr] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [orderWarnings, setOrderWarnings] = useState<OrderWarning[]>([]);
-  const [stockConflicts, setStockConflicts] = useState<StockConflict[] | null>(null);
   const [customerResults, setCustomerResults] = useState<Array<{ id: string; name: string }>>([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
@@ -97,6 +98,14 @@ export function PdvClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
 
+  // Aquece a foto de catálogo offline deste local assim que o PDV abre — sem isso, a busca/
+  // leitura de código de barras não tem nada local pra cair de volta quando a rede falhar.
+  // Melhor esforço: se a rede já estiver fora agora, simplesmente não atualiza desta vez.
+  useEffect(() => {
+    if (!operatorLocationId) return;
+    void refreshSnapshot(operatorLocationId).catch(() => undefined);
+  }, [operatorLocationId]);
+
   const term = pdv.search.trim();
 
   useEffect(() => {
@@ -107,7 +116,10 @@ export function PdvClient() {
     let cancelled = false;
     const timer = setTimeout(async () => {
       setSearching(true);
-      const items = await pdvSearchProducts(term, 10);
+      // Local primeiro (funciona sem rede); só cai pra rede se a foto local não achar nada —
+      // evita mostrar resultado desatualizado quando a busca local já resolve.
+      const local = await searchLocalAsProducts(term, 10) as PdvProduct[];
+      const items = local.length > 0 ? local : await pdvSearchProducts(term, 10);
       if (!cancelled) {
         setResults(items);
         setSearching(false);
@@ -136,9 +148,12 @@ export function PdvClient() {
       setIsScannerOpen(false);
       setScanning(true);
       try {
-        const { product, variantId } = await pdvLookupByBarcode(code);
-        pickProduct(product);
-        const label = matchBarcodeVariantLabel(product, variantId);
+        // Local primeiro (funciona sem rede); só cai pra rede se o código não estiver na
+        // foto local deste PDV.
+        const local = await lookupLocalByBarcodeAsProduct(code);
+        const { product, variantId } = local ?? (await pdvLookupByBarcode(code));
+        pickProduct(product as PdvProduct);
+        const label = matchBarcodeVariantLabel(product as PdvProduct, variantId);
         toast.success(label ? `${product.name} · ${label}` : `${product.name}`);
       } catch (e: any) {
         toast.error(e?.response?.data?.message || `Código ${code} não encontrado.`);
@@ -234,7 +249,6 @@ export function PdvClient() {
       if (!walkIn) return;
     }
     setSubmitErr(null);
-    setStockConflicts(null);
     setOrderWarnings([]);
     setIsPaymentOpen(true);
   }, [cart, selectWalkIn]);
@@ -244,14 +258,17 @@ export function PdvClient() {
     if (!snap.customer?.id) return;
     setSubmitting(true);
     try {
-      const order = await createOrder({
+      // Toda venda passa pela fila local primeiro, online ou offline — o `syncEngine` dispara
+      // logo em seguida, então o caso online resolve na prática quase no mesmo instante de
+      // antes; o caso offline só fica esperando a conexão voltar. Estoque insuficiente nunca
+      // bloqueia mais aqui: a sincronização converte a diferença em encomenda automaticamente.
+      const clientSaleId = await enqueueSale({
         customerId: snap.customer.id,
-        channel: "in_person",
-        status: deriveOrderStatus(snap.lines),
         paymentMethod: method,
         notes: notes ? `PDV mobile - ${notes}` : "PDV mobile",
         lines: buildOrderLinesPayload(snap.lines),
       });
+      void flushNow();
 
       const orderLines = snap.lines.filter(l => l.isOrder);
       if (orderLines.length > 0) {
@@ -260,34 +277,28 @@ export function PdvClient() {
           sku: l.sku,
           batchQty: l.quantity,
           status: 'Encomendado (Pago)',
-          notes: `Encomenda via PDV para o cliente: ${snap.customer!.name || "Sem Nome"} (${snap.customer!.id})\nVinculado ao pedido: ${order?._id ?? ''}`,
+          notes: `Encomenda via PDV para o cliente: ${snap.customer!.name || "Sem Nome"} (${snap.customer!.id})\nVenda local (sincronizando): ${clientSaleId}`,
           imageUrl: l.imageUrl || undefined,
         }).catch(err => {
           console.error("Erro ao criar batch para encomenda", err);
         })));
       }
 
-      setOrderWarnings(order?.warnings ?? []);
+      setOrderWarnings([]);
       cart.clear();
       pdv.setActiveProduct(null);
       setIsPaymentOpen(false);
       setCustomerSearch("");
       setCustomerResults([]);
-      
-      toast.success("Venda finalizada com sucesso!");
+
+      toast.success("Venda registrada — sincronizando…");
     } catch (e) {
       setIsPaymentOpen(false);
-      const stock = getStockConflictsFromAxiosError(e);
-      if (stock) {
-        setStockConflicts(stock.conflicts ?? []);
-        setSubmitErr(stock.message);
-      } else {
-        setSubmitErr(axiosErrorMessage(e));
-      }
+      setSubmitErr(axiosErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
-  }, [cart, pdv, router]);
+  }, [cart, pdv]);
 
   const handleOrderRequest = useCallback((variant: VariantRowData, product: Record<string, unknown>) => {
     if (isProductionLocked) {
@@ -308,22 +319,35 @@ export function PdvClient() {
       search={null}
       cart={<QuickCart onFinalize={onFinalize} busy={submitting} finalizeLabel="Finalizar (Ctrl+Enter)" />}
     >
-      {stockConflicts ? (
-        <StockConflictPanel
-          title={submitErr ?? "Estoque insuficiente para finalizar o pedido."}
-          conflicts={stockConflicts}
-          onDismiss={() => {
-            setStockConflicts(null);
-            setSubmitErr(null);
-          }}
-        />
-      ) : submitErr ? (
+      {submitErr ? (
         <p className="text-sm" style={{ color: lmfitTokens.error }}>
           {submitErr}
         </p>
       ) : null}
 
       {orderWarnings.length ? <OrderWarningsPanel warnings={orderWarnings} /> : null}
+
+      <SyncStatusBadge />
+
+      {!operatorLocationId && role !== "guest" && !locationNoticeDismissed ? (
+        <div
+          className="flex items-start justify-between gap-3 rounded-md border px-3 py-2 text-xs"
+          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}
+        >
+          <span>
+            Você ainda não tem um local de trabalho atribuído — as vendas caem no estoque
+            central do tenant, e o modo offline por local não se aplica a este operador. Peça
+            a um admin para atribuir seu local de trabalho em Usuários.
+          </span>
+          <button
+            type="button"
+            className="shrink-0 underline"
+            onClick={() => setLocationNoticeDismissed(true)}
+          >
+            ok
+          </button>
+        </div>
+      ) : null}
 
       <div
         className="flex flex-col gap-2 rounded-md border bg-[var(--card-bg)] px-3 py-2"

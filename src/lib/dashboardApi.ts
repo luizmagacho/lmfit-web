@@ -50,6 +50,18 @@ export type AbcResponse = {
   }>;
 };
 
+/** Vendas atribuídas por influenciador (Programa de Influenciadores) no período. */
+export type SalesByInfluencerResponse = {
+  range: { from: string; to: string };
+  items: Array<{
+    influencerId: string;
+    name: string;
+    revenue: number;
+    units: number;
+    orderCount: number;
+  }>;
+};
+
 /** Vendas do dia / ticket médio. */
 export type SalesTodayResponse = {
   date: string;
@@ -94,6 +106,21 @@ export async function fetchRevenueByProduct(
 ): Promise<RevenueByProductResponse | null> {
   try {
     const { data } = await http.get<RevenueByProductResponse>("/reports/revenue-by-product", {
+      params: { from, to, limit },
+    });
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchSalesByInfluencer(
+  from: string,
+  to: string,
+  limit = 10,
+): Promise<SalesByInfluencerResponse | null> {
+  try {
+    const { data } = await http.get<SalesByInfluencerResponse>("/reports/sales-by-influencer", {
       params: { from, to, limit },
     });
     return data;

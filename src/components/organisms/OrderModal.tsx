@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
 import { lmfitTokens } from "@/theme/tokens";
 import { X, Calendar } from "lucide-react";

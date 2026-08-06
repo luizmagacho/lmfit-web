@@ -4,11 +4,15 @@ import { useTheme } from "next-themes";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens, lmfitLogoSrc } from "@/theme/tokens";
 import { useEffect, useState } from "react";
-import { Moon, Sun, Monitor, Languages, Palette, Upload, Gift } from "lucide-react";
-import { useTenant } from "@/context/TenantContext";
+import AsyncSelect from "react-select/async";
+import { Moon, Sun, Monitor, Languages, Palette, Upload, Gift, Truck, BarChart3, Store, ExternalLink, Check, Image as ImageIcon, Plus, X } from "lucide-react";
+import { useTenant, GOOGLE_FONT_WEIGHTS } from "@/context/TenantContext";
 import { useTenantStore } from "@/stores/useTenantStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { http } from "@/lib/http";
+import { extractListItems } from "@/lib/normalizeApiList";
+import { STOREFRONT_PRESETS, DEFAULT_THEME_PRESET, type ThemePreset } from "@/theme/storefrontPresets";
+import { buildStorefrontUrl } from "@/lib/tenantSlug";
 
 export function SettingsClient() {
   const { theme, setTheme } = useTheme();
@@ -17,6 +21,9 @@ export function SettingsClient() {
 
   const { tenant, slug } = useTenant();
   const setTenantBranding = useTenantStore((s) => s.setTenantBranding);
+  const setTenantShipping = useTenantStore((s) => s.setTenantShipping);
+  const setTenantAnalytics = useTenantStore((s) => s.setTenantAnalytics);
+  const setTenantStorefront = useTenantStore((s) => s.setTenantStorefront);
   const user = useAuthStore((s) => s.user);
 
   const [primaryColor, setPrimaryColor] = useState("#7c3aed");
@@ -30,10 +37,44 @@ export function SettingsClient() {
   const [metaWhatsappVerifyToken, setMetaWhatsappVerifyToken] = useState("");
   const [metaWhatsappPhoneNumberId, setMetaWhatsappPhoneNumberId] = useState("");
   const [metaWhatsappAccessToken, setMetaWhatsappAccessToken] = useState("");
+  const [whatsappAiEnabled, setWhatsappAiEnabled] = useState(false);
 
   const [loyaltyEnabled, setLoyaltyEnabled] = useState(false);
   const [loyaltyPointsPerBRL, setLoyaltyPointsPerBRL] = useState(1);
   const [loyaltyRedeemValue, setLoyaltyRedeemValue] = useState(0.01);
+
+  const [pickupLabel, setPickupLabel] = useState("");
+  const [standardFee, setStandardFee] = useState(19.9);
+  const [expressFee, setExpressFee] = useState(39.9);
+  const [freeAboveTotal, setFreeAboveTotal] = useState(0);
+  const [savingShipping, setSavingShipping] = useState(false);
+
+  const [metaPixelId, setMetaPixelId] = useState("");
+  const [metaConversionsApiToken, setMetaConversionsApiToken] = useState("");
+  const [ga4MeasurementId, setGa4MeasurementId] = useState("");
+  const [ga4ApiSecret, setGa4ApiSecret] = useState("");
+  const [tiktokPixelId, setTiktokPixelId] = useState("");
+  const [tiktokAccessToken, setTiktokAccessToken] = useState("");
+  const [savingAnalytics, setSavingAnalytics] = useState(false);
+
+  const [themePreset, setThemePreset] = useState<ThemePreset>(DEFAULT_THEME_PRESET);
+  const [storefrontEnabled, setStorefrontEnabled] = useState(true);
+  const [savingStorefront, setSavingStorefront] = useState(false);
+
+  // Carrossel de banners promocionais da home — cada slide tem sua própria imagem, produto
+  // linkado e título/subtítulo/CTA, todos opcionais; menor/retangular, distinto do hero de
+  // título único por preset.
+  const [heroBannerSlides, setHeroBannerSlides] = useState<
+    Array<{
+      imageUrl: string;
+      linkedProductSlug: string;
+      linkedProductLabel: string;
+      title: string;
+      subtitle: string;
+      ctaLabel: string;
+    }>
+  >([]);
+  const [uploadingHeroIndex, setUploadingHeroIndex] = useState<number | null>(null);
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
@@ -43,6 +84,26 @@ export function SettingsClient() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Carrega, num único request, as fontes de exibição dos 10 presets — só usado pelos mini-mockups
+  // do seletor de estilo da loja abaixo, nunca aplicado ao resto do painel admin.
+  useEffect(() => {
+    const families = Array.from(
+      new Set(Object.values(STOREFRONT_PRESETS).map((t) => t.fontDisplay)),
+    );
+    const familyParams = families
+      .map((f) => `family=${encodeURIComponent(f)}:wght@${GOOGLE_FONT_WEIGHTS[f] ?? "400;700"}`)
+      .join("&");
+    const href = `https://fonts.googleapis.com/css2?${familyParams}&display=swap`;
+    let link = document.querySelector<HTMLLinkElement>("link[data-preset-picker-fonts]");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.setAttribute("data-preset-picker-fonts", "true");
+      document.head.appendChild(link);
+    }
+    if (link.href !== href) link.href = href;
   }, []);
 
   // Initialize values when tenant is loaded
@@ -72,10 +133,68 @@ export function SettingsClient() {
             setMetaWhatsappVerifyToken(data.metaWhatsappVerifyToken || "");
             setMetaWhatsappPhoneNumberId(data.metaWhatsappPhoneNumberId || "");
             setMetaWhatsappAccessToken(data.metaWhatsappAccessToken || "");
+            setWhatsappAiEnabled(data.whatsappAiEnabled ?? false);
             if (data.loyalty) {
               setLoyaltyEnabled(data.loyalty.enabled ?? false);
               setLoyaltyPointsPerBRL(data.loyalty.pointsPerBRL ?? 1);
               setLoyaltyRedeemValue(data.loyalty.redeemValuePerPoint ?? 0.01);
+            }
+            if (data.shippingConfig) {
+              setPickupLabel(data.shippingConfig.pickupLabel ?? "");
+              setStandardFee(data.shippingConfig.standardFee ?? 19.9);
+              setExpressFee(data.shippingConfig.expressFee ?? 39.9);
+              setFreeAboveTotal(data.shippingConfig.freeAboveTotal ?? 0);
+            }
+            if (data.storefront) {
+              if (data.storefront.themePreset && data.storefront.themePreset in STOREFRONT_PRESETS) {
+                setThemePreset(data.storefront.themePreset as ThemePreset);
+              }
+              setStorefrontEnabled(data.storefront.enabled ?? true);
+              const banners = (data.storefront.heroBanners ?? []) as Array<{
+                imageUrl?: string;
+                linkedProductSlug?: string;
+                title?: string;
+                subtitle?: string;
+                ctaLabel?: string;
+              }>;
+              const drafts = banners
+                .filter((b) => b.imageUrl)
+                .map((b) => ({
+                  imageUrl: b.imageUrl as string,
+                  linkedProductSlug: b.linkedProductSlug ?? "",
+                  linkedProductLabel: b.linkedProductSlug ?? "",
+                  title: b.title ?? "",
+                  subtitle: b.subtitle ?? "",
+                  ctaLabel: b.ctaLabel ?? "",
+                }));
+              setHeroBannerSlides(drafts);
+              // Resolve o nome de exibição de cada produto linkado (a config só guarda o slug) —
+              // sem bloquear a UI: o slug já aparece como rótulo provisório enquanto isso carrega.
+              drafts.forEach((slide, i) => {
+                if (!slide.linkedProductSlug) return;
+                http
+                  .get("/products", { params: { page: 1, limit: 5, search: slide.linkedProductSlug } })
+                  .then(({ data: productsData }) => {
+                    const items = extractListItems(productsData) as Array<{ slug?: string; name?: string }>;
+                    const match = items.find((p) => p.slug === slide.linkedProductSlug);
+                    if (match?.name) {
+                      setHeroBannerSlides((prev) =>
+                        prev.map((s, idx) => (idx === i ? { ...s, linkedProductLabel: match.name as string } : s)),
+                      );
+                    }
+                  })
+                  .catch(() => {
+                    /* mantém o slug como rótulo se a busca falhar */
+                  });
+              });
+            }
+            if (data.analytics) {
+              setMetaPixelId(data.analytics.metaPixelId ?? "");
+              setMetaConversionsApiToken(data.analytics.metaConversionsApiToken ?? "");
+              setGa4MeasurementId(data.analytics.ga4MeasurementId ?? "");
+              setGa4ApiSecret(data.analytics.ga4ApiSecret ?? "");
+              setTiktokPixelId(data.analytics.tiktokPixelId ?? "");
+              setTiktokAccessToken(data.analytics.tiktokAccessToken ?? "");
             }
           }
         })
@@ -85,7 +204,58 @@ export function SettingsClient() {
     }
   }, [user]);
 
+  const saveStorefrontTheme = async (preset: ThemePreset, enabled: boolean) => {
+    if (user?.role !== "admin" || !user?.tenantId) return;
+    setSavingStorefront(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const payload = {
+        themePreset: preset,
+        enabled,
+        heroBanners: heroBannerSlides
+          .filter((s) => s.imageUrl.trim())
+          .map((s) => ({
+            imageUrl: s.imageUrl.trim(),
+            linkedProductSlug: s.linkedProductSlug || undefined,
+            title: s.title.trim() || undefined,
+            subtitle: s.subtitle.trim() || undefined,
+            ctaLabel: s.ctaLabel.trim() || undefined,
+          })),
+      };
+      await http.patch(`/tenants/${user.tenantId}/storefront`, payload);
+      setTenantStorefront(payload);
+      setSuccessMsg(language === "en" ? "Store style saved successfully!" : "Estilo da loja salvo com sucesso!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.message || "Erro ao salvar o estilo da loja.");
+    } finally {
+      setSavingStorefront(false);
+    }
+  };
+
+  const handleSaveStorefrontTheme = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveStorefrontTheme(themePreset, storefrontEnabled);
+  };
+
+  const handleViewLive = async () => {
+    // Loop 4c: salva o preset recém-clicado antes de abrir, senão a aba abre com o preset
+    // ainda salvo (parece um no-op pro lojista que acabou de trocar e clicar em "Ver ao vivo").
+    await saveStorefrontTheme(themePreset, storefrontEnabled);
+    const url = buildStorefrontUrl(slug || "loja", window.location.hostname, window.location.port);
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   if (!mounted) return null;
+
+  // Design system: every section icon derives from the tenant's own brand colors instead of an
+  // arbitrary Tailwind hue per section — same color-mix formula as the "Customização" icon.
+  const iconBadgeStyle = (hex: string) => ({
+    backgroundColor: `color-mix(in srgb, ${hex} 12%, transparent)`,
+    color: hex,
+  });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: "logo" | "favicon") => {
     const file = e.target.files?.[0];
@@ -103,7 +273,7 @@ export function SettingsClient() {
 
       // Call products/images upload endpoint
       const { data } = await http.post<{ url: string }>("/products/images", formData);
-      
+
       if (target === "logo") {
         setLogoUrl(data.url);
       } else {
@@ -115,6 +285,27 @@ export function SettingsClient() {
     } finally {
       setUploadingLogo(false);
       setUploadingFavicon(false);
+    }
+  };
+
+  const handleHeroSlideUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingHeroIndex(index);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await http.post<{ url: string }>("/products/images", formData);
+      setHeroBannerSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageUrl: data.url } : s)));
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Erro ao fazer upload do arquivo. Use apenas JPEG/PNG até 5MB.");
+    } finally {
+      setUploadingHeroIndex(null);
     }
   };
 
@@ -146,6 +337,7 @@ export function SettingsClient() {
         metaWhatsappVerifyToken: metaWhatsappVerifyToken.trim() || undefined,
         metaWhatsappPhoneNumberId: metaWhatsappPhoneNumberId.trim() || undefined,
         metaWhatsappAccessToken: metaWhatsappAccessToken.trim() || undefined,
+        whatsappAiEnabled,
       };
 
       // Call PATCH /tenants/:id/branding
@@ -159,6 +351,68 @@ export function SettingsClient() {
       setErrorMsg(err.response?.data?.message || "Ocorreu um erro ao salvar as configurações.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveShipping = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (user?.role !== "admin") return;
+    if (!user?.tenantId) return;
+
+    setSavingShipping(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const payload = {
+        pickupLabel: pickupLabel.trim() || undefined,
+        standardFee,
+        expressFee,
+        freeAboveTotal: freeAboveTotal || undefined,
+      };
+      await http.patch(`/tenants/${user.tenantId}/shipping`, payload);
+      setTenantShipping(payload);
+      setSuccessMsg(language === "en" ? "Shipping settings saved successfully!" : "Frete salvo com sucesso!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.message || "Erro ao salvar as configurações de frete.");
+    } finally {
+      setSavingShipping(false);
+    }
+  };
+
+  const handleSaveAnalytics = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (user?.role !== "admin") return;
+    if (!user?.tenantId) return;
+
+    setSavingAnalytics(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const payload = {
+        metaPixelId: metaPixelId.trim() || undefined,
+        metaConversionsApiToken: metaConversionsApiToken.trim() || undefined,
+        ga4MeasurementId: ga4MeasurementId.trim() || undefined,
+        ga4ApiSecret: ga4ApiSecret.trim() || undefined,
+        tiktokPixelId: tiktokPixelId.trim() || undefined,
+        tiktokAccessToken: tiktokAccessToken.trim() || undefined,
+      };
+      await http.patch(`/tenants/${user.tenantId}/analytics`, payload);
+      setTenantAnalytics({
+        metaPixelId: payload.metaPixelId,
+        ga4MeasurementId: payload.ga4MeasurementId,
+        tiktokPixelId: payload.tiktokPixelId,
+      });
+      setSuccessMsg(language === "en" ? "Analytics settings saved successfully!" : "Analytics salvo com sucesso!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.message || "Erro ao salvar as configurações de analytics.");
+    } finally {
+      setSavingAnalytics(false);
     }
   };
 
@@ -208,7 +462,7 @@ export function SettingsClient() {
             <div className="flex items-start gap-3.5 mb-6">
               <div
                 className="p-2.5 rounded-xl flex-shrink-0 transition-colors"
-                style={{ backgroundColor: `color-mix(in srgb, ${primaryColor} 12%, transparent)`, color: primaryColor }}
+                style={iconBadgeStyle(primaryColor)}
               >
                 <Palette size={22} />
               </div>
@@ -424,6 +678,84 @@ export function SettingsClient() {
                       </div>
                     </div>
 
+                    {/* WhatsApp Business API + IA (Loop 11-A) */}
+                    <div className="space-y-4 pt-6 border-t" style={{ borderColor: lmfitTokens.border }}>
+                      <div>
+                        <h3 className="text-sm font-bold tracking-wide uppercase text-neutral-400 dark:text-neutral-500">
+                          {language === "en" ? "WhatsApp Business API" : "WhatsApp Business API"}
+                        </h3>
+                        <p className="text-xs mt-1" style={{ color: lmfitTokens.textMuted }}>
+                          {language === "en"
+                            ? "Connect your own Meta WhatsApp Business account to receive orders and let the AI answer customers automatically."
+                            : "Conecte a conta do WhatsApp Business da sua loja na Meta para receber pedidos e deixar a IA responder clientes automaticamente."}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Phone Number ID</label>
+                          <input
+                            type="text"
+                            value={metaWhatsappPhoneNumberId}
+                            onChange={(e) => setMetaWhatsappPhoneNumberId(e.target.value)}
+                            placeholder="Ex: 109876543210987"
+                            className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Access Token</label>
+                          <input
+                            type="password"
+                            value={metaWhatsappAccessToken}
+                            onChange={(e) => setMetaWhatsappAccessToken(e.target.value)}
+                            placeholder="Ex: EAAG..."
+                            className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">App Secret</label>
+                          <input
+                            type="password"
+                            value={metaAppSecret}
+                            onChange={(e) => setMetaAppSecret(e.target.value)}
+                            placeholder="Ex: 32a1b..."
+                            className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Verify Token</label>
+                          <input
+                            type="text"
+                            value={metaWhatsappVerifyToken}
+                            onChange={(e) => setMetaWhatsappVerifyToken(e.target.value)}
+                            placeholder={language === "en" ? "A password you choose" : "Uma senha que você escolhe"}
+                            className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                          />
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none pt-1">
+                        <input
+                          type="checkbox"
+                          checked={whatsappAiEnabled}
+                          onChange={(e) => setWhatsappAiEnabled(e.target.checked)}
+                          className="w-4 h-4 rounded accent-violet-500"
+                        />
+                        <span className="text-sm" style={{ color: lmfitTokens.text }}>
+                          {language === "en"
+                            ? "Let the AI automatically answer customers on WhatsApp"
+                            : "Deixar a IA responder clientes automaticamente no WhatsApp"}
+                        </span>
+                      </label>
+                    </div>
+
                   </div>
                 </div>
 
@@ -532,12 +864,287 @@ export function SettingsClient() {
           </section>
         )}
 
+        {/* Storefront Theme Section (Admin Only) */}
+        {user?.role === "admin" && (
+          <section className="rounded-2xl border p-6 md:p-8 bg-[var(--card-bg)] shadow-sm" style={{ borderColor: lmfitTokens.border }}>
+            <form onSubmit={handleSaveStorefrontTheme}>
+              <div className="flex items-start justify-between gap-3.5 mb-6 flex-wrap">
+                <div className="flex items-start gap-3.5">
+                  <div className="p-2.5 rounded-xl flex-shrink-0" style={iconBadgeStyle(primaryColor)}>
+                    <Store size={22} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold" style={{ color: lmfitTokens.text }}>
+                      {language === "en" ? "Online Store" : "Loja Online"}
+                    </h2>
+                    <p className="text-xs mt-0.5" style={{ color: lmfitTokens.textMuted }}>
+                      {language === "en"
+                        ? "Choose your public storefront's (/loja) visual style — layout and typography change, not just color."
+                        : "Escolha o estilo visual da sua loja pública (/loja) — muda o layout e a tipografia, não só a cor."}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleViewLive}
+                  disabled={savingStorefront}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer flex-shrink-0"
+                  style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                >
+                  <ExternalLink size={15} />
+                  {language === "en" ? "View live" : "Ver ao vivo"}
+                </button>
+              </div>
+
+              {/* Enabled Toggle */}
+              <div className="flex items-center justify-between border p-4 rounded-xl bg-gray-50/50 dark:bg-neutral-900/50 mb-6" style={{ borderColor: lmfitTokens.border }}>
+                <div>
+                  <h3 className="text-sm font-semibold" style={{ color: lmfitTokens.text }}>
+                    {language === "en" ? "Store enabled" : "Loja habilitada"}
+                  </h3>
+                  <p className="text-xs mt-0.5" style={{ color: lmfitTokens.textMuted }}>
+                    {language === "en"
+                      ? "Turn off to show visitors a temporarily-unavailable page."
+                      : "Desligue para mostrar aos visitantes uma página de indisponibilidade temporária."}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={storefrontEnabled}
+                    onChange={(e) => setStorefrontEnabled(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div
+                    className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"
+                    style={{ backgroundColor: storefrontEnabled ? primaryColor : undefined }}
+                  />
+                </label>
+              </div>
+
+              {/* Banners da Home (carrossel) */}
+              <div className="border rounded-xl p-4 mb-6 space-y-4" style={{ borderColor: lmfitTokens.border }}>
+                <div>
+                  <h3 className="text-sm font-semibold" style={{ color: lmfitTokens.text }}>
+                    {language === "en" ? "Home banners (carousel)" : "Banners da Home (carrossel)"}
+                  </h3>
+                  <p className="text-xs mt-0.5" style={{ color: lmfitTokens.textMuted }}>
+                    {language === "en"
+                      ? "Small rectangular promo banners at the top of your store — add as many as you like, each one links to a different product."
+                      : "Banners promocionais pequenos e retangulares no topo da sua loja — adicione quantos quiser, cada um leva pra um produto diferente."}
+                  </p>
+                  <p className="text-[10px] mt-1.5" style={{ color: lmfitTokens.textMuted }}>
+                    {language === "en"
+                      ? "Recommended image size: at least 1500×500px (3:1, rectangular) — the same image works for every banner."
+                      : "Tamanho mínimo recomendado da imagem: 1500×500px (proporção 3:1, retangular) — vale pra qualquer banner."}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {heroBannerSlides.map((slide, index) => (
+                    <div
+                      key={index}
+                      className="space-y-2.5 p-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50"
+                      style={{ borderColor: lmfitTokens.border }}
+                    >
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {slide.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={slide.imageUrl} alt={`Banner ${index + 1}`} className="w-14 h-5 object-cover rounded-md border flex-shrink-0" style={{ borderColor: lmfitTokens.border }} />
+                          ) : (
+                            <div className="w-14 h-5 rounded-md bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-neutral-400 select-none flex-shrink-0">
+                              <ImageIcon size={12} />
+                            </div>
+                          )}
+                          <input
+                            type="text"
+                            placeholder="https://sua-url-do-banner.jpg"
+                            value={slide.imageUrl}
+                            onChange={(e) =>
+                              setHeroBannerSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageUrl: e.target.value } : s)))
+                            }
+                            className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm text-neutral-700 dark:text-neutral-300 truncate"
+                          />
+                          <label className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all active:scale-[0.98] select-none flex-shrink-0" style={{ borderColor: lmfitTokens.border }}>
+                            <Upload size={14} className="text-neutral-500" />
+                            <span>{uploadingHeroIndex === index ? "..." : "Subir"}</span>
+                            <input
+                              type="file"
+                              accept="image/png, image/jpeg, image/webp"
+                              onChange={(e) => handleHeroSlideUpload(e, index)}
+                              className="hidden"
+                              disabled={uploadingHeroIndex === index}
+                            />
+                          </label>
+                        </div>
+
+                        <div className="w-full sm:w-56 flex-shrink-0">
+                          <AsyncSelect
+                            isClearable
+                            cacheOptions
+                            defaultOptions
+                            loadOptions={async (inputValue: string) => {
+                              try {
+                                const { data } = await http.get("/products", { params: { page: 1, limit: 50, search: inputValue } });
+                                const items = extractListItems(data) as Array<{ slug?: string; name?: string }>;
+                                return items.filter((p) => !!p.slug).map((p) => ({ value: p.slug as string, label: p.name ?? p.slug }));
+                              } catch {
+                                return [];
+                              }
+                            }}
+                            placeholder={language === "en" ? "Links to…" : "Vai pra…"}
+                            value={slide.linkedProductSlug ? { value: slide.linkedProductSlug, label: slide.linkedProductLabel } : null}
+                            onChange={(opt: any) =>
+                              setHeroBannerSlides((prev) =>
+                                prev.map((s, i) =>
+                                  i === index
+                                    ? { ...s, linkedProductSlug: opt?.value ?? "", linkedProductLabel: opt?.label ?? "" }
+                                    : s,
+                                ),
+                              )
+                            }
+                            styles={{
+                              control: (base: any) => ({ ...base, minHeight: "2.25rem", borderRadius: "0.5rem", borderColor: lmfitTokens.border, backgroundColor: "var(--card-bg)" }),
+                              singleValue: (base: any) => ({ ...base, color: lmfitTokens.text }),
+                              input: (base: any) => ({ ...base, color: lmfitTokens.text }),
+                              menu: (base: any) => ({ ...base, zIndex: 50, backgroundColor: "var(--card-bg)" }),
+                            }}
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          aria-label={language === "en" ? "Remove banner" : "Remover banner"}
+                          onClick={() => setHeroBannerSlides((prev) => prev.filter((_, i) => i !== index))}
+                          className="flex-shrink-0 p-2 rounded-lg hover:bg-rose-500/10 text-rose-500 transition-colors cursor-pointer self-center"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      {/* Título/subtítulo/CTA — opcionais, sobrepostos na imagem só quando preenchidos */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          placeholder={language === "en" ? "Title (optional)" : "Título (opcional)"}
+                          value={slide.title}
+                          onChange={(e) => setHeroBannerSlides((prev) => prev.map((s, i) => (i === index ? { ...s, title: e.target.value } : s)))}
+                          className="w-full px-2.5 py-1.5 rounded-lg border bg-white/60 dark:bg-neutral-950/40 text-xs outline-none"
+                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                        />
+                        <input
+                          type="text"
+                          placeholder={language === "en" ? "Subtitle (optional)" : "Subtítulo (opcional)"}
+                          value={slide.subtitle}
+                          onChange={(e) => setHeroBannerSlides((prev) => prev.map((s, i) => (i === index ? { ...s, subtitle: e.target.value } : s)))}
+                          className="w-full px-2.5 py-1.5 rounded-lg border bg-white/60 dark:bg-neutral-950/40 text-xs outline-none"
+                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                        />
+                        <input
+                          type="text"
+                          placeholder={language === "en" ? "Button text (optional)" : "Texto do botão (opcional)"}
+                          value={slide.ctaLabel}
+                          onChange={(e) => setHeroBannerSlides((prev) => prev.map((s, i) => (i === index ? { ...s, ctaLabel: e.target.value } : s)))}
+                          className="w-full px-2.5 py-1.5 rounded-lg border bg-white/60 dark:bg-neutral-950/40 text-xs outline-none"
+                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setHeroBannerSlides((prev) => [
+                      ...prev,
+                      { imageUrl: "", linkedProductSlug: "", linkedProductLabel: "", title: "", subtitle: "", ctaLabel: "" },
+                    ])
+                  }
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all active:scale-[0.98] cursor-pointer"
+                  style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                >
+                  <Plus size={15} />
+                  {language === "en" ? "Add banner" : "Adicionar banner"}
+                </button>
+              </div>
+
+              {/* Preset grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {(Object.keys(STOREFRONT_PRESETS) as ThemePreset[]).map((presetId) => {
+                  const tokens = STOREFRONT_PRESETS[presetId];
+                  const isSelected = themePreset === presetId;
+                  return (
+                    <button
+                      key={presetId}
+                      type="button"
+                      onClick={() => setThemePreset(presetId)}
+                      className="text-left rounded-xl border-2 overflow-hidden transition-all active:scale-[0.98] cursor-pointer"
+                      style={{ borderColor: isSelected ? primaryColor : lmfitTokens.border }}
+                    >
+                      <div className="h-20 flex flex-col justify-between p-2.5" style={{ backgroundColor: tokens.palette.bg }}>
+                        <div
+                          className="text-[10px] font-bold truncate"
+                          style={{
+                            color: tokens.palette.text,
+                            fontFamily: `'${tokens.fontDisplay}', sans-serif`,
+                            textTransform: tokens.heading.case === "uppercase" ? "uppercase" : "none",
+                            letterSpacing: tokens.heading.tracking,
+                          }}
+                        >
+                          {tokens.label}
+                        </div>
+                        <span
+                          className="self-start text-[8px] font-semibold px-2 py-1"
+                          style={{
+                            borderRadius: tokens.buttonStyle === "pill" ? 999 : tokens.radius,
+                            backgroundColor: tokens.buttonStyle === "ghost" ? "transparent" : primaryColor,
+                            color: tokens.buttonStyle === "ghost" ? primaryColor : "#fff",
+                            border: tokens.buttonStyle === "ghost" ? `1.5px solid ${primaryColor}` : "none",
+                          }}
+                        >
+                          Comprar
+                        </span>
+                      </div>
+                      <div className="p-2 flex items-center justify-between gap-1 border-t" style={{ borderColor: lmfitTokens.border }}>
+                        <span className="text-[11px] font-semibold truncate" style={{ color: lmfitTokens.text }}>
+                          {tokens.label}
+                        </span>
+                        {isSelected && (
+                          <span className="rounded-full p-0.5 flex-shrink-0" style={{ backgroundColor: primaryColor }}>
+                            <Check size={10} className="text-white" />
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] mt-3" style={{ color: lmfitTokens.textMuted }}>
+                {STOREFRONT_PRESETS[themePreset].tagline}
+              </p>
+
+              <div className="flex justify-end pt-4 mt-4 border-t" style={{ borderColor: lmfitTokens.border }}>
+                <button
+                  type="submit"
+                  disabled={savingStorefront}
+                  className="px-6 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                  style={{ backgroundColor: lmfitTokens.primary }}
+                >
+                  {savingStorefront ? "Salvando..." : (language === "en" ? "Save Store Style" : "Salvar Estilo da Loja")}
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
         {/* Loyalty Section (Admin Only) */}
         {user?.role === "admin" && (
           <section className="rounded-2xl border p-6 md:p-8 bg-[var(--card-bg)] shadow-sm" style={{ borderColor: lmfitTokens.border }}>
             <form onSubmit={handleSaveLoyalty}>
               <div className="flex items-start gap-3.5 mb-6">
-                <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-500 flex-shrink-0">
+                <div className="p-2.5 rounded-xl flex-shrink-0" style={iconBadgeStyle(secondaryColor)}>
                   <Gift size={22} />
                 </div>
                 <div>
@@ -610,6 +1217,226 @@ export function SettingsClient() {
                     style={{ backgroundColor: lmfitTokens.primary }}
                   >
                     {saving ? "Salvando..." : "Salvar Fidelidade"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {/* Shipping Section (Admin Only) */}
+        {user?.role === "admin" && (
+          <section className="rounded-2xl border p-6 md:p-8 bg-[var(--card-bg)] shadow-sm" style={{ borderColor: lmfitTokens.border }}>
+            <form onSubmit={handleSaveShipping}>
+              <div className="flex items-start gap-3.5 mb-6">
+                <div className="p-2.5 rounded-xl flex-shrink-0" style={iconBadgeStyle(primaryColor)}>
+                  <Truck size={22} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold" style={{ color: lmfitTokens.text }}>
+                    {language === "en" ? "Shipping" : "Frete"}
+                  </h2>
+                  <p className="text-xs mt-0.5" style={{ color: lmfitTokens.textMuted }}>
+                    {language === "en"
+                      ? "Configure the pickup label and the fixed fees charged at checkout for standard/express delivery."
+                      : "Configure o rótulo da retirada e as taxas fixas cobradas no checkout para entrega padrão/expressa."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                    {language === "en" ? "Pickup label" : "Rótulo da retirada em loja"}
+                  </label>
+                  <input
+                    type="text"
+                    value={pickupLabel}
+                    onChange={(e) => setPickupLabel(e.target.value)}
+                    placeholder="Retirada em Loja / Banca"
+                    className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                    style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                      {language === "en" ? "Standard delivery fee (BRL)" : "Taxa de entrega padrão (R$)"}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={standardFee}
+                      onChange={(e) => setStandardFee(Number(e.target.value))}
+                      className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                      style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                      {language === "en" ? "Express delivery fee (BRL)" : "Taxa de entrega expressa (R$)"}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={expressFee}
+                      onChange={(e) => setExpressFee(Number(e.target.value))}
+                      className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                      style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                      {language === "en" ? "Free above (BRL, 0 = disabled)" : "Frete grátis acima de (R$, 0 = desativado)"}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={freeAboveTotal}
+                      onChange={(e) => setFreeAboveTotal(Number(e.target.value))}
+                      className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                      style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t" style={{ borderColor: lmfitTokens.border }}>
+                  <button
+                    type="submit"
+                    disabled={savingShipping}
+                    className="px-6 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                    style={{ backgroundColor: lmfitTokens.primary }}
+                  >
+                    {savingShipping ? "Salvando..." : language === "en" ? "Save Shipping" : "Salvar Frete"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {/* Analytics Section (Admin Only) */}
+        {user?.role === "admin" && (
+          <section className="rounded-2xl border p-6 md:p-8 bg-[var(--card-bg)] shadow-sm" style={{ borderColor: lmfitTokens.border }}>
+            <form onSubmit={handleSaveAnalytics}>
+              <div className="flex items-start gap-3.5 mb-6">
+                <div className="p-2.5 rounded-xl flex-shrink-0" style={iconBadgeStyle(secondaryColor)}>
+                  <BarChart3 size={22} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold" style={{ color: lmfitTokens.text }}>
+                    {language === "en" ? "Analytics & Ad Pixels" : "Analytics e Pixels de Anúncio"}
+                  </h2>
+                  <p className="text-xs mt-0.5" style={{ color: lmfitTokens.textMuted }}>
+                    {language === "en"
+                      ? "Configure Meta, Google Analytics 4 and TikTok pixels to measure and optimize paid traffic. Pixels only load after the visitor accepts cookies."
+                      : "Configure os pixels do Meta, Google Analytics 4 e TikTok para medir e otimizar tráfego pago. Os pixels só carregam depois que o visitante aceita cookies."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-3 pb-4 border-b" style={{ borderColor: lmfitTokens.border }}>
+                  <h3 className="text-sm font-bold tracking-wide uppercase text-neutral-400 dark:text-neutral-500">Meta (Facebook/Instagram)</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Pixel ID</label>
+                      <input
+                        type="text"
+                        value={metaPixelId}
+                        onChange={(e) => setMetaPixelId(e.target.value)}
+                        placeholder="123456789012345"
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        {language === "en" ? "Conversions API token (optional)" : "Token da Conversions API (opcional)"}
+                      </label>
+                      <input
+                        type="password"
+                        value={metaConversionsApiToken}
+                        onChange={(e) => setMetaConversionsApiToken(e.target.value)}
+                        placeholder="EAA..."
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pb-4 border-b" style={{ borderColor: lmfitTokens.border }}>
+                  <h3 className="text-sm font-bold tracking-wide uppercase text-neutral-400 dark:text-neutral-500">Google Analytics 4</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Measurement ID</label>
+                      <input
+                        type="text"
+                        value={ga4MeasurementId}
+                        onChange={(e) => setGa4MeasurementId(e.target.value)}
+                        placeholder="G-XXXXXXXXXX"
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        {language === "en" ? "Measurement Protocol API secret (optional)" : "API secret do Measurement Protocol (opcional)"}
+                      </label>
+                      <input
+                        type="password"
+                        value={ga4ApiSecret}
+                        onChange={(e) => setGa4ApiSecret(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-sm font-bold tracking-wide uppercase text-neutral-400 dark:text-neutral-500">TikTok Ads</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Pixel Code</label>
+                      <input
+                        type="text"
+                        value={tiktokPixelId}
+                        onChange={(e) => setTiktokPixelId(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        {language === "en" ? "Events API token (optional)" : "Token da Events API (opcional)"}
+                      </label>
+                      <input
+                        type="password"
+                        value={tiktokAccessToken}
+                        onChange={(e) => setTiktokAccessToken(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t" style={{ borderColor: lmfitTokens.border }}>
+                  <button
+                    type="submit"
+                    disabled={savingAnalytics}
+                    className="px-6 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                    style={{ backgroundColor: lmfitTokens.primary }}
+                  >
+                    {savingAnalytics ? "Salvando..." : language === "en" ? "Save Analytics" : "Salvar Analytics"}
                   </button>
                 </div>
               </div>

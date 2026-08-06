@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useCallback, useState } from "react";
 import { isValidCep, lookupCep, maskCep, onlyCepDigits } from "@/lib/cep";
 import { useCheckoutStore } from "@/stores/useCheckoutStore";

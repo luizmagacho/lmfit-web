@@ -43,6 +43,12 @@ export type OrderRecord = {
   discountTotal?: number;
   paymentMethod?: "pix" | "cash" | "card" | string;
   lines?: OrderLineInput[] | Record<string, unknown>[];
+  carrier?: string;
+  trackingCode?: string;
+  trackingUrl?: string;
+  clientSaleId?: string;
+  autoBackorderedAt?: string | null;
+  autoBackorderNote?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };

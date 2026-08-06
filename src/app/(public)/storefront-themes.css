@@ -1,0 +1,58 @@
+/*
+ * Loop 4 — overrides de estilo de loja por preset, escopados em [data-theme-preset] (setado por
+ * TenantContext.tsx no <html>). Tipografia e raio de borda são seguros de aplicar globalmente
+ * porque usam variáveis já lidas por toda a árvore; "buttonStyle" (solid/ghost/pill) do preset
+ * fica só nos dados (storefrontPresets.ts) por ora — a loja pública não tem um componente
+ * <Button> compartilhado hoje (só a landing tem `.kivo-btn`, que não é por-tenant), então aplicar
+ * ghost/pill via seletor amplo em cima de `<button>` quebraria estados de seleção que dependem de
+ * background-color (ex.: cards do ShippingPicker/forma de pagamento). Fica como próximo passo
+ * quando esse componente existir.
+ */
+
+[data-theme-preset] h1,
+[data-theme-preset] h2,
+[data-theme-preset] h3,
+[data-theme-preset] .storefront-brand-heading {
+  font-family: var(--kivoni-font-display);
+  /* Loop 4e — tratamento tipográfico por preset (caixa/tracking/peso/itálico), não só a família. */
+  text-transform: var(--kivoni-heading-transform, none);
+  font-variant: var(--kivoni-heading-variant, normal);
+  letter-spacing: var(--kivoni-heading-tracking, normal);
+  font-weight: var(--kivoni-heading-weight, 600);
+  font-style: var(--kivoni-heading-style, normal);
+}
+
+[data-theme-preset] body,
+[data-theme-preset] p,
+[data-theme-preset] span,
+[data-theme-preset] button,
+[data-theme-preset] input,
+[data-theme-preset] label {
+  font-family: var(--kivoni-font-body);
+}
+
+[data-theme-preset] .rounded-md,
+[data-theme-preset] .rounded-lg,
+[data-theme-preset] .rounded-xl,
+[data-theme-preset] .rounded-2xl {
+  border-radius: var(--kivoni-radius) !important;
+}
+
+/* AnnouncementTicker: duas cópias da lista lado a lado, desliza -50% pra criar loop contínuo.
+ * Loop 4f — velocidade lida de `--kivoni-storefront-ticker-duration` (derivada de motionDurationMs
+ * em StorefrontThemeVars.tsx), 22s é só o fallback antes do JS montar. */
+.kivoni-ticker-track {
+  width: max-content;
+  animation-name: kivoni-ticker-scroll;
+  animation-duration: var(--kivoni-storefront-ticker-duration, 22s);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes kivoni-ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}

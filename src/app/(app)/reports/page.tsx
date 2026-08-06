@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { http } from "@/lib/http";
+import { fetchSalesByInfluencer, type SalesByInfluencerResponse } from "@/lib/dashboardApi";
 import { lmfitTokens } from "@/theme/tokens";
 
 type Summary = {
@@ -26,6 +28,7 @@ export default function ReportsPage() {
   const [days, setDays] = useState(30);
   const [data, setData] = useState<Summary | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [influencerData, setInfluencerData] = useState<SalesByInfluencerResponse | null>(null);
 
   const params = useMemo(() => rangeIso(days), [days]);
 
@@ -52,8 +55,24 @@ export default function ReportsPage() {
     };
   }, [params.from, params.to]);
 
+  useEffect(() => {
+    let cancelled = false;
+    // Lista completa (não só top N) — o teaser do dashboard já mostra os 5 primeiros.
+    // 50 é o teto validado em `ReportsRevenueQueryDto` (@Max(50)) — o mesmo limite que
+    // `revenue-by-product` já respeita em `revenueByProduct(..., 50)` no DashboardClient.
+    fetchSalesByInfluencer(params.from, params.to, 50).then((r) => {
+      if (!cancelled) setInfluencerData(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.from, params.to]);
+
   const maxRev =
     data?.topVariants?.reduce((m, v) => Math.max(m, v.revenue), 0) ?? 0;
+
+  const maxInfluencerRev =
+    influencerData?.items?.reduce((m, v) => Math.max(m, v.revenue), 0) ?? 0;
 
   return (
     <div className="space-y-6">
@@ -138,6 +157,48 @@ export default function ReportsPage() {
           </section>
         </>
       )}
+
+      <section className="space-y-2">
+        <div className="flex flex-wrap justify-between gap-2 items-baseline">
+          <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
+            Vendas por influenciador
+          </h2>
+          <Link href="/influencers" className="text-sm underline" style={{ color: lmfitTokens.primary }}>
+            Gerenciar influenciadores
+          </Link>
+        </div>
+        <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+          {!influencerData?.items?.length ? (
+            <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
+              Nenhuma venda de influenciador neste período. Vincule um cupom a um influenciador em{" "}
+              <Link href="/promotions" className="underline" style={{ color: lmfitTokens.primary }}>
+                Promoções
+              </Link>
+              .
+            </p>
+          ) : (
+            influencerData.items.map((inf) => (
+              <div key={inf.influencerId} className="space-y-1">
+                <div className="flex justify-between text-sm gap-2">
+                  <span style={{ color: lmfitTokens.text }}>{inf.name}</span>
+                  <span style={{ color: lmfitTokens.textMuted }}>
+                    {formatMoney(inf.revenue)} · {inf.units} un. · {inf.orderCount} pedidos
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-[var(--chart-track)] overflow-hidden" aria-hidden>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${maxInfluencerRev ? Math.round((inf.revenue / maxInfluencerRev) * 100) : 0}%`,
+                      backgroundColor: lmfitTokens.primary,
+                    }}
+                  />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
     </div>
   );
 }

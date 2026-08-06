@@ -1,8 +1,16 @@
 "use client";
 
 import { create } from "zustand";
+import { getLocallyReservedQtyByVariant, getOutboxCounts } from "@/lib/pdv/outbox";
 
 type Product = Record<string, unknown>;
+
+export type PdvSyncStatus = {
+  pendingCount: number;
+  syncingCount: number;
+  failedCount: number;
+  lastError?: string;
+};
 
 type PdvState = {
   search: string;
@@ -11,11 +19,17 @@ type PdvState = {
   setActiveProduct: (p: Product | null) => void;
   focusVariantId: string | null;
   setFocusVariantId: (id: string | null) => void;
-  /** Estoque reservado local (antes de enviar ao servidor) para evitar overselling na sessao. */
-  localReserved: Record<string, number>;
-  reserve: (variantId: string, qty: number) => void;
-  release: (variantId: string, qty: number) => void;
-  resetReservations: () => void;
+  /** Quantidade por variante ainda presa na fila local (vendas pendentes/em sincronização) —
+   *  recalculada a partir da fila real (`outbox`) sempre que chamada, nunca um contador
+   *  mantido à mão: correta por construção, ao contrário do scaffold antigo
+   *  (`localReserved`/`reserve()`/`release()`) que dependia de alguém chamar reserve/release
+   *  certinho e nunca era de fato usado em lugar nenhum. */
+  getLocallyReservedQty: (variantId: string) => Promise<number>;
+  /** Snapshot do estado da fila de sincronização, para o indicador de status no PDV. A fila
+   *  vive no IndexedDB (sem reatividade nativa do React) — `refreshSyncStatus()` é a ponte:
+   *  chamado sob demanda (montagem do badge, ou toda vez que `syncEngine` termina um flush). */
+  syncStatus: PdvSyncStatus;
+  refreshSyncStatus: () => Promise<void>;
 };
 
 export const usePdvStore = create<PdvState>((set) => ({
@@ -25,20 +39,13 @@ export const usePdvStore = create<PdvState>((set) => ({
   setActiveProduct: (p) => set({ activeProduct: p }),
   focusVariantId: null,
   setFocusVariantId: (id) => set({ focusVariantId: id }),
-  localReserved: {},
-  reserve: (variantId, qty) =>
-    set((s) => ({
-      localReserved: {
-        ...s.localReserved,
-        [variantId]: Math.max(0, (s.localReserved[variantId] ?? 0) + qty),
-      },
-    })),
-  release: (variantId, qty) =>
-    set((s) => ({
-      localReserved: {
-        ...s.localReserved,
-        [variantId]: Math.max(0, (s.localReserved[variantId] ?? 0) - qty),
-      },
-    })),
-  resetReservations: () => set({ localReserved: {} }),
+  getLocallyReservedQty: async (variantId) => {
+    const totals = await getLocallyReservedQtyByVariant();
+    return totals[variantId] ?? 0;
+  },
+  syncStatus: { pendingCount: 0, syncingCount: 0, failedCount: 0 },
+  refreshSyncStatus: async () => {
+    const syncStatus = await getOutboxCounts();
+    set({ syncStatus });
+  },
 }));

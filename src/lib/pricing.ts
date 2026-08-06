@@ -1,4 +1,28 @@
+import { formatBRL } from "@/lib/formatMoney";
+
 export type PriceMode = "atacado" | "varejo";
+
+/** Loop 2 — desconto no Pix / parcelamento, configurados em Settings, mesma regra em card/PDP/
+ *  sacola/checkout. */
+export type PricingDisplayRules = {
+  pixDiscountPercent: number;
+  maxInstallments: number;
+};
+
+/** `null` quando o tenant não configurou desconto — o chamador simplesmente não mostra a linha. */
+export function computePixPrice(price: number, rules: PricingDisplayRules): number | null {
+  if (!rules.pixDiscountPercent || rules.pixDiscountPercent <= 0) return null;
+  return Math.round(price * (1 - rules.pixDiscountPercent / 100) * 100) / 100;
+}
+
+/** `null` quando o tenant não habilitou parcelamento (`maxInstallments <= 1`) — sem juros: este
+ *  código nunca modelou juros de parcelamento, só divide o valor à vista. */
+export function installmentsText(price: number, rules: PricingDisplayRules): string | null {
+  if (!rules.maxInstallments || rules.maxInstallments <= 1) return null;
+  const n = Math.floor(rules.maxInstallments);
+  const perInstallment = Math.round((price / n) * 100) / 100;
+  return `${n}x de ${formatBRL(perInstallment)} sem juros`;
+}
 
 export type PricingInput = {
   priceRetail?: number | null;

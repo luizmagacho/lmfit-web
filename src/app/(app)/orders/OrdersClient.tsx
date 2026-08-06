@@ -282,6 +282,15 @@ export function OrdersClient() {
                     </td>
                     <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
                       {t(`status.${row.status}`, orderStatusLabel(row.status as string))}
+                      {row.autoBackorderedAt ? (
+                        <span
+                          className="inline-block mt-1 text-[10px] font-medium normal-case tracking-normal rounded px-1.5 py-0.5"
+                          style={{ backgroundColor: lmfitTokens.warningBg, color: lmfitTokens.text }}
+                          title={row.autoBackorderNote ?? undefined}
+                        >
+                          ⚠️ {t("orders.autoBackordered", "Ajustado na sincronização")}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2 align-top tabular-nums" style={{ color: lmfitTokens.text }}>
                       {row.total != null ? formatBRL(parseBRLToNumber(row.total)) : "—"}

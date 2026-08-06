@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { MessageCircle, Send, X, Loader2 } from "lucide-react";
