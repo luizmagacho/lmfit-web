@@ -13,6 +13,7 @@ import { http } from "@/lib/http";
 import { extractListItems } from "@/lib/normalizeApiList";
 import { STOREFRONT_PRESETS, DEFAULT_THEME_PRESET, type ThemePreset } from "@/theme/storefrontPresets";
 import { buildStorefrontUrl } from "@/lib/tenantSlug";
+import { WhatsappSellersSection } from "./WhatsappSellersSection";
 
 export function SettingsClient() {
   const { theme, setTheme } = useTheme();
@@ -755,6 +756,8 @@ export function SettingsClient() {
                         </span>
                       </label>
                     </div>
+
+                    <WhatsappSellersSection />
 
                   </div>
                 </div>
