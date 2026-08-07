@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRightLeft, Boxes, Loader2, PackageSearch } from "lucide-react";
+import { ArrowRightLeft, Boxes, Layers, Loader2, PackageSearch, Table2, X } from "lucide-react";
 import { ResourceList } from "@/components/ResourceList";
 import { http } from "@/lib/http";
 import { lmfitTokens } from "@/theme/tokens";
@@ -15,6 +15,20 @@ type LocationRow = {
 type VariantOption = {
   variantId: string;
   label: string;
+};
+
+type ProductOption = {
+  productId: string;
+  name: string;
+  variants: Array<{ variantId: string; sku: string; color?: string; size?: string }>;
+};
+
+type StockMatrixItem = {
+  variantId: string;
+  sku: string;
+  displayName: string;
+  byLocation: Record<string, number>;
+  total: number;
 };
 
 type StockBreakdownRow = {
@@ -47,6 +61,29 @@ export function flattenVariants(products: Array<Record<string, unknown>>): Varia
       const variation = [v.color, v.size].filter(Boolean).join("/");
       out.push({ variantId: id, label: `${name}${variation ? ` — ${variation}` : ""} (${v.sku ?? ""})` });
     }
+  }
+  return out;
+}
+
+export function flattenProducts(products: Array<Record<string, unknown>>): ProductOption[] {
+  const out: ProductOption[] = [];
+  for (const p of products) {
+    const productId = String(p._id ?? "");
+    const name = String(p.name ?? "");
+    const variants = Array.isArray(p.variants) ? (p.variants as Array<Record<string, unknown>>) : [];
+    if (!productId || !variants.length) continue;
+    out.push({
+      productId,
+      name,
+      variants: variants
+        .filter((v) => v._id)
+        .map((v) => ({
+          variantId: String(v._id),
+          sku: String(v.sku ?? ""),
+          color: v.color ? String(v.color) : undefined,
+          size: v.size ? String(v.size) : undefined,
+        })),
+    });
   }
   return out;
 }
@@ -466,14 +503,334 @@ function AllocatedStockPanel({ locations, reloadKey }: { locations: LocationRow[
   );
 }
 
+/** "Onde está cada peça" numa grade só — todas as variantes de todos os produtos, todos os
+ *  locais lado a lado. Antes só dava pra ver um local por vez (`AllocatedStockPanel`); pra
+ *  saber se uma peça também estava em outro local era preciso trocar o filtro e comparar de
+ *  cabeça. */
+function StockMatrixPanel({ locations, reloadKey }: { locations: LocationRow[]; reloadKey: number }) {
+  const [items, setItems] = useState<StockMatrixItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    http
+      .get<{ locations: LocationRow[]; items: StockMatrixItem[] }>("/locations/stock-matrix")
+      .then((res) => setItems(res.data.items ?? []))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, [reloadKey]);
+
+  return (
+    <div className="rounded-xl border p-5 space-y-4" style={{ borderColor: lmfitTokens.border, backgroundColor: "var(--card-bg)" }}>
+      <div className="flex items-center gap-2">
+        <Table2 className="h-5 w-5" style={{ color: lmfitTokens.primary }} />
+        <h2 className="text-base font-semibold" style={{ color: lmfitTokens.text }}>
+          Onde está cada peça
+        </h2>
+      </div>
+      <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>
+        Cada linha é uma peça (cor/tamanho), cada coluna é um local — veja tudo de uma vez, sem
+        trocar de filtro.
+      </p>
+
+      {loading ? (
+        <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>
+          Carregando…
+        </p>
+      ) : items.length ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-xs">
+            <thead>
+              <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>
+                <th className="px-2 py-1.5 font-medium sticky left-0" style={{ color: lmfitTokens.textMuted, backgroundColor: "var(--card-bg)" }}>
+                  Peça
+                </th>
+                {locations.map((l) => (
+                  <th key={l._id} className="px-2 py-1.5 font-medium text-right whitespace-nowrap" style={{ color: lmfitTokens.textMuted }}>
+                    {l.name}
+                    {l.isDefault ? " (padrão)" : ""}
+                  </th>
+                ))}
+                <th className="px-2 py-1.5 font-medium text-right" style={{ color: lmfitTokens.textMuted }}>
+                  Total
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((r) => (
+                <tr key={r.variantId} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
+                  <td className="px-2 py-1.5 sticky left-0" style={{ color: lmfitTokens.text, backgroundColor: "var(--card-bg)" }}>
+                    {r.displayName}
+                    <span className="ml-1.5" style={{ color: lmfitTokens.textMuted }}>
+                      ({r.sku})
+                    </span>
+                  </td>
+                  {locations.map((l) => (
+                    <td key={l._id} className="px-2 py-1.5 text-right tabular-nums" style={{ color: lmfitTokens.text }}>
+                      {r.byLocation[l._id] ?? "—"}
+                    </td>
+                  ))}
+                  <td className="px-2 py-1.5 text-right tabular-nums font-semibold" style={{ color: lmfitTokens.text }}>
+                    {r.total}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>
+          Nenhum estoque alocado em nenhum local ainda.
+        </p>
+      )}
+    </div>
+  );
+}
+
+type BatchLine = { variantId: string; label: string; sku: string; quantity: number };
+
+/** Transferência em lote: várias peças (tamanhos/cores diferentes, de vários produtos) numa
+ *  única operação — ex.: Legging Preta P/M/G/GG + Legging Branca P/M tudo de uma vez, em vez
+ *  de uma transferência por SKU. */
+function BatchTransferPanel({
+  locations,
+  products,
+  onTransferred,
+}: {
+  locations: LocationRow[];
+  products: ProductOption[];
+  onTransferred: () => void;
+}) {
+  const [fromLocationId, setFromLocationId] = useState("");
+  const [toLocationId, setToLocationId] = useState("");
+  const [pickerProductId, setPickerProductId] = useState("");
+  const [lines, setLines] = useState<BatchLine[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  function addProduct(productId: string) {
+    if (!productId) return;
+    const product = products.find((p) => p.productId === productId);
+    if (!product) return;
+    setLines((prev) => {
+      const existingIds = new Set(prev.map((l) => l.variantId));
+      const additions = product.variants
+        .filter((v) => !existingIds.has(v.variantId))
+        .map((v) => ({
+          variantId: v.variantId,
+          label: [v.color, v.size].filter(Boolean).join(" — ") || v.sku,
+          sku: v.sku,
+          quantity: 0,
+        }));
+      return [...prev, ...additions];
+    });
+    setPickerProductId("");
+  }
+
+  function removeLine(variantId: string) {
+    setLines((prev) => prev.filter((l) => l.variantId !== variantId));
+  }
+
+  function setQuantity(variantId: string, quantity: number) {
+    setLines((prev) => prev.map((l) => (l.variantId === variantId ? { ...l, quantity: Math.max(0, Math.floor(quantity || 0)) } : l)));
+  }
+
+  const items = lines.filter((l) => l.quantity > 0);
+  const transferError = transferErrorMessage(fromLocationId, toLocationId);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage(null);
+    if (!fromLocationId || !toLocationId || !items.length) return;
+    if (transferError) {
+      setMessage({ type: "error", text: transferError });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await http.post("/locations/transfer-batch", {
+        fromLocationId,
+        toLocationId,
+        items: items.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+      });
+      setMessage({ type: "success", text: `${items.length} peça(s) transferida(s) com sucesso.` });
+      setLines([]);
+      onTransferred();
+    } catch (err: any) {
+      const conflicts = err.response?.data?.conflicts as Array<{ variantId: string; needed: number; available: number }> | undefined;
+      if (conflicts?.length) {
+        const bySku = new Map(lines.map((l) => [l.variantId, l.label] as const));
+        const detail = conflicts
+          .map((c) => `${bySku.get(c.variantId) ?? c.variantId}: precisa ${c.needed}, tem ${c.available}`)
+          .join("; ");
+        setMessage({ type: "error", text: `Estoque insuficiente — ${detail}` });
+      } else {
+        setMessage({ type: "error", text: err.response?.data?.message || "Erro ao transferir estoque em lote." });
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border p-5 space-y-4" style={{ borderColor: lmfitTokens.border, backgroundColor: "var(--card-bg)" }}>
+      <div className="flex items-center gap-2">
+        <Layers className="h-5 w-5" style={{ color: lmfitTokens.primary }} />
+        <h2 className="text-base font-semibold" style={{ color: lmfitTokens.text }}>
+          Transferência em lote
+        </h2>
+      </div>
+      <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>
+        Adicione um ou mais produtos, informe a quantidade de cada tamanho/cor, e transfira tudo
+        numa única operação.
+      </p>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="text-xs" style={{ color: lmfitTokens.textMuted }}>
+            De (origem)
+            <select
+              value={fromLocationId}
+              onChange={(e) => setFromLocationId(e.target.value)}
+              className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-transparent"
+              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+            >
+              <option value="">Selecione…</option>
+              {locations.map((l) => (
+                <option key={l._id} value={l._id}>
+                  {l.name}
+                  {l.isDefault ? " (padrão)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs" style={{ color: lmfitTokens.textMuted }}>
+            Para (destino)
+            <select
+              value={toLocationId}
+              onChange={(e) => setToLocationId(e.target.value)}
+              className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-transparent"
+              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+            >
+              <option value="">Selecione…</option>
+              {locations.map((l) => (
+                <option key={l._id} value={l._id}>
+                  {l.name}
+                  {l.isDefault ? " (padrão)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="text-xs block" style={{ color: lmfitTokens.textMuted }}>
+          Adicionar produto
+          <select
+            value={pickerProductId}
+            onChange={(e) => addProduct(e.target.value)}
+            className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-transparent"
+            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+          >
+            <option value="">Selecione um produto para adicionar suas variantes…</option>
+            {products.map((p) => (
+              <option key={p.productId} value={p.productId}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {lines.length ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-xs">
+              <thead>
+                <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>
+                  <th className="px-2 py-1.5 font-medium" style={{ color: lmfitTokens.textMuted }}>
+                    Peça
+                  </th>
+                  <th className="px-2 py-1.5 font-medium" style={{ color: lmfitTokens.textMuted }}>
+                    SKU
+                  </th>
+                  <th className="px-2 py-1.5 font-medium text-right" style={{ color: lmfitTokens.textMuted }}>
+                    Quantidade
+                  </th>
+                  <th className="px-2 py-1.5 w-8" />
+                </tr>
+              </thead>
+              <tbody>
+                {lines.map((l) => (
+                  <tr key={l.variantId} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
+                    <td className="px-2 py-1.5" style={{ color: lmfitTokens.text }}>
+                      {l.label}
+                    </td>
+                    <td className="px-2 py-1.5" style={{ color: lmfitTokens.textMuted }}>
+                      {l.sku}
+                    </td>
+                    <td className="px-2 py-1.5 text-right">
+                      <input
+                        type="number"
+                        min={0}
+                        value={l.quantity}
+                        onChange={(e) => setQuantity(l.variantId, Number(e.target.value))}
+                        className="w-20 min-h-8 border rounded px-2 py-1 text-sm text-right bg-transparent"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() => removeLine(l.variantId)}
+                        aria-label="Remover"
+                        className="p-1 rounded hover:opacity-70"
+                        style={{ color: lmfitTokens.textMuted }}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-xs" style={{ color: lmfitTokens.textMuted }}>
+            Nenhum produto adicionado ainda.
+          </p>
+        )}
+
+        <div className="flex items-center justify-between gap-3">
+          {message ? (
+            <p className="text-xs" style={{ color: message.type === "error" ? lmfitTokens.error : lmfitTokens.success }}>
+              {message.text}
+            </p>
+          ) : (
+            <span />
+          )}
+          <button
+            type="submit"
+            disabled={submitting || !fromLocationId || !toLocationId || !items.length}
+            className="min-h-10 px-4 rounded-md text-sm font-semibold text-white disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center gap-2"
+            style={{ backgroundColor: lmfitTokens.primary }}
+          >
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
+            Transferir {items.length > 0 ? `(${items.length})` : ""}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export function LocationsClient() {
   const [locations, setLocations] = useState<LocationRow[]>([]);
   const [variants, setVariants] = useState<VariantOption[]>([]);
+  const [products, setProducts] = useState<ProductOption[]>([]);
   const [allocationReloadKey, setAllocationReloadKey] = useState(0);
 
   useEffect(() => {
     void http.get<{ items: Array<Record<string, unknown>> }>("/products", { params: { limit: 500 } }).then((res) => {
       setVariants(flattenVariants(res.data.items ?? []));
+      setProducts(flattenProducts(res.data.items ?? []));
     });
   }, []);
 
@@ -505,6 +862,8 @@ export function LocationsClient() {
         onDataChange={(rows) => setLocations(rows as LocationRow[])}
       />
 
+      <StockMatrixPanel locations={locations} reloadKey={allocationReloadKey} />
+
       <AllocatePanel
         locations={locations}
         variants={variants}
@@ -512,6 +871,12 @@ export function LocationsClient() {
       />
 
       <AllocatedStockPanel locations={locations} reloadKey={allocationReloadKey} />
+
+      <BatchTransferPanel
+        locations={locations}
+        products={products}
+        onTransferred={() => setAllocationReloadKey((k) => k + 1)}
+      />
 
       <TransferPanel locations={locations} variants={variants} />
     </div>
