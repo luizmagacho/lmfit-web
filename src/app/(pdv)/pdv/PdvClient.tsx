@@ -15,7 +15,7 @@ import { NewCustomerModal } from "@/components/organisms/NewCustomerModal";
 import { PaymentModal, type PaymentMethod } from "@/components/organisms/PaymentModal";
 import type { VariantRowData } from "@/components/molecules/VariantQtyRow";
 import { pdvSearchProducts, pdvLookupByBarcode, type PdvProduct } from "@/lib/pdv/searchProducts";
-import { searchLocalAsProducts, lookupLocalByBarcodeAsProduct, refreshSnapshot, refreshWalkInCustomer, getCachedWalkInCustomer } from "@/lib/pdv/catalogSnapshot";
+import { searchLocalAsProducts, lookupLocalByBarcodeAsProduct, listAllLocalAsProducts, refreshSnapshot, refreshWalkInCustomer, getCachedWalkInCustomer } from "@/lib/pdv/catalogSnapshot";
 import { enqueueSale } from "@/lib/pdv/outbox";
 import { enqueueCustomer } from "@/lib/pdv/customerOutbox";
 import { flushNow } from "@/lib/pdv/syncEngine";
@@ -81,6 +81,7 @@ export function PdvClient() {
   const pdv = usePdvStore();
 
   const [results, setResults] = useState<PdvProduct[]>([]);
+  const [browseProducts, setBrowseProducts] = useState<PdvProduct[]>([]);
   const [searching, setSearching] = useState(false);
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [submitErr, setSubmitErr] = useState<string | null>(null);
@@ -100,13 +101,31 @@ export function PdvClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
 
+  // Lista padrão pra escolher direto, sem digitar nada — sem isso, abrir o PDV e perder a
+  // conexão antes de fazer a primeira busca deixa o vendedor sem nenhum produto pra tocar,
+  // mesmo com o catálogo já salvo localmente de uma sessão anterior. Carrega logo de cara com
+  // o que já tiver local; depois de `refreshSnapshot` atualizar a foto (se a rede permitir),
+  // recarrega de novo pra refletir o catálogo mais recente.
+  const loadBrowseProducts = useCallback(() => {
+    void listAllLocalAsProducts(50)
+      .then((items) => setBrowseProducts(items as PdvProduct[]))
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    loadBrowseProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Aquece a foto de catálogo offline deste local assim que o PDV abre — sem isso, a busca/
   // leitura de código de barras não tem nada local pra cair de volta quando a rede falhar.
   // Melhor esforço: se a rede já estiver fora agora, simplesmente não atualiza desta vez.
   useEffect(() => {
     if (!operatorLocationId) return;
-    void refreshSnapshot(operatorLocationId).catch(() => undefined);
-  }, [operatorLocationId]);
+    void refreshSnapshot(operatorLocationId)
+      .catch(() => undefined)
+      .then(loadBrowseProducts);
+  }, [operatorLocationId, loadBrowseProducts]);
 
   // Same "warm it while we still have signal" idea, for the walk-in customer — checkout with
   // no customer picked (the counter's most common case) needs this to resolve offline too.
@@ -557,6 +576,33 @@ export function PdvClient() {
                 })}
               </ul>
             )}
+          </div>
+        ) : browseProducts.length > 0 && !pdv.activeProduct ? (
+          <div className="rounded-lg border bg-[var(--card-bg)] overflow-hidden">
+            <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide opacity-60 border-b" style={{ borderColor: lmfitTokens.border }}>
+              Produtos
+            </div>
+            <ul>
+              {browseProducts.map((p) => {
+                const id = documentId(p);
+                return (
+                  <li key={id} className="border-b last:border-0">
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 hover:bg-[var(--hover-bg)] min-h-11"
+                      onClick={() => pickProduct(p)}
+                    >
+                      <span className="block text-sm font-semibold">
+                        {productName(p)}
+                      </span>
+                      <span className="block text-xs mt-0.5">
+                        {productSku(p)}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ) : null}
 

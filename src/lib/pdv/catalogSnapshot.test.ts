@@ -9,6 +9,8 @@ import { http } from "@/lib/http";
 import { getOfflineDb } from "./offlineDb";
 import {
   getCachedWalkInCustomer,
+  listAllLocal,
+  listAllLocalAsProducts,
   lookupLocalByBarcode,
   refreshSnapshot,
   refreshWalkInCustomer,
@@ -168,6 +170,48 @@ describe("searchLocal", () => {
 
   it("returns nothing for an empty/blank term", async () => {
     expect(await searchLocal("   ")).toEqual([]);
+  });
+});
+
+describe("listAllLocal / listAllLocalAsProducts (PDV default browsable list)", () => {
+  beforeEach(async () => {
+    await resetDb();
+    const db = await getOfflineDb();
+    await db.put("catalogSnapshot", {
+      variantId: "v1", productId: "p1", sku: "CAM-P", productName: "Camiseta Dry Fit",
+      color: "Preta", size: "M", unitPrice: 49.9, quantity: 5,
+    });
+    await db.put("catalogSnapshot", {
+      variantId: "v2", productId: "p1", sku: "CAM-B", productName: "Camiseta Dry Fit",
+      color: "Branca", size: "M", unitPrice: 49.9, quantity: 3,
+    });
+    await db.put("catalogSnapshot", {
+      variantId: "v3", productId: "p2", sku: "BER-P", productName: "Bermuda",
+      color: "Preta", size: "G", unitPrice: 89.9, quantity: 2,
+    });
+  });
+
+  it("returns every row currently in the snapshot, without needing a search term", async () => {
+    const rows = await listAllLocal();
+    expect(rows).toHaveLength(3);
+  });
+
+  it("sorts alphabetically by product name — a predictable order to scroll through", async () => {
+    const rows = await listAllLocal();
+    expect(rows.map((r) => r.productName)).toEqual(["Bermuda", "Camiseta Dry Fit", "Camiseta Dry Fit"]);
+  });
+
+  it("groups variants of the same product together as one browsable item", async () => {
+    const products = await listAllLocalAsProducts();
+    expect(products).toHaveLength(2);
+    const camiseta = products.find((p) => p.name === "Camiseta Dry Fit") as { variants: unknown[] };
+    expect(camiseta.variants).toHaveLength(2);
+  });
+
+  it("returns an empty list rather than throwing when the snapshot was never warmed", async () => {
+    await resetDb();
+    expect(await listAllLocal()).toEqual([]);
+    expect(await listAllLocalAsProducts()).toEqual([]);
   });
 });
 

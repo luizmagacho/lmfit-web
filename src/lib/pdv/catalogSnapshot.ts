@@ -114,6 +114,16 @@ export async function searchLocal(term: string, limit = 20): Promise<CatalogSnap
   return all.filter((r) => matchesTerm(r, term)).slice(0, limit);
 }
 
+/** Every product currently in this device's local snapshot, alphabetical — the PDV's default
+ *  browsable list before the operator types anything. Without this, opening the PDV and losing
+ *  the connection before ever typing a search leaves nothing to pick from, even though the
+ *  catalog itself was already saved locally from the last time the device was online. */
+export async function listAllLocal(limit = 50): Promise<CatalogSnapshotRow[]> {
+  const db = await getOfflineDb();
+  const all = await db.getAll("catalogSnapshot");
+  return all.sort((a, b) => a.productName.localeCompare(b.productName)).slice(0, limit);
+}
+
 /** Local (offline-safe) equivalent of `pdvLookupByBarcode`. */
 export async function lookupLocalByBarcode(code: string): Promise<CatalogSnapshotRow | null> {
   const trimmed = code.trim();
@@ -161,6 +171,12 @@ function groupSnapshotRowsIntoProducts(rows: CatalogSnapshotRow[]): Array<Record
 /** Drop-in offline fallback for `pdvSearchProducts` — same product-with-variants shape. */
 export async function searchLocalAsProducts(term: string, limit = 20): Promise<Array<Record<string, unknown>>> {
   const rows = await searchLocal(term, limit * 10);
+  return groupSnapshotRowsIntoProducts(rows).slice(0, limit);
+}
+
+/** Product-with-variants shape of `listAllLocal` — the PDV's default browsable list. */
+export async function listAllLocalAsProducts(limit = 50): Promise<Array<Record<string, unknown>>> {
+  const rows = await listAllLocal(limit * 10);
   return groupSnapshotRowsIntoProducts(rows).slice(0, limit);
 }
 
