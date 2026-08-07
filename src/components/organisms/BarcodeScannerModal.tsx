@@ -3,13 +3,19 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { X, ScanLine, AlertTriangle } from "lucide-react";
+import { BrowserMultiFormatReader, type IScannerControls } from "@zxing/browser";
+import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { lmfitTokens } from "@/theme/tokens";
 
 /** Formatos de código de barras de varejo mais comuns (produto embalado). */
-const BARCODE_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"];
-
-type DetectorInstance = { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> };
-type DetectorCtor = new (opts: { formats: string[] }) => DetectorInstance;
+const BARCODE_FORMATS = [
+  BarcodeFormat.EAN_13,
+  BarcodeFormat.EAN_8,
+  BarcodeFormat.UPC_A,
+  BarcodeFormat.UPC_E,
+  BarcodeFormat.CODE_128,
+  BarcodeFormat.CODE_39,
+];
 
 export function BarcodeScannerModal({
   onClose,
@@ -20,7 +26,7 @@ export function BarcodeScannerModal({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const rafRef = useRef<number | null>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
   const detectedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -29,13 +35,6 @@ export function BarcodeScannerModal({
     let cancelled = false;
 
     async function start() {
-      const Detector = (window as unknown as { BarcodeDetector?: DetectorCtor }).BarcodeDetector;
-      if (!Detector) {
-        setError(
-          "Este navegador não suporta leitura de código de barras por câmera. Use Chrome/Edge no Android, ou digite o código manualmente na busca.",
-        );
-        return;
-      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" },
@@ -45,28 +44,25 @@ export function BarcodeScannerModal({
           return;
         }
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-        setReady(true);
 
-        const detector = new Detector({ formats: BARCODE_FORMATS });
-        const scanLoop = async () => {
-          if (cancelled || detectedRef.current || !videoRef.current) return;
-          try {
-            const codes = await detector.detect(videoRef.current);
-            if (codes.length > 0 && !detectedRef.current) {
-              detectedRef.current = true;
-              onDetected(codes[0].rawValue);
-              return;
-            }
-          } catch {
-            // frame ilegível, tenta de novo no próximo tick
-          }
-          rafRef.current = requestAnimationFrame(() => void scanLoop());
-        };
-        void scanLoop();
+        // Decodifica em JavaScript puro (ZXing) em vez da API nativa `BarcodeDetector` — essa
+        // API só existe em navegadores Chromium. No iPhone TODO navegador (Safari, Chrome,
+        // Firefox) roda por baixo no motor do Safari, que nunca implementou essa API — então
+        // sem essa troca a leitura por câmera simplesmente não funciona em nenhum app no iOS.
+        const hints = new Map<DecodeHintType, unknown>([[DecodeHintType.POSSIBLE_FORMATS, BARCODE_FORMATS]]);
+        const reader = new BrowserMultiFormatReader(hints);
+        const controls = await reader.decodeFromStream(stream, videoRef.current ?? undefined, (result) => {
+          if (cancelled || detectedRef.current || !result) return;
+          detectedRef.current = true;
+          controlsRef.current?.stop();
+          onDetected(result.getText());
+        });
+        if (cancelled) {
+          controls.stop();
+          return;
+        }
+        controlsRef.current = controls;
+        setReady(true);
       } catch {
         if (!cancelled) {
           setError("Não foi possível acessar a câmera. Verifique a permissão do navegador.");
@@ -78,7 +74,7 @@ export function BarcodeScannerModal({
 
     return () => {
       cancelled = true;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      controlsRef.current?.stop();
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
