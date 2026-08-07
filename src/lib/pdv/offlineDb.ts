@@ -59,6 +59,28 @@ export type SyncHistoryEntry = {
   occurredAt: string;
 };
 
+/** Small key-value store for standalone bits the PDV needs offline that don't fit the other
+ *  stores' shapes — currently just the tenant's walk-in ("Consumidor Final") customer, so
+ *  checkout with no customer picked (the most common counter sale) doesn't need a live network
+ *  call to resolve who to bill it to. */
+export type MetaRow = { key: string; value: unknown };
+
+export type PendingCustomerStatus = "pending" | "syncing" | "synced" | "failed";
+
+/** A customer typed by name at the counter while offline — gets a temporary `localId`
+ *  (see `LOCAL_CUSTOMER_PREFIX` in `customerOutbox.ts`) usable in the cart immediately;
+ *  `syncEngine` creates the real customer server-side and repoints any queued sales as soon
+ *  as the connection allows, same idea as `pendingSales` but for who the sale bills to. */
+export type PendingCustomerRow = {
+  localId: string;
+  name: string;
+  status: PendingCustomerStatus;
+  lastError?: string;
+  createdAtLocal: string;
+  /** Preenchido quando o servidor confirma — o id real do cliente. */
+  realCustomerId?: string;
+};
+
 interface PdvOfflineDB extends DBSchema {
   catalogSnapshot: {
     key: string;
@@ -75,10 +97,19 @@ interface PdvOfflineDB extends DBSchema {
     value: SyncHistoryEntry;
     indexes: { occurredAt: string };
   };
+  meta: {
+    key: string;
+    value: MetaRow;
+  };
+  pendingCustomers: {
+    key: string;
+    value: PendingCustomerRow;
+    indexes: { status: string };
+  };
 }
 
 const DB_NAME = "kivoni-pdv-offline";
-const DB_VERSION = 2;
+const DB_VERSION = 6;
 
 let dbPromise: Promise<IDBPDatabase<PdvOfflineDB>> | null = null;
 
@@ -100,6 +131,13 @@ export function getOfflineDb(): Promise<IDBPDatabase<PdvOfflineDB>> {
         if (!db.objectStoreNames.contains("syncHistory")) {
           const store = db.createObjectStore("syncHistory", { keyPath: "id" });
           store.createIndex("occurredAt", "occurredAt");
+        }
+        if (!db.objectStoreNames.contains("meta")) {
+          db.createObjectStore("meta", { keyPath: "key" });
+        }
+        if (!db.objectStoreNames.contains("pendingCustomers")) {
+          const store = db.createObjectStore("pendingCustomers", { keyPath: "localId" });
+          store.createIndex("status", "status");
         }
       },
     });

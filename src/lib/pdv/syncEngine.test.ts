@@ -13,6 +13,7 @@ import { toast } from "react-hot-toast";
 import { http } from "@/lib/http";
 import { getOfflineDb } from "./offlineDb";
 import { enqueueSale, getOutboxCounts, listFailed } from "./outbox";
+import { enqueueCustomer } from "./customerOutbox";
 import { listRecentSyncHistory } from "./syncHistory";
 import { flushNow, retryFailedNow } from "./syncEngine";
 
@@ -23,6 +24,7 @@ async function resetDb() {
   const db = await getOfflineDb();
   await db.clear("pendingSales");
   await db.clear("syncHistory");
+  await db.clear("pendingCustomers");
 }
 
 describe("syncEngine.flushNow", () => {
@@ -171,6 +173,95 @@ describe("syncEngine.flushNow", () => {
     await Promise.all([first, second]);
 
     expect(httpPost).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("syncEngine.flushNow — offline-created customers (customerOutbox)", () => {
+  beforeEach(async () => {
+    await resetDb();
+    httpGet.mockReset();
+    httpPost.mockReset();
+    httpGet.mockResolvedValue({ data: { ok: true } });
+  });
+
+  it("creates the customer server-side, repoints the queued sale, then syncs it in the same flush", async () => {
+    const localId = await enqueueCustomer("Maria");
+    const saleId = await enqueueSale({ customerId: localId, paymentMethod: "cash", lines: [{ variantId: "v1", quantity: 1, unitPrice: 10 }] });
+    httpPost.mockImplementation((url: string) => {
+      if (url === "/customers") return Promise.resolve({ data: { _id: "real-cust-1", name: "Maria" } });
+      if (url === "/orders/sync-batch") return Promise.resolve({ data: [{ clientSaleId: saleId, orderId: "o1", orderNumber: 9, status: "ok" }] });
+      throw new Error("unexpected url " + url);
+    });
+
+    await flushNow();
+
+    const db = await getOfflineDb();
+    const customerRow = await db.get("pendingCustomers", localId);
+    expect(customerRow).toMatchObject({ status: "synced", realCustomerId: "real-cust-1" });
+    const saleRow = await db.get("pendingSales", saleId);
+    expect(saleRow?.status).toBe("synced");
+    // The batch actually sent to the server must use the real id, never the local placeholder.
+    const [, batchBody] = httpPost.mock.calls.find((c: any[]) => c[0] === "/orders/sync-batch")!;
+    expect(batchBody.sales[0].customerId).toBe("real-cust-1");
+  });
+
+  it("leaves the sale queued (not failed) when the customer still can't be created — never sends a local: id to the API", async () => {
+    const localId = await enqueueCustomer("Maria");
+    const saleId = await enqueueSale({ customerId: localId, paymentMethod: "cash", lines: [{ variantId: "v1", quantity: 1, unitPrice: 10 }] });
+    httpPost.mockImplementation((url: string) => {
+      if (url === "/customers") return Promise.reject(new Error("still offline"));
+      throw new Error("unexpected url " + url);
+    });
+
+    await flushNow();
+
+    expect(httpPost).not.toHaveBeenCalledWith("/orders/sync-batch", expect.anything());
+    const counts = await getOutboxCounts();
+    expect(counts).toMatchObject({ pendingCount: 1, failedCount: 0 });
+    const db = await getOfflineDb();
+    expect((await db.get("pendingCustomers", localId))?.status).toBe("failed");
+  });
+
+  it("repoints every sale billed to the same local customer, not just the first one", async () => {
+    const localId = await enqueueCustomer("Maria");
+    const sale1 = await enqueueSale({ customerId: localId, paymentMethod: "cash", lines: [{ variantId: "v1", quantity: 1, unitPrice: 10 }] });
+    const sale2 = await enqueueSale({ customerId: localId, paymentMethod: "pix", lines: [{ variantId: "v2", quantity: 1, unitPrice: 20 }] });
+    httpPost.mockImplementation((url: string) => {
+      if (url === "/customers") return Promise.resolve({ data: { _id: "real-cust-1" } });
+      if (url === "/orders/sync-batch") {
+        return Promise.resolve({
+          data: [
+            { clientSaleId: sale1, orderId: "o1", orderNumber: 1, status: "ok" },
+            { clientSaleId: sale2, orderId: "o2", orderNumber: 2, status: "ok" },
+          ],
+        });
+      }
+      throw new Error("unexpected url " + url);
+    });
+
+    await flushNow();
+
+    const db = await getOfflineDb();
+    expect((await db.get("pendingSales", sale1))?.status).toBe("synced");
+    expect((await db.get("pendingSales", sale2))?.status).toBe("synced");
+  });
+
+  it("does not block a sale for an already-real customer while another sale waits on a local one", async () => {
+    const localId = await enqueueCustomer("Maria");
+    await enqueueSale({ customerId: localId, paymentMethod: "cash", lines: [{ variantId: "v1", quantity: 1, unitPrice: 10 }] });
+    const readySaleId = await enqueueSale({ customerId: "already-real-id", paymentMethod: "cash", lines: [{ variantId: "v2", quantity: 1, unitPrice: 10 }] });
+    httpPost.mockImplementation((url: string) => {
+      if (url === "/customers") return Promise.reject(new Error("still offline"));
+      if (url === "/orders/sync-batch") return Promise.resolve({ data: [{ clientSaleId: readySaleId, orderId: "o1", orderNumber: 1, status: "ok" }] });
+      throw new Error("unexpected url " + url);
+    });
+
+    await flushNow();
+
+    const db = await getOfflineDb();
+    expect((await db.get("pendingSales", readySaleId))?.status).toBe("synced");
+    const batchCall = httpPost.mock.calls.find((c: any[]) => c[0] === "/orders/sync-batch")!;
+    expect(batchCall[1].sales).toHaveLength(1);
   });
 });
 

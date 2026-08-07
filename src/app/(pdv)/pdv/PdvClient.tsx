@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
+import { isAxiosError } from "axios";
 import { ScanLine } from "lucide-react";
 import { PdvTemplate } from "@/components/templates/PdvTemplate";
 import { VariantGrid } from "@/components/organisms/VariantGrid";
@@ -14,8 +15,9 @@ import { NewCustomerModal } from "@/components/organisms/NewCustomerModal";
 import { PaymentModal, type PaymentMethod } from "@/components/organisms/PaymentModal";
 import type { VariantRowData } from "@/components/molecules/VariantQtyRow";
 import { pdvSearchProducts, pdvLookupByBarcode, type PdvProduct } from "@/lib/pdv/searchProducts";
-import { searchLocalAsProducts, lookupLocalByBarcodeAsProduct, refreshSnapshot } from "@/lib/pdv/catalogSnapshot";
+import { searchLocalAsProducts, lookupLocalByBarcodeAsProduct, refreshSnapshot, refreshWalkInCustomer, getCachedWalkInCustomer } from "@/lib/pdv/catalogSnapshot";
 import { enqueueSale } from "@/lib/pdv/outbox";
+import { enqueueCustomer } from "@/lib/pdv/customerOutbox";
 import { flushNow } from "@/lib/pdv/syncEngine";
 import { SyncStatusBadge } from "@/components/organisms/SyncStatusBadge";
 import { createBatch } from "@/lib/production/productionApi";
@@ -105,6 +107,12 @@ export function PdvClient() {
     if (!operatorLocationId) return;
     void refreshSnapshot(operatorLocationId).catch(() => undefined);
   }, [operatorLocationId]);
+
+  // Same "warm it while we still have signal" idea, for the walk-in customer — checkout with
+  // no customer picked (the counter's most common case) needs this to resolve offline too.
+  useEffect(() => {
+    void refreshWalkInCustomer().catch(() => undefined);
+  }, []);
 
   const term = pdv.search.trim();
 
@@ -198,7 +206,11 @@ export function PdvClient() {
   }, [customerSearch]);
 
   /** Cria um cliente só com o nome digitado e já o seleciona — o comprador que
-   * não quer dar CPF/telefone/e-mail sai do caixa em um toque. */
+   * não quer dar CPF/telefone/e-mail sai do caixa em um toque. Sem conexão, entra na fila
+   * (`customerOutbox`) com um id temporário e o vendedor segue a venda normalmente — o
+   * `syncEngine` cria o cliente de verdade e reaponta a venda assim que a rede voltar. Um erro
+   * de VALIDAÇÃO de verdade (o servidor respondeu, só que recusou) não entra na fila — ele
+   * nunca ia se resolver sozinho, então mostra o erro real na hora em vez de fingir sucesso. */
   const quickCreateCustomer = useCallback(async (name: string) => {
     const trimmed = name.trim();
     if (!trimmed || creatingCustomer) return;
@@ -213,13 +225,25 @@ export function PdvClient() {
       setCustomerResults([]);
       toast.success(`Cliente "${trimmed}" criado`);
     } catch (e) {
-      toast.error(axiosErrorMessage(e));
+      if (isAxiosError(e) && !e.response) {
+        const localId = await enqueueCustomer(trimmed);
+        cart.setCustomer({ id: localId, name: trimmed });
+        setCustomerSearch("");
+        setCustomerResults([]);
+        toast.success(`Cliente "${trimmed}" salvo — sincroniza quando a conexão voltar`);
+        void flushNow();
+      } else {
+        toast.error(axiosErrorMessage(e));
+      }
     } finally {
       setCreatingCustomer(false);
     }
   }, [cart, creatingCustomer]);
 
-  /** Venda sem cadastro: usa o "Consumidor Final" do tenant (criado sob demanda na API). */
+  /** Venda sem cadastro: usa o "Consumidor Final" do tenant (criado sob demanda na API). Tenta
+   *  a rede primeiro (garante o id mais atual); se falhar — sem conexão é o caso mais comum —
+   *  cai pro id já guardado localmente por `refreshWalkInCustomer`, em vez de travar a venda
+   *  mais comum do balcão atrás de uma chamada de rede que não vai completar. */
   const selectWalkIn = useCallback(async (): Promise<{ id: string; name: string } | null> => {
     try {
       const { data } = await http.post<{ _id?: string; id?: string; name?: string }>(
@@ -234,6 +258,13 @@ export function PdvClient() {
       setCustomerResults([]);
       return customer;
     } catch (e) {
+      const cached = await getCachedWalkInCustomer().catch(() => null);
+      if (cached) {
+        cart.setCustomer(cached);
+        setCustomerSearch("");
+        setCustomerResults([]);
+        return cached;
+      }
       setSubmitErr(axiosErrorMessage(e));
       return null;
     }

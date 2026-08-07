@@ -2,14 +2,21 @@ import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/http", () => ({
-  http: { get: vi.fn() },
+  http: { get: vi.fn(), post: vi.fn() },
 }));
 
 import { http } from "@/lib/http";
 import { getOfflineDb } from "./offlineDb";
-import { lookupLocalByBarcode, refreshSnapshot, searchLocal } from "./catalogSnapshot";
+import {
+  getCachedWalkInCustomer,
+  lookupLocalByBarcode,
+  refreshSnapshot,
+  refreshWalkInCustomer,
+  searchLocal,
+} from "./catalogSnapshot";
 
 const httpGet = http.get as ReturnType<typeof vi.fn>;
+const httpPost = http.post as ReturnType<typeof vi.fn>;
 
 async function resetDb() {
   const db = await getOfflineDb();
@@ -186,5 +193,33 @@ describe("lookupLocalByBarcode", () => {
 
   it("returns null for an unknown barcode instead of throwing", async () => {
     expect(await lookupLocalByBarcode("0000000000000")).toBeNull();
+  });
+});
+
+describe("refreshWalkInCustomer / getCachedWalkInCustomer (offline checkout regression)", () => {
+  beforeEach(async () => {
+    const db = await getOfflineDb();
+    await db.clear("meta");
+    httpPost.mockReset();
+  });
+
+  it("caches the walk-in customer id/name locally after a successful fetch", async () => {
+    httpPost.mockResolvedValue({ data: { _id: "cust-final-1", name: "Consumidor Final" } });
+
+    await refreshWalkInCustomer();
+
+    expect(await getCachedWalkInCustomer()).toEqual({ id: "cust-final-1", name: "Consumidor Final" });
+  });
+
+  it("returns null when nothing was ever cached — e.g. the PDV's very first open happened offline", async () => {
+    expect(await getCachedWalkInCustomer()).toBeNull();
+  });
+
+  it("does not cache a response with no usable id", async () => {
+    httpPost.mockResolvedValue({ data: {} });
+
+    await refreshWalkInCustomer();
+
+    expect(await getCachedWalkInCustomer()).toBeNull();
   });
 });

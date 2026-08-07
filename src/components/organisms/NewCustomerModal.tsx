@@ -2,7 +2,10 @@
 
 import * as React from "react";
 import { useState } from "react";
+import { isAxiosError } from "axios";
 import { http } from "@/lib/http";
+import { enqueueCustomer } from "@/lib/pdv/customerOutbox";
+import { flushNow } from "@/lib/pdv/syncEngine";
 import { lmfitTokens } from "@/theme/tokens";
 import { X } from "lucide-react";
 
@@ -33,6 +36,21 @@ export function NewCustomerModal({
       });
       onSuccess({ id: data._id || data.id, name: data.name });
     } catch (err: any) {
+      // Sem conexão (o servidor nunca respondeu, `err.response` vem vazio): entra na fila em
+      // vez de travar o vendedor no meio da venda — o e-mail/WhatsApp digitados aqui se perdem
+      // nesse caso (a fila só guarda o nome), mas o cliente pode ser completado depois que
+      // sincronizar. Um erro de validação de verdade (nome duplicado etc.) continua mostrando
+      // a mensagem real, já que entrar na fila nunca ia resolver isso sozinho.
+      if (isAxiosError(err) && !err.response) {
+        try {
+          const localId = await enqueueCustomer(name.trim());
+          onSuccess({ id: localId, name: name.trim() });
+          void flushNow();
+          return;
+        } catch {
+          // falls through to the generic error below
+        }
+      }
       setError(err.response?.data?.message || "Erro ao criar cliente");
     } finally {
       setLoading(false);

@@ -3,6 +3,10 @@ import { extractListItems } from "@/lib/normalizeApiList";
 import { resolvePrimaryImageUrl } from "@/lib/productImageUrl";
 import { getOfflineDb, type CatalogSnapshotRow } from "./offlineDb";
 
+const WALK_IN_META_KEY = "walkInCustomer";
+
+export type CachedWalkInCustomer = { id: string; name: string };
+
 type LocationStockItem = { variantId: string; sku: string; productName: string; quantity: number };
 
 /** The API serializes money fields as pt-BR formatted strings (e.g. `"39,90"`), not raw
@@ -66,6 +70,29 @@ export async function refreshSnapshot(locationId: string): Promise<void> {
   await tx.store.clear();
   await Promise.all(rows.map((r) => tx.store.put(r)));
   await tx.done;
+}
+
+/** Fetches the tenant's walk-in ("Consumidor Final") customer and caches it locally — called
+ *  whenever the device is online, same "warm the offline snapshot" moment as `refreshSnapshot`,
+ *  so checkout with no customer picked (the most common counter sale) can resolve who to bill
+ *  it to without a live network call once the connection drops. */
+export async function refreshWalkInCustomer(): Promise<void> {
+  const { data } = await http.post<{ _id?: string; id?: string; name?: string }>("/customers/walk-in");
+  const customer: CachedWalkInCustomer = {
+    id: String(data._id ?? data.id ?? ""),
+    name: data.name ?? "Consumidor Final",
+  };
+  if (!customer.id) return;
+  const db = await getOfflineDb();
+  await db.put("meta", { key: WALK_IN_META_KEY, value: customer });
+}
+
+/** Offline-safe read of the cached walk-in customer — null if it was never warmed (e.g. first
+ *  ever PDV open happened offline). */
+export async function getCachedWalkInCustomer(): Promise<CachedWalkInCustomer | null> {
+  const db = await getOfflineDb();
+  const row = await db.get("meta", WALK_IN_META_KEY);
+  return (row?.value as CachedWalkInCustomer | undefined) ?? null;
 }
 
 function matchesTerm(row: CatalogSnapshotRow, term: string): boolean {

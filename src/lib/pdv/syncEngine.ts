@@ -1,6 +1,13 @@
 import { toast } from "react-hot-toast";
 import { http } from "@/lib/http";
 import { listSyncable, markFailed, markSynced, markSyncing, resetForManualRetry } from "./outbox";
+import {
+  isLocalCustomerId,
+  listSyncableCustomers,
+  markCustomerFailed,
+  markCustomerSynced,
+  repointPendingSalesCustomer,
+} from "./customerOutbox";
 import type { PendingSaleRow } from "./offlineDb";
 import { recordSyncHistoryEntry } from "./syncHistory";
 
@@ -42,6 +49,28 @@ async function probeOnline(): Promise<boolean> {
   }
 }
 
+/** Creates, server-side, every customer that was typed at the counter while offline, and
+ *  repoints any sale already queued for that customer to the real id it gets back. Runs before
+ *  the sale batch itself — a sale still billed to a `local:` id would otherwise fail the whole
+ *  batch's validation (the API only accepts real Mongo ids for `customerId`). Never throws:
+ *  a customer that still can't be created (e.g. connection dropped mid-flush) just stays
+ *  queued for the next flush, and any sale still pointing at it is silently skipped this round
+ *  by `flushNow`'s own filter — not marked failed, since it isn't really the sale's fault. */
+async function resolvePendingCustomers(): Promise<void> {
+  const customers = await listSyncableCustomers();
+  for (const c of customers) {
+    try {
+      const { data } = await http.post<{ _id?: string; id?: string }>("/customers", { name: c.name });
+      const realId = String(data._id ?? data.id ?? "");
+      if (!realId) throw new Error("Resposta sem id");
+      await markCustomerSynced(c.localId, realId);
+      await repointPendingSalesCustomer(c.localId, realId);
+    } catch (e) {
+      await markCustomerFailed(c.localId, e instanceof Error ? e.message : "Falha ao criar cliente");
+    }
+  }
+}
+
 /** Sends every syncable sale in one batch, applies the per-sale result, and never throws —
  *  a failed flush just leaves the sale queued for the next trigger. Safe to call repeatedly
  *  (e.g. from multiple triggers firing close together): re-entrant calls are no-ops. */
@@ -52,7 +81,12 @@ export async function flushNow(): Promise<void> {
     const online = await probeOnline();
     if (!online) return;
 
-    const sales = await listSyncable();
+    await resolvePendingCustomers();
+
+    const syncable = await listSyncable();
+    // A sale still billed to an unresolved `local:` customer isn't ready yet — leave it
+    // queued (still "pending", not touched) rather than sending an id the API would reject.
+    const sales = syncable.filter((s) => !isLocalCustomerId(s.payload.customerId));
     if (!sales.length) return;
 
     await Promise.all(sales.map((s) => markSyncing(s.clientSaleId)));
