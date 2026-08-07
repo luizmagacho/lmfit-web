@@ -28,6 +28,11 @@ type AllocatedStockRow = {
   variantId: string;
   sku: string;
   productName: string;
+  color?: string;
+  size?: string;
+  /** "Produto — Cor — Tamanho" — o back-end já concatena; várias variantes do mesmo
+   *  produto viravam linhas indistinguíveis sem isso (só o SKU cru diferenciava). */
+  displayName?: string;
   quantity: number;
 };
 
@@ -437,7 +442,7 @@ function AllocatedStockPanel({ locations, reloadKey }: { locations: LocationRow[
                   {rows.map((r) => (
                     <tr key={r.variantId} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
                       <td className="px-2 py-1.5" style={{ color: lmfitTokens.text }}>
-                        {r.productName}
+                        {r.displayName || r.productName}
                       </td>
                       <td className="px-2 py-1.5" style={{ color: lmfitTokens.text }}>
                         {r.sku}
