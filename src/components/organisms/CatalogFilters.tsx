@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { publicHttp } from "@/lib/publicHttp";
 import { useCatalogStore, type PublicCatalogSort } from "@/stores/useCatalogStore";
 import { lmfitTokens } from "@/theme/tokens";
@@ -22,6 +22,10 @@ const SORT_OPTIONS: { value: PublicCatalogSort; label: string }[] = [
   { value: "maior-preco", label: "Maior preço" },
 ];
 
+/** How many pills a facet shows before collapsing behind "mostrar mais" — a catalog with
+ *  30+ colors used to dump every single one on screen at once with no cap at all. */
+const MAX_VISIBLE_OPTIONS = 8;
+
 function FacetGroup({
   label,
   options,
@@ -33,14 +37,26 @@ function FacetGroup({
   active: string;
   onSelect: (value: string) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   if (options.length === 0) return null;
+
+  // The active option must always be visible, even collapsed, so a selection never
+  // disappears from under the user just because it wasn't among the first N alphabetically.
+  const visible =
+    expanded || options.length <= MAX_VISIBLE_OPTIONS
+      ? options
+      : active && options.includes(active) && options.indexOf(active) >= MAX_VISIBLE_OPTIONS
+        ? [...options.slice(0, MAX_VISIBLE_OPTIONS - 1), active]
+        : options.slice(0, MAX_VISIBLE_OPTIONS);
+  const hiddenCount = options.length - visible.length;
+
   return (
     <div className="space-y-1.5">
       <span className="text-xs font-semibold" style={{ color: lmfitTokens.textMuted }}>
         {label}
       </span>
       <div className="flex flex-wrap gap-1.5">
-        {options.map((opt) => {
+        {visible.map((opt) => {
           const isActive = active === opt;
           return (
             <button
@@ -59,6 +75,16 @@ function FacetGroup({
             </button>
           );
         })}
+        {options.length > MAX_VISIBLE_OPTIONS && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="min-h-8 px-3 rounded-full border text-xs font-medium transition-colors underline-offset-2 hover:underline"
+            style={{ borderColor: "transparent", color: lmfitTokens.textMuted }}
+          >
+            {expanded ? "mostrar menos" : `+${hiddenCount} mais`}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -78,6 +104,12 @@ export function CatalogFilters() {
     setFilter,
   } = useCatalogStore();
   const [facets, setFacets] = useState<Facets | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const activeFacetCount = useMemo(
+    () => [category, size, color].filter(Boolean).length + (priceMin != null ? 1 : 0) + (priceMax != null ? 1 : 0),
+    [category, size, color, priceMin, priceMax],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -151,9 +183,33 @@ export function CatalogFilters() {
             </option>
           ))}
         </select>
+        {facets ? (
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
+            className="inline-flex items-center gap-1.5 min-h-10 px-3 text-sm rounded-md border bg-[var(--card-bg)]"
+            style={{
+              borderColor: filtersOpen || activeFacetCount > 0 ? lmfitTokens.primary : lmfitTokens.border,
+              color: filtersOpen || activeFacetCount > 0 ? lmfitTokens.primary : lmfitTokens.text,
+            }}
+          >
+            <SlidersHorizontal size={14} aria-hidden />
+            Filtros
+            {activeFacetCount > 0 && (
+              <span
+                className="inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[10px] font-semibold text-white"
+                style={{ backgroundColor: lmfitTokens.primary }}
+              >
+                {activeFacetCount}
+              </span>
+            )}
+            <ChevronDown size={14} aria-hidden className={filtersOpen ? "rotate-180 transition-transform" : "transition-transform"} />
+          </button>
+        ) : null}
       </div>
 
-      {facets ? (
+      {facets && filtersOpen ? (
         <div className="flex flex-wrap gap-x-6 gap-y-3 p-3 rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
           <FacetGroup label="Categoria" options={facets.categories} active={category} onSelect={(v) => setFilter({ category: v })} />
           <FacetGroup label="Tamanho" options={facets.sizes} active={size} onSelect={(v) => setFilter({ size: v })} />
