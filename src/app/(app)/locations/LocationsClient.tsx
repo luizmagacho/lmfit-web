@@ -62,6 +62,9 @@ export function flattenVariants(products: Array<Record<string, unknown>>): Varia
       out.push({ variantId: id, label: `${name}${variation ? ` — ${variation}` : ""} (${v.sku ?? ""})` });
     }
   }
+  // Products come back sorted by creation date, not name — a list of 100+ SKUs is only
+  // scannable alphabetically, otherwise finding one means reading the whole thing.
+  out.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
   return out;
 }
 
@@ -85,6 +88,7 @@ export function flattenProducts(products: Array<Record<string, unknown>>): Produ
         })),
     });
   }
+  out.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   return out;
 }
 
