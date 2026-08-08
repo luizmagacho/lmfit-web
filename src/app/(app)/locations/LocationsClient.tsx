@@ -2,9 +2,60 @@
 
 import { useEffect, useState } from "react";
 import { ArrowRightLeft, Boxes, Layers, Loader2, PackageSearch, Table2, X } from "lucide-react";
+import Select from "react-select";
 import { ResourceList } from "@/components/ResourceList";
 import { http } from "@/lib/http";
 import { lmfitTokens } from "@/theme/tokens";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const variantSelectStyles = {
+  control: (base: any) => ({
+    ...base,
+    minHeight: "2.5rem",
+    borderRadius: "0.375rem",
+    borderColor: lmfitTokens.border,
+    backgroundColor: "transparent",
+    color: lmfitTokens.text,
+  }),
+  singleValue: (base: any) => ({ ...base, color: lmfitTokens.text }),
+  input: (base: any) => ({ ...base, color: lmfitTokens.text }),
+  placeholder: (base: any) => ({ ...base, color: lmfitTokens.textMuted }),
+  menu: (base: any) => ({ ...base, zIndex: 50, backgroundColor: "var(--card-bg)" }),
+  option: (base: any, state: { isFocused: boolean }) => ({
+    ...base,
+    backgroundColor: state.isFocused ? lmfitTokens.accentBlue + "20" : "transparent",
+    color: lmfitTokens.text,
+    cursor: "pointer",
+  }),
+};
+
+/** Um produto/catálogo real passa de 100 SKUs — um <select> nativo obriga a rolar a lista
+ *  inteira pra achar um item; isso dá busca por texto (digitar filtra), igual ao resto do
+ *  admin (ex.: o picker de peça em Compras). Options já vêm carregadas em memória (a lista de
+ *  variantes/produtos já foi buscada pra tela toda), então é um Select síncrono, não Async. */
+function VariantSearchSelect({
+  options,
+  value,
+  onChange,
+  placeholder,
+}: {
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <Select
+      options={options}
+      value={options.find((o) => o.value === value) ?? null}
+      onChange={(opt) => onChange(opt?.value ?? "")}
+      styles={variantSelectStyles}
+      placeholder={placeholder}
+      isClearable
+      className="mt-1"
+    />
+  );
+}
 
 type LocationRow = {
   _id: string;
@@ -162,19 +213,12 @@ function TransferPanel({ locations, variants }: { locations: LocationRow[]; vari
       <form onSubmit={handleTransfer} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="text-xs sm:col-span-2" style={{ color: lmfitTokens.textMuted }}>
           Produto / variante
-          <select
+          <VariantSearchSelect
+            options={variants.map((v) => ({ value: v.variantId, label: v.label }))}
             value={variantId}
-            onChange={(e) => setVariantId(e.target.value)}
-            className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-transparent"
-            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-          >
-            <option value="">Selecione…</option>
-            {variants.map((v) => (
-              <option key={v.variantId} value={v.variantId}>
-                {v.label}
-              </option>
-            ))}
-          </select>
+            onChange={setVariantId}
+            placeholder="Buscar por nome ou SKU…"
+          />
         </label>
 
         <label className="text-xs" style={{ color: lmfitTokens.textMuted }}>
@@ -332,19 +376,12 @@ function AllocatePanel({
       <form onSubmit={handleAllocate} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="text-xs sm:col-span-2" style={{ color: lmfitTokens.textMuted }}>
           Produto / variante
-          <select
+          <VariantSearchSelect
+            options={variants.map((v) => ({ value: v.variantId, label: v.label }))}
             value={variantId}
-            onChange={(e) => setVariantId(e.target.value)}
-            className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-transparent"
-            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-          >
-            <option value="">Selecione…</option>
-            {variants.map((v) => (
-              <option key={v.variantId} value={v.variantId}>
-                {v.label}
-              </option>
-            ))}
-          </select>
+            onChange={setVariantId}
+            placeholder="Buscar por nome ou SKU…"
+          />
         </label>
 
         <label className="text-xs" style={{ color: lmfitTokens.textMuted }}>
@@ -729,19 +766,12 @@ function BatchTransferPanel({
 
         <label className="text-xs block" style={{ color: lmfitTokens.textMuted }}>
           Adicionar produto
-          <select
+          <VariantSearchSelect
+            options={products.map((p) => ({ value: p.productId, label: p.name }))}
             value={pickerProductId}
-            onChange={(e) => addProduct(e.target.value)}
-            className="mt-1 w-full min-h-10 border rounded px-2 py-1.5 text-sm bg-transparent"
-            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-          >
-            <option value="">Selecione um produto para adicionar suas variantes…</option>
-            {products.map((p) => (
-              <option key={p.productId} value={p.productId}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            onChange={addProduct}
+            placeholder="Buscar produto pelo nome…"
+          />
         </label>
 
         {lines.length ? (
