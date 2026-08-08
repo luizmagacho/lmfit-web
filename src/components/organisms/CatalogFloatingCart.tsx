@@ -54,6 +54,12 @@ export function CatalogFloatingCart() {
       return;
     }
 
+    // Abre a aba em branco JÁ, ainda de forma síncrona dentro do clique — o Safari do iOS
+    // bloqueia window.open() se ele acontecer depois de qualquer await (mesmo vindo de um
+    // clique real), então esperar as 3 chamadas de rede abaixo pra só então abrir sempre
+    // falhava silenciosamente no iPhone. Navegamos essa aba já aberta quando a URL fica pronta.
+    const whatsappWindow = window.open("", "_blank");
+
     setIsSubmitting(true);
     try {
       // 1. Criar Rascunho
@@ -100,8 +106,15 @@ export function CatalogFloatingCart() {
       setIsOpen(false);
       setShowForm(false);
       setCouponCode("");
-      window.open(url, "_blank");
+      if (whatsappWindow) {
+        whatsappWindow.location.href = url;
+      } else {
+        // Aba em branco também foi bloqueada (ex.: popups desativados no navegador) — tenta
+        // mesmo assim; ao menos não falha silenciosamente sem nenhuma tentativa.
+        window.open(url, "_blank");
+      }
     } catch (e: any) {
+      whatsappWindow?.close();
       console.error(e);
       toast.error(e?.response?.data?.message || "Ocorreu um erro ao gerar o pedido. Tente novamente.");
     } finally {
