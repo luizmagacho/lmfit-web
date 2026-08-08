@@ -31,6 +31,10 @@ export function ScrollReveal({ children, className }: { children: React.ReactNod
       setRevealed(true);
       return;
     }
+    // threshold: 0 (não 0.15) — o alvo pode ser um bloco arbitrariamente alto (ex.: a grade
+    // inteira do catálogo, centenas de produtos): exigir 15% da PRÓPRIA área do elemento visível
+    // nunca é satisfeito quando o elemento é mais alto que `15% > altura da viewport`, travando
+    // a animação em opacity:0 pra sempre. threshold 0 revela assim que o primeiro pixel entra.
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -38,7 +42,7 @@ export function ScrollReveal({ children, className }: { children: React.ReactNod
           observer.disconnect();
         }
       },
-      { threshold: 0.15 },
+      { threshold: 0 },
     );
     observer.observe(el);
     return () => observer.disconnect();

@@ -6,10 +6,12 @@ import { prefersReducedMotion, ScrollReveal } from "./ScrollReveal";
 // jsdom has no real IntersectionObserver — stub one whose constructor captures the callback so
 // tests can fire it manually, simulating the element scrolling into view.
 let ioCallback: IntersectionObserverCallback | null = null;
+let ioOptions: IntersectionObserverInit | undefined;
 const disconnect = vi.fn();
 class FakeIntersectionObserver {
-  constructor(cb: IntersectionObserverCallback) {
+  constructor(cb: IntersectionObserverCallback, options?: IntersectionObserverInit) {
     ioCallback = cb;
+    ioOptions = options;
   }
   observe() {}
   disconnect = disconnect;
@@ -43,6 +45,7 @@ describe("prefersReducedMotion", () => {
 describe("ScrollReveal — Loop 25", () => {
   beforeEach(() => {
     ioCallback = null;
+    ioOptions = undefined;
     disconnect.mockClear();
     global.IntersectionObserver = FakeIntersectionObserver as unknown as typeof IntersectionObserver;
     setReducedMotion(false);
@@ -89,6 +92,15 @@ describe("ScrollReveal — Loop 25", () => {
     expect(wrapper.style.opacity).toBe("1");
     expect(wrapper.style.transform).toBe("translateY(0)");
     expect(ioCallback).toBeNull(); // IntersectionObserver was never constructed
+  });
+
+  it("regression: observes with threshold 0, not 0.15 — a tall wrapped block (e.g. the whole catalog grid) never satisfies a 15%-of-its-own-area threshold within a normal viewport, which permanently froze it at opacity:0", () => {
+    render(
+      <ScrollReveal>
+        <p data-testid="content">conteúdo</p>
+      </ScrollReveal>,
+    );
+    expect(ioOptions?.threshold).toBe(0);
   });
 
   it("AC4: uses the shared storefront motion CSS vars, not a per-preset animation table", () => {
