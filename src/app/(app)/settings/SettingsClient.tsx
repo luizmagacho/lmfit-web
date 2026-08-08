@@ -1147,7 +1147,11 @@ export function SettingsClient() {
           <section className="rounded-2xl border p-6 md:p-8 bg-[var(--card-bg)] shadow-sm" style={{ borderColor: lmfitTokens.border }}>
             <form onSubmit={handleSaveLoyalty}>
               <div className="flex items-start gap-3.5 mb-6">
-                <div className="p-2.5 rounded-xl flex-shrink-0" style={iconBadgeStyle(secondaryColor)}>
+                {/* primaryColor, not secondaryColor: a tenant that never touches the secondary
+                    swatch keeps whatever it defaulted to (LM FIT's is #000000), which reads as
+                    a dead/invisible icon on a dark badge — primaryColor is always the color the
+                    merchant actually chose. */}
+                <div className="p-2.5 rounded-xl flex-shrink-0" style={iconBadgeStyle(primaryColor)}>
                   <Gift size={22} />
                 </div>
                 <div>
@@ -1329,7 +1333,7 @@ export function SettingsClient() {
           <section className="rounded-2xl border p-6 md:p-8 bg-[var(--card-bg)] shadow-sm" style={{ borderColor: lmfitTokens.border }}>
             <form onSubmit={handleSaveAnalytics}>
               <div className="flex items-start gap-3.5 mb-6">
-                <div className="p-2.5 rounded-xl flex-shrink-0" style={iconBadgeStyle(secondaryColor)}>
+                <div className="p-2.5 rounded-xl flex-shrink-0" style={iconBadgeStyle(primaryColor)}>
                   <BarChart3 size={22} />
                 </div>
                 <div>
