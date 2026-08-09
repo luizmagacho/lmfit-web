@@ -648,6 +648,22 @@ function BatchTransferPanel({
   const [lines, setLines] = useState<BatchLine[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  // Mesma quebra por local que o formulário de 1 item já mostrava — sem isso o usuário não
+  // tinha como ver, ao montar o lote, quanto tem de cada peça em cada local antes de decidir a
+  // quantidade a mover. `undefined` = ainda carregando, `[]` = sem estoque em nenhum local.
+  const [stockByVariant, setStockByVariant] = useState<Record<string, StockBreakdownRow[]>>({});
+
+  useEffect(() => {
+    const missing = lines.map((l) => l.variantId).filter((id) => !(id in stockByVariant));
+    if (!missing.length) return;
+    missing.forEach((variantId) => {
+      http
+        .get<StockBreakdownRow[]>(`/locations/stock/${variantId}`)
+        .then((res) => setStockByVariant((prev) => ({ ...prev, [variantId]: res.data })))
+        .catch(() => setStockByVariant((prev) => ({ ...prev, [variantId]: [] })));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lines]);
 
   function addProduct(productId: string) {
     if (!productId) return;
@@ -696,6 +712,9 @@ function BatchTransferPanel({
       });
       setMessage({ type: "success", text: `${items.length} peça(s) transferida(s) com sucesso.` });
       setLines([]);
+      // Os números por local mudaram de verdade (acabaram de mover); limpa o cache pra não
+      // mostrar a foto de ANTES da transferência se essas mesmas peças voltarem pro lote.
+      setStockByVariant({});
       onTransferred();
     } catch (err: any) {
       const conflicts = err.response?.data?.conflicts as Array<{ variantId: string; needed: number; available: number }> | undefined;
@@ -785,6 +804,9 @@ function BatchTransferPanel({
                   <th className="px-2 py-1.5 font-medium" style={{ color: lmfitTokens.textMuted }}>
                     SKU
                   </th>
+                  <th className="px-2 py-1.5 font-medium" style={{ color: lmfitTokens.textMuted }}>
+                    Estoque atual por local
+                  </th>
                   <th className="px-2 py-1.5 font-medium text-right" style={{ color: lmfitTokens.textMuted }}>
                     Quantidade
                   </th>
@@ -792,13 +814,36 @@ function BatchTransferPanel({
                 </tr>
               </thead>
               <tbody>
-                {lines.map((l) => (
+                {lines.map((l) => {
+                  const breakdown = stockByVariant[l.variantId];
+                  return (
                   <tr key={l.variantId} className="border-b last:border-0" style={{ borderColor: lmfitTokens.border }}>
                     <td className="px-2 py-1.5" style={{ color: lmfitTokens.text }}>
                       {l.label}
                     </td>
                     <td className="px-2 py-1.5" style={{ color: lmfitTokens.textMuted }}>
                       {l.sku}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      {breakdown === undefined ? (
+                        <span style={{ color: lmfitTokens.textMuted }}>Carregando…</span>
+                      ) : breakdown.length === 0 ? (
+                        <span style={{ color: lmfitTokens.textMuted }}>Sem estoque registrado</span>
+                      ) : (
+                        <ul className="space-y-0.5">
+                          {breakdown.map((b) => (
+                            <li key={b.locationId} className="flex items-center justify-between gap-3 whitespace-nowrap">
+                              <span style={{ color: lmfitTokens.textMuted }}>
+                                {b.locationName}
+                                {b.isDefault ? " (padrão)" : ""}
+                              </span>
+                              <span className="tabular-nums font-medium" style={{ color: lmfitTokens.text }}>
+                                {b.quantity} un.
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </td>
                     <td className="px-2 py-1.5 text-right">
                       <input
@@ -822,7 +867,8 @@ function BatchTransferPanel({
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
