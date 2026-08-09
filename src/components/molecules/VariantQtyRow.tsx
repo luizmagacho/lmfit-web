@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { NumberStepper } from "@/components/atoms/NumberStepper";
 import { Badge } from "@/components/atoms/Badge";
 import { formatBRL } from "@/lib/formatMoney";
@@ -12,6 +13,11 @@ export type VariantRowData = {
   size?: string;
   unitPrice: number;
   stock: number;
+  /** Sem isto, "Encomendar" aparecia pra QUALQUER variante sem estoque — o cliente conseguia
+   *  adicionar à sacola e só descobria, na hora de finalizar, que o servidor rejeita porque
+   *  esta variante específica não aceita encomenda (`acceptsBackorder` é por variante, o
+   *  lojista decide quais). */
+  acceptsBackorder: boolean;
 };
 
 export function VariantQtyRow({
@@ -63,7 +69,11 @@ export function VariantQtyRow({
           <span className="tabular-nums">{formatBRL(data.unitPrice)}</span>
         </div>
       </div>
-      {outOfStock && quantity === 0 ? (
+      {outOfStock && quantity === 0 && !data.acceptsBackorder ? (
+        <span className="text-xs whitespace-nowrap" style={{ color: lmfitTokens.textMuted }}>
+          Indisponível
+        </span>
+      ) : outOfStock && quantity === 0 ? (
         <button
           type="button"
           onClick={(e) => {

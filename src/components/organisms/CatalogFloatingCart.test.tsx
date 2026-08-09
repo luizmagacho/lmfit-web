@@ -49,7 +49,12 @@ describe("CatalogFloatingCart — WhatsApp handoff on iOS Safari", () => {
   afterEach(() => {
     cleanup();
     useCartStore.setState({ lines: [], customer: null });
-    vi.restoreAllMocks();
+    // restoreAllMocks() calls mockRestore() on every mock, including the plain vi.fn()s
+    // returned by the vi.mock() factories above — for those (no real implementation to
+    // "restore" to) that wipes the factory's own mockImplementation, so every test after the
+    // first silently got `post()` resolving to undefined. clearAllMocks() only resets call
+    // history, which is all a per-test spy like `vi.spyOn(window, "open")` actually needs.
+    vi.clearAllMocks();
   });
 
   it("opens the tab synchronously on click, before any await resolves — window.open() after an await is silently blocked by iOS Safari's popup blocker", async () => {
@@ -72,6 +77,37 @@ describe("CatalogFloatingCart — WhatsApp handoff on iOS Safari", () => {
     await waitFor(() => expect(fakeWindow.location.href).toContain("https://wa.me/"));
     expect(fakeWindow.location.href).toContain("ORD-1");
     expect(openSpy).toHaveBeenCalledTimes(1); // never opened a second (blockable) window
+  });
+
+  it("shows a real tappable <a href> to wa.me once the order succeeds — the guaranteed path when the pre-opened tab was silently closed (iOS Safari)", async () => {
+    const fakeWindow = { location: { href: "" }, close: vi.fn() } as unknown as Window;
+    vi.spyOn(window, "open").mockReturnValue(fakeWindow);
+
+    render(<CatalogFloatingCart />);
+    fireEvent.click(screen.getByText("Comprar via WhatsApp"));
+    fireEvent.change(screen.getByPlaceholderText("Seu Nome Completo"), { target: { value: "Maria" } });
+    fireEvent.change(screen.getByPlaceholderText("Seu WhatsApp (DDD + Número)"), { target: { value: "41999998888" } });
+    fireEvent.click(screen.getByText("Confirmar e Enviar"));
+
+    const link = await screen.findByText("Abrir WhatsApp");
+    expect(link.tagName).toBe("A");
+    expect(link.getAttribute("href")).toContain("https://wa.me/");
+    expect(link.getAttribute("href")).toContain("ORD-1");
+    expect(link.getAttribute("target")).toBe("_blank");
+  });
+
+  it("keeps the confirmation link visible after clearCart empties the bag — items===0 alone must not unmount it", async () => {
+    vi.spyOn(window, "open").mockReturnValue({ location: { href: "" }, close: vi.fn() } as unknown as Window);
+
+    render(<CatalogFloatingCart />);
+    fireEvent.click(screen.getByText("Comprar via WhatsApp"));
+    fireEvent.change(screen.getByPlaceholderText("Seu Nome Completo"), { target: { value: "Maria" } });
+    fireEvent.change(screen.getByPlaceholderText("Seu WhatsApp (DDD + Número)"), { target: { value: "41999998888" } });
+    fireEvent.click(screen.getByText("Confirmar e Enviar"));
+
+    await screen.findByText("Abrir WhatsApp");
+    expect(useCartStore.getState().lines).toHaveLength(0);
+    expect(screen.getByText("Abrir WhatsApp")).toBeDefined();
   });
 
   it("closes the pre-opened blank tab if the order submission fails", async () => {

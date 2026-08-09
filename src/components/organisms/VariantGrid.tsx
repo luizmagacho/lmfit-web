@@ -86,6 +86,7 @@ export function VariantGrid({
         size: d.size === "Único" ? undefined : d.size,
         unitPrice: price,
         stock: d.quantityInStock,
+        acceptsBackorder: d.acceptsBackorder,
       };
     });
   }, [product, role]);

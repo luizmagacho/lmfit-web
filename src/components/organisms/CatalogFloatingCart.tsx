@@ -19,6 +19,12 @@ export function CatalogFloatingCart() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [couponCode, setCouponCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Preenchido quando o pedido é criado com sucesso — mostra um link de verdade pro WhatsApp
+  // em vez de só torcer pro window.open() automático funcionar (ver comentário em
+  // handleCheckout: no Safari do iPhone ele segue falhando mesmo pré-aberto de forma síncrona,
+  // provavelmente a aba em branco é fechada silenciosamente enquanto as 3 chamadas de rede
+  // rodam). Um toque real num <a href> nunca é bloqueado por popup blocker nenhum.
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let v = e.target.value.replace(/\D/g, "");
@@ -40,7 +46,10 @@ export function CatalogFloatingCart() {
   const items = lines.reduce((acc, l) => acc + l.quantity, 0);
   const subtotal = lines.reduce((acc, l) => acc + l.unitPrice * l.quantity, 0);
 
-  if (items === 0) return null;
+  // clearCart() on a successful submit zeroes `items` on the next render — without the
+  // whatsappUrl check this would unmount the component (and the confirmation link with it)
+  // the instant the order succeeds, before the customer ever sees it.
+  if (items === 0 && !whatsappUrl) return null;
 
   const handleCheckout = async () => {
     if (!showForm) {
@@ -103,16 +112,14 @@ export function CatalogFloatingCart() {
       const url = `https://wa.me/${storePhone}?text=${encodedText}`;
 
       clearCart();
-      setIsOpen(false);
       setShowForm(false);
       setCouponCode("");
+      // Melhor esforço: funciona em vários navegadores. Mas não confiamos só nisso — o botão
+      // com <a href> abaixo (setWhatsappUrl) é o caminho garantido, inclusive no iPhone.
       if (whatsappWindow) {
         whatsappWindow.location.href = url;
-      } else {
-        // Aba em branco também foi bloqueada (ex.: popups desativados no navegador) — tenta
-        // mesmo assim; ao menos não falha silenciosamente sem nenhuma tentativa.
-        window.open(url, "_blank");
       }
+      setWhatsappUrl(url);
     } catch (e: any) {
       whatsappWindow?.close();
       console.error(e);
@@ -122,13 +129,21 @@ export function CatalogFloatingCart() {
     }
   };
 
+  // Fecha o drawer e, se o pedido já tinha sido enviado, também limpa o estado de confirmação —
+  // sem isso, fechar sem tocar em "Abrir WhatsApp" deixava o carrinho flutuante reaparecer
+  // vazio (0 itens / R$0,00) porque `items === 0 && !whatsappUrl` deixava de ser verdade.
+  const handleClose = () => {
+    setIsOpen(false);
+    setWhatsappUrl(null);
+  };
+
   return (
     <>
       {/* Backdrop (quando aberto) */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/40 z-40 transition-opacity"
-          onClick={() => setIsOpen(false)}
+          onClick={handleClose}
           aria-hidden="true"
         />
       )}
@@ -137,7 +152,7 @@ export function CatalogFloatingCart() {
       <div 
         className={`fixed bottom-0 left-0 right-0 z-50 bg-[var(--card-bg)] rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transition-transform duration-300 transform ${isOpen ? "translate-y-0" : "translate-y-[100%]"}`}
       >
-        <div className="w-full flex justify-center py-3" onClick={() => setIsOpen(false)}>
+        <div className="w-full flex justify-center py-3" onClick={handleClose}>
           <div className="w-12 h-1.5 bg-neutral-300 rounded-full" />
         </div>
         <div className="px-4 pb-2 flex justify-between items-center">
@@ -149,46 +164,72 @@ export function CatalogFloatingCart() {
           )}
         </div>
         
-        {showForm && (
-          <div className="px-4 pb-4 space-y-3">
-            <p className="text-sm font-medium" style={{ color: lmfitTokens.textMuted }}>Preencha seus dados para criar o pedido:</p>
-            <input 
-              type="text" 
-              placeholder="Seu Nome Completo" 
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              value={customerName}
-              onChange={e => setCustomerName(e.target.value)}
-              style={{ borderColor: lmfitTokens.border }}
-              disabled={isSubmitting}
-            />
-            <input
-              type="tel"
-              placeholder="Seu WhatsApp (DDD + Número)"
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              value={customerPhone}
-              onChange={handlePhoneChange}
-              style={{ borderColor: lmfitTokens.border }}
-              disabled={isSubmitting}
-            />
-            <input
-              type="text"
-              placeholder="Cupom de desconto (opcional)"
-              className="w-full border rounded-md px-3 py-2 text-sm uppercase placeholder:normal-case"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
-              style={{ borderColor: lmfitTokens.border }}
-              disabled={isSubmitting}
-            />
+        {whatsappUrl ? (
+          <div className="px-4 pb-6 space-y-4 text-center">
+            <p className="text-sm font-medium" style={{ color: lmfitTokens.text }}>
+              Pedido enviado! Toque no botão abaixo para continuar no WhatsApp.
+            </p>
+            {/* Um toque real neste link nunca é bloqueado por popup blocker — diferente de um
+             *  window.open() disparado depois de chamadas assíncronas, que o Safari do iPhone
+             *  segue recusando mesmo com a aba pré-aberta de forma síncrona. */}
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                setIsOpen(false);
+                setWhatsappUrl(null);
+              }}
+              className="flex items-center justify-center w-full min-h-12 rounded-md text-white font-semibold"
+              style={{ backgroundColor: lmfitTokens.primary }}
+            >
+              Abrir WhatsApp
+            </a>
           </div>
-        )}
+        ) : (
+          <>
+            {showForm && (
+              <div className="px-4 pb-4 space-y-3">
+                <p className="text-sm font-medium" style={{ color: lmfitTokens.textMuted }}>Preencha seus dados para criar o pedido:</p>
+                <input
+                  type="text"
+                  placeholder="Seu Nome Completo"
+                  className="w-full border rounded-md px-3 py-2 text-sm"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  style={{ borderColor: lmfitTokens.border }}
+                  disabled={isSubmitting}
+                />
+                <input
+                  type="tel"
+                  placeholder="Seu WhatsApp (DDD + Número)"
+                  className="w-full border rounded-md px-3 py-2 text-sm"
+                  value={customerPhone}
+                  onChange={handlePhoneChange}
+                  style={{ borderColor: lmfitTokens.border }}
+                  disabled={isSubmitting}
+                />
+                <input
+                  type="text"
+                  placeholder="Cupom de desconto (opcional)"
+                  className="w-full border rounded-md px-3 py-2 text-sm uppercase placeholder:normal-case"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  style={{ borderColor: lmfitTokens.border }}
+                  disabled={isSubmitting}
+                />
+              </div>
+            )}
 
-        <div className="pb-6">
-          <QuickCart 
-            onFinalize={handleCheckout} 
-            finalizeLabel={showForm ? "Confirmar e Enviar" : "Comprar via WhatsApp"} 
-            busy={isSubmitting}
-          />
-        </div>
+            <div className="pb-6">
+              <QuickCart
+                onFinalize={handleCheckout}
+                finalizeLabel={showForm ? "Confirmar e Enviar" : "Comprar via WhatsApp"}
+                busy={isSubmitting}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Floating Button (quando fechado) */}

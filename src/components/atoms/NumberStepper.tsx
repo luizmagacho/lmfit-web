@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { Minus, Plus } from "lucide-react";
 import { IconButton } from "./IconButton";
 import { lmfitTokens } from "@/theme/tokens";
