@@ -25,6 +25,7 @@ export function SettingsClient() {
   const setTenantShipping = useTenantStore((s) => s.setTenantShipping);
   const setTenantAnalytics = useTenantStore((s) => s.setTenantAnalytics);
   const setTenantStorefront = useTenantStore((s) => s.setTenantStorefront);
+  const setTenantWhatsappNumber = useTenantStore((s) => s.setTenantWhatsappNumber);
   const user = useAuthStore((s) => s.user);
 
   const [primaryColor, setPrimaryColor] = useState("#7c3aed");
@@ -39,6 +40,11 @@ export function SettingsClient() {
   const [metaWhatsappPhoneNumberId, setMetaWhatsappPhoneNumberId] = useState("");
   const [metaWhatsappAccessToken, setMetaWhatsappAccessToken] = useState("");
   const [whatsappAiEnabled, setWhatsappAiEnabled] = useState(false);
+  // Número de contato pra onde os checkouts (/loja e /catalogo) mandam o cliente no WhatsApp —
+  // distinto da API oficial da Meta abaixo (aquela é pra IA responder automaticamente; este é só
+  // o "pra qual número o wa.me aponta"). Sem este campo não havia como o lojista configurar isso
+  // pela tela; o /catalogo usava um número fixo no código e o /loja ficava com o campo vazio.
+  const [whatsappNumber, setWhatsappNumber] = useState("");
 
   const [loyaltyEnabled, setLoyaltyEnabled] = useState(false);
   const [loyaltyPointsPerBRL, setLoyaltyPointsPerBRL] = useState(1);
@@ -127,6 +133,7 @@ export function SettingsClient() {
             setSecondaryColor(data.branding?.secondaryColor || "#06b6d4");
             setLogoUrl(data.branding?.logoUrl || "");
             setFaviconUrl(data.branding?.faviconUrl || "");
+            setWhatsappNumber(data.whatsappNumber || "");
             setInfinitePayTag(data.infinitePayTag || "");
             setInfinitePayApiKey(data.infinitePayApiKey || "");
             setGeminiApiKey(data.geminiApiKey || "");
@@ -331,6 +338,7 @@ export function SettingsClient() {
         secondaryColor,
         logoUrl: logoUrl.trim() || undefined,
         faviconUrl: faviconUrl.trim() || undefined,
+        whatsappNumber: whatsappNumber.trim() || undefined,
         infinitePayTag: infinitePayTag.trim() || undefined,
         infinitePayApiKey: infinitePayApiKey.trim() || undefined,
         geminiApiKey: geminiApiKey.trim() || undefined,
@@ -346,6 +354,10 @@ export function SettingsClient() {
 
       // Instantly update Zustand store so the client layout re-themes
       setTenantBranding(payload);
+      // whatsappNumber é campo de topo em TenantInfo (não aninhado em branding) — setTenantBranding
+      // mistura tudo dentro de tenant.branding.*, então sem isso o cache local ficava com o valor
+      // antigo até um refresh completo, mesmo o checkout já lendo tenant.whatsappNumber direto.
+      setTenantWhatsappNumber(whatsappNumber.trim());
       setSuccessMsg("Customização salva com sucesso! O visual foi atualizado instantaneamente.");
     } catch (err: any) {
       console.error(err);
@@ -631,6 +643,35 @@ export function SettingsClient() {
                         </label>
                       </div>
                       <p className="text-[10px] text-neutral-400 dark:text-neutral-500">Recomendado: formato quadrado (32x32 ou 64x64 pixels).</p>
+                    </div>
+
+                    {/* WhatsApp de contato — pra onde o checkout do /loja e do /catalogo manda o
+                        cliente confirmar o pedido; diferente da API oficial da Meta logo abaixo,
+                        que é só pra IA responder automaticamente. */}
+                    <div className="space-y-4 pt-6 border-t" style={{ borderColor: lmfitTokens.border }}>
+                      <div>
+                        <h3 className="text-sm font-bold tracking-wide uppercase text-neutral-400 dark:text-neutral-500">
+                          {language === "en" ? "Order Contact" : "Contato para Pedidos"}
+                        </h3>
+                        <p className="text-xs mt-1" style={{ color: lmfitTokens.textMuted }}>
+                          {language === "en"
+                            ? "The WhatsApp number your customers are sent to when they finish a checkout on your storefront or catalog."
+                            : "O número de WhatsApp para onde o cliente é enviado ao finalizar um pedido na sua loja online ou catálogo."}
+                        </p>
+                      </div>
+                      <div className="max-w-sm space-y-1.5">
+                        <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                          {language === "en" ? "WhatsApp number" : "Número de WhatsApp"}
+                        </label>
+                        <input
+                          type="tel"
+                          value={whatsappNumber}
+                          onChange={(e) => setWhatsappNumber(e.target.value)}
+                          placeholder="Ex: (41) 99677-0521"
+                          className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                        />
+                      </div>
                     </div>
 
                     {/* Pagamentos / InfinitePay */}

@@ -9,8 +9,10 @@ import { QuickCart } from "@/components/organisms/QuickCart";
 import { formatBRL } from "@/lib/formatMoney";
 import { publicHttp } from "@/lib/publicHttp";
 import { lmfitTokens } from "@/theme/tokens";
+import { useTenant } from "@/context/TenantContext";
 
 export function CatalogFloatingCart() {
+  const { tenant } = useTenant();
   const [isOpen, setIsOpen] = useState(false);
   const lines = useCartStore((s) => s.lines);
   const clearCart = useCartStore((s) => s.clear);
@@ -63,6 +65,15 @@ export function CatalogFloatingCart() {
       return;
     }
 
+    // Checado ANTES de criar o pedido de verdade — sem isso, uma loja sem WhatsApp configurado
+    // (Configurações) ainda submetia o pedido no servidor e só então descobria que não tinha
+    // pra onde mandar a mensagem, deixando um pedido "órfão" sem confirmação nenhuma pro cliente.
+    const storePhone = (tenant?.whatsappNumber || "").replace(/\D/g, "");
+    if (!storePhone) {
+      toast.error("A loja ainda não configurou um número de WhatsApp para receber pedidos.");
+      return;
+    }
+
     // Abre a aba em branco JÁ, ainda de forma síncrona dentro do clique — o Safari do iOS
     // bloqueia window.open() se ele acontecer depois de qualquer await (mesmo vindo de um
     // clique real), então esperar as 3 chamadas de rede abaixo pra só então abrir sempre
@@ -90,8 +101,7 @@ export function CatalogFloatingCart() {
       const res3 = await publicHttp.post(`/public/order-drafts/${token}/submit`, {});
       const orderId = res3.data.orderId;
 
-      // 4. Montar mensagem WhatsApp
-      const storePhone = "5541996770521";
+      // 4. Montar mensagem WhatsApp (storePhone já validado antes de abrir o pedido, acima)
       let text = `Olá! Gostaria de finalizar meu pedido #${orderId} com os itens:\n\n`;
       lines.forEach((l) => {
         text += `🛍️ *${l.quantity}x ${l.productName}*\n`;

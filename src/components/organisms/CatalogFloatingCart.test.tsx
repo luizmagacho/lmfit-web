@@ -25,6 +25,15 @@ vi.mock("@/lib/publicHttp", () => ({
   },
 }));
 
+// Regression: the wa.me destination used to be a literal string hardcoded in this component,
+// disconnected from the store's actual configured number (and from /loja's checkout, which
+// already read tenant.whatsappNumber) — mock the tenant to a real number by default so the
+// happy-path tests below exercise the same code path production uses.
+let mockTenant: { whatsappNumber?: string } | null = { whatsappNumber: "5541999998888" };
+vi.mock("@/context/TenantContext", () => ({
+  useTenant: () => ({ tenant: mockTenant }),
+}));
+
 import { useCartStore } from "@/stores/useCartStore";
 import { CatalogFloatingCart } from "./CatalogFloatingCart";
 
@@ -44,6 +53,7 @@ const cartLine = {
 describe("CatalogFloatingCart — WhatsApp handoff on iOS Safari", () => {
   beforeEach(() => {
     useCartStore.setState({ lines: [cartLine], customer: null });
+    mockTenant = { whatsappNumber: "5541999998888" };
   });
 
   afterEach(() => {
@@ -108,6 +118,24 @@ describe("CatalogFloatingCart — WhatsApp handoff on iOS Safari", () => {
     await screen.findByText("Abrir WhatsApp");
     expect(useCartStore.getState().lines).toHaveLength(0);
     expect(screen.getByText("Abrir WhatsApp")).toBeDefined();
+  });
+
+  it("blocks the order entirely — never opens a tab, never submits — when the store has no whatsappNumber configured", async () => {
+    mockTenant = { whatsappNumber: undefined };
+    const { publicHttp } = await import("@/lib/publicHttp");
+    const openSpy = vi.spyOn(window, "open");
+
+    render(<CatalogFloatingCart />);
+    fireEvent.click(screen.getByText("Comprar via WhatsApp"));
+    fireEvent.change(screen.getByPlaceholderText("Seu Nome Completo"), { target: { value: "Maria" } });
+    fireEvent.change(screen.getByPlaceholderText("Seu WhatsApp (DDD + Número)"), { target: { value: "41999998888" } });
+    fireEvent.click(screen.getByText("Confirmar e Enviar"));
+
+    // Checked before creating anything server-side — a misconfigured store must not leave an
+    // "orphan" submitted order the customer has no way to follow up on via WhatsApp.
+    expect(publicHttp.post).not.toHaveBeenCalled();
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText("Abrir WhatsApp")).toBeNull();
   });
 
   it("closes the pre-opened blank tab if the order submission fails", async () => {

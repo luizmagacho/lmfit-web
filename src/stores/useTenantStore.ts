@@ -112,6 +112,7 @@ interface TenantState {
   setTenantShipping: (shippingConfig: ShippingConfig) => void;
   setTenantAnalytics: (analytics: AnalyticsConfig) => void;
   setTenantStorefront: (storefront: Partial<StorefrontConfig>) => void;
+  setTenantWhatsappNumber: (whatsappNumber: string) => void;
   resetTenant: () => void;
 }
 
@@ -187,6 +188,13 @@ export const useTenantStore = create<TenantState>((set, get) => ({
           storefront: { ...state.tenant.storefront, ...storefront },
         },
       };
+    });
+  },
+
+  setTenantWhatsappNumber: (whatsappNumber: string) => {
+    set((state) => {
+      if (!state.tenant) return state;
+      return { tenant: { ...state.tenant, whatsappNumber } };
     });
   },
 
