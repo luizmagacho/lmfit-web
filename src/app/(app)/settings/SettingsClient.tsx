@@ -15,6 +15,19 @@ import { STOREFRONT_PRESETS, DEFAULT_THEME_PRESET, type ThemePreset } from "@/th
 import { buildStorefrontUrl } from "@/lib/tenantSlug";
 import { WhatsappSellersSection } from "./WhatsappSellersSection";
 
+/** (DDD) NNNNN-NNNN (móvel, 9 dígitos) ou (DDD) NNNN-NNNN (formato antigo, 8 dígitos) — mesma
+ *  máscara já aplicada ao telefone do cliente no checkout (CatalogFloatingCart.tsx). Função pura
+ *  e exportada pra formatar tanto digitação quanto o valor já salvo vindo do servidor. */
+export function formatWhatsappNumberMask(raw: string): string {
+  let v = raw.replace(/\D/g, "");
+  if (v.length > 11) v = v.slice(0, 11);
+  if (v.length > 10) return `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
+  if (v.length > 6) return `(${v.slice(0, 2)}) ${v.slice(2, 6)}-${v.slice(6)}`;
+  if (v.length > 2) return `(${v.slice(0, 2)}) ${v.slice(2)}`;
+  if (v.length > 0) return `(${v}`;
+  return v;
+}
+
 export function SettingsClient() {
   const { theme, setTheme } = useTheme();
   const { language, setLanguage } = useLanguage();
@@ -47,22 +60,11 @@ export function SettingsClient() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   // Mesma máscara já usada no checkout do /catalogo (CatalogFloatingCart.tsx) — dígitos puros
   // formatados como (DDD) NNNNN-NNNN (móvel, 9 dígitos) ou (DDD) NNNN-NNNN (formato antigo,
-  // 8 dígitos), decidido pela quantidade de dígitos já digitados.
+  // 8 dígitos), decidido pela quantidade de dígitos já digitados. Função pura (não presa ao
+  // evento de input) pra poder formatar também o valor que já vem salvo do servidor — sem
+  // isso, um número salvo aparecia sem máscara até o usuário digitar algo nele.
   const handleWhatsappNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let v = e.target.value.replace(/\D/g, "");
-    if (v.length > 11) v = v.slice(0, 11);
-
-    let formatted = v;
-    if (v.length > 10) {
-      formatted = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
-    } else if (v.length > 6) {
-      formatted = `(${v.slice(0, 2)}) ${v.slice(2, 6)}-${v.slice(6)}`;
-    } else if (v.length > 2) {
-      formatted = `(${v.slice(0, 2)}) ${v.slice(2)}`;
-    } else if (v.length > 0) {
-      formatted = `(${v}`;
-    }
-    setWhatsappNumber(formatted);
+    setWhatsappNumber(formatWhatsappNumberMask(e.target.value));
   };
 
   const [loyaltyEnabled, setLoyaltyEnabled] = useState(false);
@@ -152,7 +154,7 @@ export function SettingsClient() {
             setSecondaryColor(data.branding?.secondaryColor || "#06b6d4");
             setLogoUrl(data.branding?.logoUrl || "");
             setFaviconUrl(data.branding?.faviconUrl || "");
-            setWhatsappNumber(data.whatsappNumber || "");
+            setWhatsappNumber(formatWhatsappNumberMask(data.whatsappNumber || ""));
             setInfinitePayTag(data.infinitePayTag || "");
             setInfinitePayApiKey(data.infinitePayApiKey || "");
             setGeminiApiKey(data.geminiApiKey || "");
