@@ -45,6 +45,25 @@ export function SettingsClient() {
   // o "pra qual número o wa.me aponta"). Sem este campo não havia como o lojista configurar isso
   // pela tela; o /catalogo usava um número fixo no código e o /loja ficava com o campo vazio.
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  // Mesma máscara já usada no checkout do /catalogo (CatalogFloatingCart.tsx) — dígitos puros
+  // formatados como (DDD) NNNNN-NNNN (móvel, 9 dígitos) ou (DDD) NNNN-NNNN (formato antigo,
+  // 8 dígitos), decidido pela quantidade de dígitos já digitados.
+  const handleWhatsappNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let v = e.target.value.replace(/\D/g, "");
+    if (v.length > 11) v = v.slice(0, 11);
+
+    let formatted = v;
+    if (v.length > 10) {
+      formatted = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
+    } else if (v.length > 6) {
+      formatted = `(${v.slice(0, 2)}) ${v.slice(2, 6)}-${v.slice(6)}`;
+    } else if (v.length > 2) {
+      formatted = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+    } else if (v.length > 0) {
+      formatted = `(${v}`;
+    }
+    setWhatsappNumber(formatted);
+  };
 
   const [loyaltyEnabled, setLoyaltyEnabled] = useState(false);
   const [loyaltyPointsPerBRL, setLoyaltyPointsPerBRL] = useState(1);
@@ -666,7 +685,7 @@ export function SettingsClient() {
                         <input
                           type="tel"
                           value={whatsappNumber}
-                          onChange={(e) => setWhatsappNumber(e.target.value)}
+                          onChange={handleWhatsappNumberChange}
                           placeholder="Ex: (41) 99677-0521"
                           className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
                           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
