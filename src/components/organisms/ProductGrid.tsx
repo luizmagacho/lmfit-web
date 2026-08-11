@@ -273,7 +273,9 @@ export function ProductGrid({
             // Loop 20 — hover ganha `scale` de verdade (não só o crossfade de opacidade que já
             // existia), usando os MESMOS tokens de motion já computados em `motionStyle` — a
             // curva de cada preset decide o "feel"; só a do Tropical tem overshoot (bounce real).
-            className={`group ${frameClass} ${spanClass} ${offsetClass} flex flex-col hover:border-[var(--primary)] hover:scale-[1.03] transition-all active:scale-[0.98]`}
+            // Esgotado (ativo, sem estoque): acinzentado, mas continua clicável — a peça existe,
+            // só não pode ser comprada agora.
+            className={`group ${frameClass} ${spanClass} ${offsetClass} flex flex-col hover:border-[var(--primary)] hover:scale-[1.03] transition-all active:scale-[0.98] ${!inStock ? "opacity-55 grayscale-[60%] hover:opacity-80" : ""}`}
             style={{ ...frameStyle, ...motionStyle }}
           >
             <article className="flex flex-col h-full">

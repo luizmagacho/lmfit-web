@@ -45,13 +45,22 @@ export function SimpleProductGrid({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return items.filter((p) => {
+    const result = items.filter((p) => {
       if (onlyInStock && !productInStock(p)) return false;
       if (onlyNew && !productIsNew(p)) return false;
       if (!q) return true;
       const hay = [p.name, p.sku, p.category].filter(Boolean).join(" ").toLowerCase();
       return hay.includes(q);
     });
+    // Peças com estoque primeiro; esgotadas (mas ativas) por último, acinzentadas no card.
+    result.sort((a, b) => {
+      const aStock = productInStock(a);
+      const bStock = productInStock(b);
+      if (aStock && !bStock) return -1;
+      if (!aStock && bStock) return 1;
+      return 0;
+    });
+    return result;
   }, [items, search, onlyInStock, onlyNew]);
 
   const mode = inferModeForUser(role);
@@ -100,7 +109,7 @@ export function SimpleProductGrid({
           <Link
             href={`/catalogo/p/${slug}`}
             key={id || String(p.name)}
-            className="rounded-lg border bg-[var(--card-bg)] overflow-hidden flex flex-col hover:border-[var(--primary)] transition-colors active:scale-[0.98]"
+            className={`rounded-lg border bg-[var(--card-bg)] overflow-hidden flex flex-col hover:border-[var(--primary)] transition-colors active:scale-[0.98] ${!inStock ? "opacity-55 grayscale-[60%] hover:opacity-80" : ""}`}
             style={{ borderColor: lmfitTokens.border }}
           >
             <article className="flex flex-col h-full">
