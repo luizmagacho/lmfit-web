@@ -172,33 +172,35 @@ Ordenadas por dependência; as tarefas 1–7 (o teste de integração) já entre
 ir para produção antes das 8+ (o cron/alerta). Nenhuma tarefa isolada passa de ~meio dia.
 
 **Bloco A — teste de integração (AC1–AC6)**
-- [ ] 1. Instalar `mongodb-memory-server` como devDependency
-- [ ] 2. `.env.test` com segredos dummy válidos (`JWT_ACCESS_SECRET`/`JWT_CUSTOMER_ACCESS_SECRET`
+- [x] 1. Instalar `mongodb-memory-server` como devDependency
+- [x] 2. `.env.test` com segredos dummy válidos (`JWT_ACCESS_SECRET`/`JWT_CUSTOMER_ACCESS_SECRET`
       ≥32 chars) + carregar `MONGODB_URI` da instância em memória antes de importar o `AppModule`
-- [ ] 3. `test/helpers/seed-tenant.ts` — cria tenant + produto, retorna helper pra inserir uma
+- [x] 3. `test/helpers/seed-tenant.ts` — cria tenant + produto, retorna helper pra inserir uma
       variante a partir de uma linha da matriz A–E
-- [ ] 4. `test/checkout-money-path.e2e-spec.ts` — esqueleto: `beforeAll` sobe o `AppModule` via
+- [x] 4. `test/checkout-money-path.e2e-spec.ts` — esqueleto: `beforeAll` sobe o `AppModule` via
       `Test.createTestingModule` + `app.init()`, `afterAll` derruba app e memory-server
-- [ ] 5. Caso A (AC1) — a regressão de 12/08 primeiro, sozinho, pra provar o harness de ponta a ponta
-- [ ] 6. Casos B–E (AC2–AC5) — cada um nomeando seu AC
-- [ ] 7. `npm run test:e2e` no `deploy-droplet.yml` (hoje só roda `npm test`) — confirma AC6
+- [x] 5. Caso A (AC1) — a regressão de 12/08 primeiro, sozinho, pra provar o harness de ponta a ponta
+- [x] 6. Casos B–E (AC2–AC5) — cada um nomeando seu AC (AC2 revisada durante o TEST, ver Result)
+- [x] 7. `npm run test:e2e` no `deploy-droplet.yml` (hoje só roda `npm test`) — confirma AC6
 
 **Bloco B — canário em produção (AC7–AC9)**
-- [ ] 8. `checkout-canary.cron.ts` (molde: `abandoned-cart.cron.ts`) — no-op sem `CANARY_TENANT_SLUG` (AC9)
-- [ ] 9. Fluxo do canário: cria draft → patch → submit no tenant `canary`; sucesso vira
+- [x] 8. `checkout-canary.cron.ts` (molde: `abandoned-cart.cron.ts`) — no-op sem `CANARY_TENANT_SLUG` (AC9)
+- [x] 9. Fluxo do canário: cria draft → patch → submit no tenant `canary`; sucesso vira
       `logStaffAlert('canary_ok', …)` (AC7)
-- [ ] 10. Alerta de falha do canário com etapa + motivo (AC8)
-- [ ] 11. Poda de pedidos de canário por `CANARY_RETENTION_DAYS`
-- [ ] 12. Testes unitários do cron (sucesso, falha por etapa, no-op sem env)
+- [x] 10. Alerta de falha do canário com etapa + motivo (AC8)
+- [x] 11. Poda de pedidos de canário por `CANARY_RETENTION_DAYS`
+- [x] 12. Testes unitários do cron (sucesso, falha por etapa, no-op sem env)
 
 **Bloco C — alerta em produção real (AC10–AC11)**
-- [ ] 13. Captura da falha real do submit público (Sentry, `tenantId` + motivo) no controller/interceptor
-- [ ] 14. Dedup em memória por `(tenantId, motivo)` com janela `CHECKOUT_ALERT_DEDUP_MINUTES`
-- [ ] 15. E-mail de staff no primeiro disparo da janela (AC10) + teste unitário do dedup
+- [x] 13. Captura da falha real do submit público (Sentry, `tenantId` + motivo) no controller
+- [x] 14. Dedup em memória por `(tenantId, motivo)` com janela `CHECKOUT_ALERT_DEDUP_MINUTES`
+- [x] 15. E-mail de staff no primeiro disparo da janela (AC10) + teste unitário do dedup
 
 **Bloco D — fechamento**
-- [ ] 16. `.env.example` + seção Config do spec; provisionar o tenant `canary` em produção
-- [ ] 17. Regressão cross-tenant: confirmar tenant `canary` fora de qualquer relatório do `lmfit` (AC11)
+- [x] 16. `.env.example` + seção Config do spec
+- [x] 17. Regressão cross-tenant (AC11) — verificada a nível de código (ver Verification record);
+      **provisionar o tenant `canary` de verdade em produção fica como carry-over explícito, pedindo
+      confirmação do usuário antes — ver Result**
 
 ## Risks & unknowns
 
@@ -245,16 +247,77 @@ não é mais S.
 
 ### PLAN        — [x] explored code · [x] draft spec · [x] decisions listed          → Draft on 2026-08-13
 ### REFINEMENT  — [x] decisions resolved · [x] assumptions checked · [x] ACs testable · [x] DoR review → Ready on 2026-08-13
-### IMPLEMENT   — [ ] tasks done · [ ] tsc green per task · [ ] env documented       → done on ___
-### TEST        — [ ] AC-named tests · [ ] negative paths · suites: api _/_ · web _/_ → green on ___
-### VERIFY      — [ ] browser walk + screenshots · [ ] AC checklist · [ ] cross-tenant probe · [ ] regression sweep → all ✅ on ___
-### DOCUMENT    — [ ] spec Result · [ ] ROADMAP changelog · [ ] living docs           → merged on ___
-### PLAN AGAIN  — [ ] retro · [ ] carry-overs filed · [ ] roadmap re-prioritized · [ ] memory updated → next loop started on ___
+### IMPLEMENT   — [x] tasks done · [x] tsc green per task · [x] env documented       → done on 2026-08-13
+### TEST        — [x] AC-named tests · [x] negative paths · suites: api 48/48 (473 tests) · web n/a → green on 2026-08-13
+### VERIFY      — [x] boot local + AC checklist (código) · [x] cross-tenant probe (código) · [ ] prova ao vivo em produção (carry-over, ver Result) → parcial em 2026-08-13
+### DOCUMENT    — [x] spec Result · [x] ROADMAP changelog · [x] living docs           → merged on 2026-08-13
+### PLAN AGAIN  — [x] retro · [x] carry-overs filed · [ ] roadmap re-prioritized · [ ] memory updated → next loop not started yet
 
 ## Verification record
 
-*Preenchido durante a VERIFY: AC → evidência (nome do teste, screenshot, saída de curl).*
+Loop backend-only, sem UI — "VERIFY" aqui é boot real + prova de código, não passo a passo de
+navegador. Nenhuma etapa envolveu Sentry/SMTP reais: `.env.test` neutraliza ambos (ver achado do
+IMPLEMENT); a prova ao vivo em produção fica deliberadamente fora deste ciclo (ver Result).
+
+| AC | Evidência |
+|---|---|
+| AC1–AC6 | `npm run test:e2e` — 5/5 verde, `test/checkout-money-path.e2e-spec.ts`. AC1 é a regressão exata de 12/08 (variante sem atacado configurado, 1 unidade, 201) |
+| AC7 | `checkout-canary.cron.spec.ts` — `'AC7: fluxo completo — cria draft, faz patch e submit, registra canary_ok em sucesso'` |
+| AC8 | `checkout-canary.cron.spec.ts` — 3 testes cobrindo `resolve_tenant`/`resolve_variant`/`submit_draft` como etapas distintas no alerta |
+| AC9 | `checkout-canary.cron.spec.ts` — `'AC9: no-op sem CANARY_TENANT_SLUG configurado — nenhuma query, nenhum alerta'` |
+| AC10 | `checkout-alert.service.spec.ts` — 7 testes (Sentry sempre capturado, e-mail no primeiro disparo, dedup por tenant+motivo, motivos/tenants diferentes não fazem dedup entre si, janela expira) + `public-order-drafts.controller.spec.ts` (repropaga a mesma exceção pro cliente) |
+| AC11 | Verificado a nível de código: `grep -c tenantId src/reports/reports.service.ts` → 30 ocorrências, toda query (`.find`/`.aggregate`/`.countDocuments`) escopada por `tenantId`. O tenant de canário, sendo um tenant comum como qualquer outro, herda esse isolamento por construção — não existe (nem existirá com este loop) nenhuma agregação cross-tenant no código. **Prova ao vivo em produção fica pendente** de o tenant `canary` ser efetivamente criado (carry-over, ver Result) |
+| Boot real | `npm run start:dev` local contra o Mongo de dev (`docker ps` confirmado `kivoni-mongo: Up`) → `Nest application successfully started` + `GET /health` → `{"ok":true}`. Prova que `CheckoutCanaryCron`/`CheckoutAlertService` resolvem suas dependências (`TenantsService`, `Order` model registrado via segundo `forFeature`) sem erro de DI |
+| Regressão | `npx tsc --noEmit` limpo · `npx jest` 48 suites / 455 testes verdes (437 antes do loop + 18 novos) · `npm run test:e2e` 5/5 |
 
 ## Result
 
-*Preenchido durante o DOCUMENT: o que subiu, desvios, retro, carry-overs.*
+**O que subiu:** harness de integração completo (Bloco A — `mongodb-memory-server`,
+`test/globalSetup.js`/`globalTeardown.js`, `test/helpers/seed-tenant.ts`,
+`test/checkout-money-path.e2e-spec.ts` com 5 casos), canário diário opcional (Bloco B —
+`checkout-canary.cron.ts`, no-op por padrão) e observabilidade de falha real do checkout público
+(Bloco C — `checkout-alert.service.ts`, capturando Sentry sempre e mandando e-mail de staff com
+dedup, integrado em `public-order-drafts.controller.ts`). 23 testes automatizados novos (18
+unitários + 5 de integração), zero regressão nos 437 já existentes.
+
+**Desvios do plano original:**
+1. **AC2 estava mal especificada e foi corrigida durante o TEST, não a REFINEMENT.** A versão
+   original esperava que o checkout público pudesse reproduzir o erro "exige quantidade mínima" pra
+   uma variante com atacado real mas quantidade abaixo do mínimo. Rodar o teste de verdade provou
+   que isso é estruturalmente impossível pelo caminho público: `rebuildLinesFromDto()`
+   (order-drafts.service.ts) sempre computa o preço a PARTIR da quantidade real antes de chegar em
+   `resolveLines()`, então nunca produz um `unitPrice` de atacado pra uma quantidade que não
+   qualifica. O gate em `resolveLines()` existe pra pegar um `unitPrice` DIGITADO manualmente
+   (staff/PDV) — já coberto por `orders.service.spec.ts`. AC2 foi reescrita pra provar o
+   comportamento certo: atacado configurado não bloqueia nem sub-cotiza uma compra pequena
+   legítima. Isso não é uma falha do processo — é exatamente o tipo de coisa que só aparece
+   rodando código de verdade, e é por isso que a fase TEST existe separada da REFINEMENT.
+2. **Vazamento de `.env` real descoberto durante o IMPLEMENT.** `ConfigModule.forRoot()` carrega o
+   `.env` da máquina por baixo dos panos preenchendo qualquer chave que `.env.test` não define — sem
+   overrides explícitos, o `.env` de dev real (`SEED_DEMO_DATA=true`, mais um `SMTP_HOST`/
+   `SENTRY_DSN`/`STAFF_NOTIFY_EMAILS` de produção de verdade) teria vazado pro e2e. Corrigido
+   neutralizando toda chave sensível em `.env.test` (string vazia — dotenv não sobrescreve o que já
+   está setado). Sem essa correção, rodar `npm run test:e2e` teria mandado e-mail real pro suporte e
+   reportado ruído no Sentry de produção. Ver comentário extenso em `.env.test`.
+
+**Carry-overs — pedem OK explícito do usuário antes de agir, não são silenciosos:**
+1. **Provisionar o tenant `canary` de verdade em produção** (`CANARY_TENANT_SLUG`/
+   `CANARY_VARIANT_SKU`) — criar um tenant novo em produção é uma ação difícil de reverter num
+   sistema compartilhado; não fiz isso sozinho.
+2. **Disparar uma falha real no checkout público em produção só pra provar o alerta end-to-end**
+   — `SENTRY_DSN` e `SMTP_HOST` de produção são reais (`STAFF_NOTIFY_EMAILS=suporte@kivoni.com.br`);
+   fazer isso de propósito manda e-mail de verdade pro suporte e cria ruído real no Sentry sem
+   nenhum bug de verdade por trás. Cobertura por teste (unitário + integração) já prova a lógica;
+   a prova "ao vivo" em produção fica condicionada ao usuário topar o ruído, ou preferir que a
+   próxima falha REAL sirva de primeira prova (o que, aliás, é o próprio propósito do recurso).
+3. **`test:e2e` ainda não rodou dentro do GitHub Actions de verdade** — só localmente. O passo foi
+   adicionado ao workflow (`deploy-droplet.yml`), mas só será confirmado no próximo push que passar
+   pelo CI.
+
+**Retro (3 linhas):**
+- O que ajudou: rodar o e2e de verdade ANTES de fechar a spec pegou uma AC mal especificada
+  (AC2) que uma revisão só de código nunca pegaria — reforça por que TEST é uma fase própria.
+- O que atrapalhou: o vazamento do `.env` real custou uma iteração extra e podia ter sido pior
+  (e-mail real, Sentry real) se não tivesse sido pego antes do primeiro `npm run test:e2e` bem-sucedido.
+- Mudar no processo: quando um harness novo é bootado pela primeira vez, tratar "rodar contra o
+  `.env` de alguém sem querer" como um risco padrão a checar explicitamente, não uma surpresa.
