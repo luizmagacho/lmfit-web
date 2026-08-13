@@ -9,7 +9,7 @@
 >
 > Status legend: 🔲 not started · 🔄 in progress · ✅ done
 
-Last updated: 2026-08-01
+Last updated: 2026-08-13
 
 ---
 
@@ -85,6 +85,16 @@ Re-prioritize at every "Again" phase.
 | Influencer-A | Entidade `Influencer` + CRUD no admin (Programa de Influenciadores) | Base do programa de afiliados: influenciador com nome/Instagram/contato/comissão(%); exclusão bloqueada se já tiver cupom com vendas — protege o histórico do relatório futuro | S | ✅ | [loop-influencer-a](./specs/loop-influencer-a-entity.md) |
 | Influencer-B | Vínculo `Promotion` ↔ `Influencer` + UI de atribuição (Programa de Influenciadores) | Cupom ganha `influencerId` opcional; `PromotionsClient.tsx` ganha coluna de seleção dinâmica (mesmo padrão de `InvoicesClient.tsx`); exclusão de cupom já usado também bloqueada | S | ✅ | [loop-influencer-b](./specs/loop-influencer-b-coupon-link.md) |
 | Influencer-C | Relatório de vendas por influenciador (Programa de Influenciadores) | `GET /reports/sales-by-influencer`; teaser no dashboard + lista completa em `/reports`; fecha o pedido original do usuário ("mapear qual influenciador vendeu quantos") | M | ✅ | [loop-influencer-c](./specs/loop-influencer-c-sales-report.md) |
+| 26 | Canário do caminho do dinheiro (Onda 0) | Nenhuma venda é perdida em silêncio: teste de integração com dados no **formato de produção**, pedido sintético diário em prod e alerta quando o `submit` público falha | S | 🔲 | — |
+| 27 | Frete real — Melhor Envio (Onda 1) | Cliente vê cotação real por CEP no PDP e no checkout, escolhe transportadora/prazo; lojista gera etiqueta e o rastreio cai no pedido | M | 🔲 | — |
+| 28 | Pix nativo + Pix Parcelado (Onda 1) | Cliente paga com QR/copia-e-cola **dentro** da loja, sem ser jogado pro checkout hospedado; base pronta pro Pix Automático (assinatura/clube) | M | 🔲 | — |
+| 29 | NF-e automática no pedido pago (Onda 1) | Nota sai sozinha ao marcar pago/enviado, com fila e reprocesso — o `FocusNfeAdapter` já existe, falta o gatilho | M | 🔲 | — |
+| 30 | Feed de produtos — Google + Meta + ACP (Onda 2) | Produtos aparecem em Google Shopping, Instagram Shopping/Advantage+ e na busca por IA (ChatGPT), a partir de um só endpoint de feed | M | 🔲 | — |
+| 31 | Pós-venda e carrinho abandonado por WhatsApp (Onda 2) | Cliente recebe "pedido confirmado", "pedido enviado + rastreio" e lembrete de sacola no WhatsApp, não num e-mail que ele não abre | S | 🔲 | — |
+| Voz-A | Áudio do WhatsApp vira texto (Onda 3) | Mensagem de voz do vendedor é baixada da Meta e transcrita, seguindo pro mesmo parser de intenção que o texto já usa | M | 🔲 | [plano](../../../.claude/plans/misty-launching-moth.md) |
+| Voz-B | Venda por voz baixa estoque de verdade (Onda 3) | "Vendi 2 camiseta preta M" por áudio cria a venda pelo mesmo caminho do PDV (`syncBatch`), baixando estoque no local certo, com confirmação de volta no WhatsApp | M | 🔲 | [plano](../../../.claude/plans/misty-launching-moth.md) |
+| 32 | Portal da Revendedora — B2B (Onda 3) | Revendedora entra e vê a **tabela de preço dela**, pedido mínimo, limite de crédito e um catálogo próprio já com o preço de revenda | L | 🔲 | — |
+| 33 | IA para o lojista — conteúdo de produto (Onda 3) | Lojista sobe a foto e recebe nome, descrição, SEO e alt-text prontos (chave Gemini e `LlmService` já existem) | M | 🔲 | — |
 
 Specs for loops 1+ are written during each loop's **Plan** phase (see LOOP_PROCESS.md) — only the
 next loop ever has a full spec; later ones stay as the outlines below so learning can reshape them.
@@ -645,6 +655,85 @@ silently skipped); a one-off re-encryption migration for whenever that surface i
 
 ---
 
+## 2.1 Ondas 2026 — próximos loops (26–33 + Voz-A/B)
+
+Derivadas da análise competitiva de agosto/2026 em [MERCADO-2026.md](./MERCADO-2026.md), que cruzou
+o que os concorrentes entregaram em 2026 com uma auditoria do que **de fato existe no código**.
+Racional da ordem: **diferencial não segura cliente que perdeu a venda no frete ou no checkout** —
+primeiro tapamos o que nos faz perder comparação direta, só depois investimos onde somos únicos.
+
+### Onda 0 — parar de perder venda
+
+**Loop 26 — Canário do caminho do dinheiro (S).** O bug de atacado de 12/08 passou por 437 testes
+verdes porque o mock usava `priceWholesale (35) < priceRetail (50)` — forma de dado que quase não
+existe na base real, onde a maioria das variantes tem os dois valores iguais (fallback de
+`getWholesalePricingBatch()`). A forma real nunca foi exercitada. **Escopo:** teste de integração
+sem mock de pricing cobrindo catálogo → draft → patch → submit com dados no formato de produção
+(variante sem atacado, com atacado real, 1 unidade, no limite do mínimo, estoque baixo/zero com e
+sem backorder); pedido sintético diário num tenant de teste em prod; alerta quando
+`POST /public/order-drafts/:token/submit` responder 4xx acima de um limiar — hoje o cliente vê o
+erro e a loja não fica sabendo.
+
+### Onda 1 — table stakes que travam conversão
+
+**Loop 27 — Frete real, Melhor Envio (M).** Hoje o frete é só `standardFee`/`expressFee`/
+`freeAboveTotal` no tenant; não há **nenhuma** referência a transportadora no repo. A UI de escolha
+de frete e o lookup de CEP já existem desde os Loops 3/13 — falta o cotador real por trás, etiqueta
+e rastreio no pedido.
+
+**Loop 28 — Pix nativo + Pix Parcelado (M).** O Loop 2 resolveu Pix delegando ao checkout hospedado
+da InfinitePay; o cliente sai da loja para pagar. Pix foi 42% do valor transacionado no e-commerce
+brasileiro em 2025. **Escopo:** QR/copia-e-cola dentro do nosso checkout + webhook de confirmação,
+expondo Pix Parcelado quando o PSP suportar, e deixando a fundação pronta para Pix Automático
+(recorrência → clube/assinatura).
+
+**Loop 29 — NF-e automática no pedido pago (M).** `FocusNfeAdapter` é real e funciona, mas nenhum
+ponto em `orders/` ou `payments/` chama o `FiscalService` — emissão é 100% manual hoje. **Escopo:**
+gatilho ao marcar pago/enviado, com fila e reprocesso em falha (a SEFAZ cai; não pode travar o
+pedido).
+
+### Onda 2 — aquisição e recuperação
+
+**Loop 30 — Feed de produtos (M).** Um endpoint gerando o catálogo em Google Merchant (XML),
+Catálogo Meta (destrava Instagram Shopping/Advantage+) e o formato do Agentic Commerce Protocol
+(Stripe + OpenAI), que alimenta o ChatGPT Shopping. Barato porque `listPublicCatalog`, SEO e JSON-LD
+já existem; alto retorno porque sem feed não há tráfego pago em escala nem presença em busca por IA.
+
+**Loop 31 — Pós-venda e carrinho abandonado por WhatsApp (S).** `abandoned-cart.cron` só chama
+`notify.sendEmail`, e o público do LM FIT não abre e-mail. Reusa o `WhatsappSenderService` já pronto
+desde o Loop 11-A para sacola abandonada, "pedido confirmado" e "pedido enviado + rastreio".
+
+### Onda 3 — diferenciação (onde ganhamos sozinhos)
+
+> ⚠️ Contexto que reforça esta onda: a Meta lançou em jun/2026 um agente de IA nativo no WhatsApp
+> Business que responde, recomenda e "conclui venda". O bot que só conversa está virando commodity
+> de graça — o que não vira é o agente que **executa no ERP** com estoque e preço reais (Loop 11-C).
+
+**Voz-A / Voz-B — venda por voz no WhatsApp (M cada).** Plano completo já escrito em
+[`misty-launching-moth`](../../../.claude/plans/misty-launching-moth.md). Renumerados de "12-A/12-B"
+para **Voz-A/Voz-B**: o plano original colidia com o Loop 12 (storefront multi-layout), que já
+existe. Voz-A é ingestão (baixar mídia da Meta + transcrever); Voz-B é o achado crítico do plano —
+o pipeline de staff hoje cria pedido `open` e **não baixa estoque**, mesmo por texto; precisa passar
+pelo `syncBatch` como o PDV faz.
+
+**Loop 32 — Portal da Revendedora, B2B (L).** Hoje `/catalogo` é único e igual para todos. A
+ViaShopModa já vende exatamente isto: catálogo por revendedora, pedido mínimo, tabela de preço
+diferenciada, carteira de clientes. É o modelo de negócio real do LM FIT.
+
+**Loop 33 — IA para o lojista (M).** Gerar nome, descrição, SEO e alt-text a partir da foto do
+produto — a chave Gemini já está no tenant e o `LlmService` já existe. A Nuvemshop reporta que 72%
+dos lojistas da base já usam IA para isso: é expectativa de mercado, não novidade.
+
+### O que decidimos **não** fazer agora
+
+- **Mais presets de layout.** O V4 já entregou diferenciação visual acima do mercado; o retorno do
+  11º preset é próximo de zero comparado a ter frete real.
+- **Marketplace próprio.** M•A•R e Brás Online ocupam esse espaço, e é negócio de rede, não de software.
+- **PCP/MRP profundo.** Não dá para ganhar do Sisplan em profundidade de indústria, e não é onde
+  está a dor do nosso cliente.
+
+---
+
 ## 3. Changelog
 
 | Date | Loop | What shipped |
@@ -707,3 +796,4 @@ silently skipped); a one-off re-encryption migration for whenever that surface i
 | 2026-08-06 | 11-A | **Loop 11-A done — WhatsApp outbound send + credential encryption.** [loop-11-a](./specs/loop-11-a-whatsapp-outbound-encryption.md). First step of the (newly-scoped) Loop 11 plan — user asked to plan "conectar uma LLM gratuita no WhatsApp pra responder clientes", chose the larger scope (real order creation, not just Q&A) during PLAN. Investigation found the terrain more ready than the old Loop 11 write-up suggested: Groq (free-tier) was already the default LLM provider (`LlmService`), and a real catalog-aware AI shopping assistant already existed (`ChatService`/`ChatWidget.tsx`) — the actual gaps were outbound send (100% inbound until now) and per-conversation state (the widget is stateless server-side, WhatsApp has no browser to hold that). Built `WhatsappSenderService.sendText()` (Meta Graph API), encrypted the 3 Meta secret fields at rest reusing Loop 18's `EncryptionService` (`metaAppSecret`/`metaWhatsappVerifyToken`/`metaWhatsappAccessToken` — extracted `encryptOrClear` as a shared private method), added `Tenant.whatsappAiEnabled` toggle. **Found and fixed a real pre-existing gap along the way**: Settings had `useState` load/save wiring for all 4 Meta WhatsApp fields for who knows how many sessions, but zero `<input>` elements ever rendered them — the merchant literally could not fill them in through the UI. Added the missing form section. TEST: +9 api (339/339, was 330), 0 new web (499/499, no regression — this is a config form, same no-render-test convention already used for the rest of Settings). `tsc` clean both repos. VERIFY live: filled and saved the new Settings fields for real, confirmed in Mongo the 3 secrets are stored as `enc:v1:...` (not plaintext) and `metaWhatsappPhoneNumberId` stays plaintext (correct, not a secret); curl'd the webhook `GET` handshake and `POST` signature check against the real encrypted-at-rest values (not just the unit test's isolated encryption instance) — both decrypt correctly and both reject a wrong token/signature with 403. **Tooling finding, not a code bug**: the browser automation's `form_input` didn't fire React's `onChange` for the new checkbox (saved `false` despite "checking" it) — a real `computer left_click` worked correctly; documented in the spec so a future verification pass isn't confused by it. Test data (fake credentials, no real messages were created) cleaned up after. Next: Loop 11-B (persistent conversation/cart per WhatsApp number, wiring `ChatService` into non-staff inbound messages). |
 | 2026-08-06 | 11-B | **Loop 11-B done — WhatsApp conversation persistence + AI replies with real memory.** [loop-11-b](./specs/loop-11-b-whatsapp-conversation-ai.md). Core of the user's original ask ("responder clientes" on WhatsApp) — until now a non-staff sender's message only triggered a silent internal e-mail, never a reply to the customer. Reused `ChatService` (the storefront chat widget's real catalog-aware AI assistant) instead of building a new conversational engine — `ChatModule` just needed `exports: [ChatService]`. New `WhatsappConversation` schema (`{tenantId, waId}`-keyed, capped 20-message history, rich cart lines matching `ChatCartAction` so Loop 11-C can create a real order straight from it, `aiEnabled` flag pre-added for the future human-takeover toggle) replaces what the browser's `useState` does for the web widget — WhatsApp has no browser to hold that state. New `WhatsappChatService.handleCustomerMessage()` loads/creates the conversation, calls `ChatService.reply()` with the persisted history/cart, applies validated `add_to_cart`/`remove_from_cart` actions to the persisted cart (merge-by-variantId / decrement-or-remove), and sends the reply via `WhatsappSenderService` (Loop 11-A). `inbound-message.processor.ts` gained exactly one new branch: non-allowlisted sender + `tenant.whatsappAiEnabled` → AI path instead of email escalation; the staff ERP pipeline (`LlmService.parseIntent`, allowlisted numbers) is byte-for-byte unchanged. New `ai_replied` status added to `WhatsAppMessage.processingStatus` (none of the 5 existing values honestly described "the AI answered the customer"). TEST: +16 api (355/355, was 339) — new spec files for the conversations service, the chat service (cart merge/remove edge cases, `aiEnabled:false` no-op, LLM failure doesn't corrupt history), and the processor itself (didn't have any tests before). `tsc` clean. VERIFY live: real 2-message conversation through the actual Meta-shaped webhook payload against the dev API — message 1 ("Vocês têm camisa do Flamengo?") got a real Groq-generated reply citing the real catalog product; message 2 ("Quero tamanho M, coloca no carrinho," no product name repeated) proved genuine cross-request memory — the AI correctly resolved "M" against the Flamengo shirt from message 1 and the persisted cart ended up with the real variantId/SKU/price from `ChatService`'s own stock/price validation, never invented by the LLM. Something the stateless web widget could never prove on its own, since there continuity always comes from the same browser session making both calls. Test conversation/messages cleaned up after; `whatsappAiEnabled` reset to off. Next: Loop 11-C (`confirm_order` action creates a real order from the persisted cart, plus the human-takeover pause endpoint). |
 | 2026-08-06 | 11-C | **Loop 11-C done — WhatsApp AI creates real orders, closes the full Loop 11 plan.** [loop-11-c](./specs/loop-11-c-whatsapp-real-order.md). Last and riskiest of the three 11-* loops (real money/stock), so the most deliberate about reuse over new code: rather than calling `OrdersService.create()` directly from the WhatsApp path (which would mean re-implementing the stock/price/shipping revalidation the real checkout already does), `WhatsappChatService.tryCreateOrder()` drives the exact same `OrderDraftsService` draft→submit pipeline the web checkout and the "Combinar no WhatsApp (Manual)" option already use — `createPublic → patchByToken → submitByToken`, with `patchByToken` re-validating stock/price at confirmation time (can refuse if it changed since `add_to_cart`) and computing the real shipping fee itself. `ChatService` gained a new `confirm_order` action, but only as an opt-in extension (`whatsappOrderContext` param) — the web widget's own call site never passes it, so its behavior is provably unchanged (dedicated test asserts the prompt never mentions `confirm_order` without the param, and that a `confirm_order` action from the LLM is silently dropped without it). The confirmation message sent back to the customer always uses the REAL order number/total returned by `OrdersService`, never whatever text the LLM generated — same "never trust the LLM" principle that already governs every other action type. Added `PATCH /internal/whatsapp/conversations/:waId` (JWT-guarded, same pattern as the rest of `whatsapp-internal.controller.ts`) so staff can pause the AI for one specific number — satisfies the Loop 11 AC "a human can take over an AI conversation at any point." TEST: +11 api (366/366, was 355) — new `chat.service.spec.ts` (didn't exist before) covering the opt-in boundary and confirm_order validation (including "LLM invented a shipping option that doesn't exist" → dropped), plus new cases in `whatsapp-chat.service.spec.ts` (order creation happy path, empty-cart refusal, pipeline failure → graceful apology not a crash or a leaked error). `tsc` clean. VERIFY live: a real 3-message conversation through the actual webhook ("tem camisa do Flamengo M?" → "adiciona no carrinho" → "pode fechar, meu nome é Ana Verificação, entrega padrão") produced a genuine `Order` (`#46`) with `reference: "WhatsApp: Ana Verificação - 5511977776666 - R$ 324,90"` — byte-for-byte the same format as the real order (#45) verified live back in Loop 11-A's session, `shippingCost: 25` matching the tenant's actual configured fee, total `299.9 + 25 = 324.9` checking out exactly; confirmed visually in the admin `/orders` panel, indistinguishable from a real order. Logged in as the real seeded admin (`/auth/login`) and called the new pause endpoint for a live number, then sent one more message and confirmed the conversation's history length didn't grow — the AI genuinely went silent. All test data (order, linked draft, guest customer, conversation, 4 messages) cleaned up after; `whatsappAiEnabled` reset to off. **This closes the entire Loop 11 plan** (11-A outbound+encryption → 11-B conversation+AI-with-memory → 11-C real order creation) — a merchant's WhatsApp is now a real, AI-staffed sales channel, built almost entirely by reusing existing, already-tested pipelines (`ChatService`, `OrderDraftsService`, `EncryptionService`) rather than new parallel logic. |
+| 2026-08-13 | — | **Análise competitiva 2026 + 10 loops novos registrados (26–33, Voz-A/B).** [MERCADO-2026.md](./MERCADO-2026.md). Pesquisa do que Nuvemshop/Tray/Bagy, Bling/Olist Tiny, Sisplan/Audaces, Suri Shop/OmniChat e ViaShopModa entregaram em 2026, cruzada com uma auditoria do que existe **no código** (não no roadmap). Três lacunas de table stakes confirmadas por grep, não por suposição: frete não tem nenhuma transportadora (só taxa fixa no tenant), Pix delega ao checkout hospedado da InfinitePay (Pix = 42% do valor do e-commerce BR em 2025), e não há feed de produtos para Google/Meta/ACP. Duas lacunas de execução: `FocusNfeAdapter` existe mas nada em `orders/`/`payments/` chama o `FiscalService` (NF-e é manual), e `abandoned-cart.cron` só usa e-mail apesar do `WhatsappSenderService` estar pronto desde o 11-A. Achado que motivou a Onda 0: o bug de atacado de 12/08 (rejeitava toda venda de 1 peça no varejo, quebrando o checkout do catálogo) passou por 437 testes verdes porque o mock usava `priceWholesale < priceRetail`, forma que quase não existe na base real — o caminho do dinheiro nunca foi testado com dados no formato de produção. Leitura estratégica registrada: a Meta lançou em jun/2026 agente de IA nativo no WhatsApp Business, então o bot que só conversa virou commodity de graça — o valor do nosso Loop 11-C está em **executar no ERP** (estoque/preço reais), não em conversar. Renumerado o plano de voz de "12-A/12-B" para **Voz-A/Voz-B** (colidia com o Loop 12, storefront multi-layout). Descartados explicitamente: mais presets de layout, marketplace próprio, PCP/MRP profundo. |
