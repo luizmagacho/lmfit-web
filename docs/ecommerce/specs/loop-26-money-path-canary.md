@@ -1,6 +1,6 @@
 # Loop 26 — Canário do caminho do dinheiro
 
-**Status:** Draft
+**Status:** Ready
 **Roadmap entry:** ROADMAP.md §2.1 Onda 0 · **Depends on:** —
 **Repos touched:** lmfit-api
 
@@ -52,16 +52,19 @@ que **não mocke o pricing nem o banco**.
 
 ## Decisions
 
-Marcadas com ⭐ a opção recomendada — **a resolver formalmente na REFINEMENT**, não antes.
+Resolvidas nesta REFINEMENT (13/08/2026), depois de validar contra o código real (não só ler os
+arquivos — confirmado onde `MONGODB_URI`/`ScheduleModule`/`ThrottlerModule` são lidos e o que
+acontece se um provider não tem a env var que normalmente espera).
 
-| Decision | Opções | Nota |
+| Decision | Escolha | Por quê |
 |---|---|---|
-| Onde roda o Mongo do teste | ⭐ `mongodb-memory-server` (devDep nova) · service container no GitHub Actions · docker-compose já existente | O deploy workflow já roda `npm test`; memory-server mantém o CI autocontido e não exige mexer no `deploy-droplet.yml`. Custo: +1 devDependency e ~5s de boot |
-| Tenant do canário | ⭐ tenant dedicado (`canary`), produto/variante próprios · usar o tenant real | Tenant dedicado nunca contamina relatório, DRE ou estoque do LM FIT |
-| Destino do pedido sintético | ⭐ mantém com `reference: 'CANARY'` e poda > 7 dias · apaga na hora | Apagar logo depois é mais código e mais risco; o tenant é isolado, então manter é inofensivo e ainda serve de histórico |
-| Política de alerta do submit | ⭐ Sentry sempre + e-mail de staff com dedup de 1h por (tenant, motivo) · e-mail em toda falha · só Sentry | Sem dedup, uma quebra geral vira centenas de e-mails; só Sentry é fácil demais de ignorar |
-| Falha "de negócio" vs. "de bug" | ⭐ alertar em **todas**, com o motivo no payload | O bug de 12/08 se **disfarçou** de rejeição de negócio legítima. Filtrar por tipo teria escondido exatamente ele |
-| Dividir em 26-A/26-B | ⭐ manter um loop, tarefas ordenadas para o teste de integração cair primeiro | O teste sozinho já paga o loop; o cron depende de nada dele. Se a REFINEMENT achar que passou de M, aí sim divide |
+| Onde roda o Mongo do teste | `mongodb-memory-server` (devDep nova) | `MongooseModule.forRoot(process.env.MONGODB_URI ?? …)` em `app.module.ts:66` lê a env var **no momento em que o módulo é avaliado** — bastando setar `process.env.MONGODB_URI` antes de importar o `AppModule` no teste, sem precisar de `overrideProvider` na conexão. Mantém o CI autocontido, sem mexer em `deploy-droplet.yml` |
+| Tenant do canário | Tenant dedicado (`canary`), produto/variante próprios | Tenant dedicado nunca contamina relatório, DRE ou estoque do LM FIT (é o que a AC11 prova) |
+| Destino do pedido sintético | Mantém com `reference: 'CANARY'` e poda > `CANARY_RETENTION_DAYS` | Apagar na hora é mais código e mais risco; o tenant é isolado, então manter é inofensivo e ainda serve de histórico de quando o canário rodou |
+| Política de alerta do submit | Sentry sempre + e-mail de staff com dedup de `CHECKOUT_ALERT_DEDUP_MINUTES` por (tenant, motivo) | Sem dedup, uma quebra geral vira centenas de e-mails; só Sentry é fácil demais de ignorar no dia a dia |
+| Falha "de negócio" vs. "de bug" | Alertar em **todas**, com o motivo no payload | O bug de 12/08 se **disfarçou** de rejeição de negócio legítima. Filtrar por tipo teria escondido exatamente ele |
+| Dividir em 26-A/26-B | Não dividir — um loop só, com blocos internos (A: teste de integração · B: cron · C: alerta em prod) cada um shipável sozinho | O Bloco A sozinho já paga o loop e pode ir a produção primeiro; B e C não dependem um do outro. Mantém 1 PR coerente, com pontos de corte claros se precisar parar no meio |
+| Bootstrap do `AppModule` inteiro no e2e vs. módulo de teste enxuto | `AppModule` inteiro, sem `overrideProvider` | Verificado: nenhum provider do boot lança em env faltando (ex. `EncryptionService` só loga warning se `CREDENTIALS_ENCRYPTION_KEY` está ausente); `ScheduleModule.forRoot()` registra os crons mas nenhum dispara dentro da janela de um teste (`EVERY_HOUR`/`EVERY_DAY_AT_...`); `ThrottlerModule` permite 120 req/60s por tenant — a suíte usa ~15. Simular um subconjunto de módulos custaria mais do que resolve |
 
 ## Acceptance criteria
 
@@ -165,37 +168,83 @@ horizontalmente vira alerta duplicado por réplica, aceitável e registrado.
 
 ## Tasks
 
-Ordenadas por dependência; as tarefas 1–5 já entregam valor sozinhas e podem ir para produção antes das 6+.
+Ordenadas por dependência; as tarefas 1–7 (o teste de integração) já entregam valor sozinhas e podem
+ir para produção antes das 8+ (o cron/alerta). Nenhuma tarefa isolada passa de ~meio dia.
 
-- [ ] 1. Decidir e instalar o runner de Mongo do teste (`mongodb-memory-server` se confirmado na REFINEMENT)
-- [ ] 2. `test/helpers/seed-tenant.ts` — semeia tenant, produto e as variantes A–E
-- [ ] 3. `test/checkout-money-path.e2e-spec.ts` — bootstrap do AppModule + supertest das 3 chamadas
-- [ ] 4. Casos A–E da matriz (AC1–AC5), cada um nomeando seu AC
-- [ ] 5. `npm run test:e2e` no CI (`deploy-droplet.yml` hoje roda só `npm test`)
-- [ ] 6. `checkout-canary.cron.ts` + no-op sem env (AC7, AC9)
-- [ ] 7. Alerta de falha do canário com etapa + motivo (AC8)
-- [ ] 8. Poda de pedidos de canário por `CANARY_RETENTION_DAYS`
-- [ ] 9. Captura + alerta com dedup na falha real do submit público (AC10)
-- [ ] 10. `.env.example` + seção Config; provisionar o tenant de canário em prod
-- [ ] 11. Testes unitários do cron e do dedup (AC7–AC10)
+**Bloco A — teste de integração (AC1–AC6)**
+- [ ] 1. Instalar `mongodb-memory-server` como devDependency
+- [ ] 2. `.env.test` com segredos dummy válidos (`JWT_ACCESS_SECRET`/`JWT_CUSTOMER_ACCESS_SECRET`
+      ≥32 chars) + carregar `MONGODB_URI` da instância em memória antes de importar o `AppModule`
+- [ ] 3. `test/helpers/seed-tenant.ts` — cria tenant + produto, retorna helper pra inserir uma
+      variante a partir de uma linha da matriz A–E
+- [ ] 4. `test/checkout-money-path.e2e-spec.ts` — esqueleto: `beforeAll` sobe o `AppModule` via
+      `Test.createTestingModule` + `app.init()`, `afterAll` derruba app e memory-server
+- [ ] 5. Caso A (AC1) — a regressão de 12/08 primeiro, sozinho, pra provar o harness de ponta a ponta
+- [ ] 6. Casos B–E (AC2–AC5) — cada um nomeando seu AC
+- [ ] 7. `npm run test:e2e` no `deploy-droplet.yml` (hoje só roda `npm test`) — confirma AC6
 
-## Risks & unknowns (atacar na REFINEMENT)
+**Bloco B — canário em produção (AC7–AC9)**
+- [ ] 8. `checkout-canary.cron.ts` (molde: `abandoned-cart.cron.ts`) — no-op sem `CANARY_TENANT_SLUG` (AC9)
+- [ ] 9. Fluxo do canário: cria draft → patch → submit no tenant `canary`; sucesso vira
+      `logStaffAlert('canary_ok', …)` (AC7)
+- [ ] 10. Alerta de falha do canário com etapa + motivo (AC8)
+- [ ] 11. Poda de pedidos de canário por `CANARY_RETENTION_DAYS`
+- [ ] 12. Testes unitários do cron (sucesso, falha por etapa, no-op sem env)
 
-1. **Primeiro `.e2e-spec.ts` do repo.** Subir o `AppModule` inteiro pode arrastar cron, Sentry e
-   conexões externas para dentro do teste. Mitigação a validar: `TestingModule` com `overrideProvider`
-   nos módulos de efeito colateral, ou um `AppModule` de teste enxuto.
-2. **`@nestjs/schedule` no ambiente de teste** — crons podem disparar durante o e2e. Verificar se
-   `ScheduleModule` precisa ser desabilitado explicitamente.
-3. **Tempo de CI.** O deploy hoje é ~2min; se o e2e passar disso, avaliar rodar só no push pra `main`.
-4. **Isolamento do canário.** Confirmar que um tenant novo não aparece em nenhum relatório
-   cross-tenant antes de ligar em produção (AC11 existe por causa deste risco).
-5. **Sizing.** A ROADMAP registra **S**; a exploração sugere **M**. Confirmar na REFINEMENT e corrigir
-   a linha da ROADMAP (o processo manda ajustar o roadmap, não espremer o loop).
+**Bloco C — alerta em produção real (AC10–AC11)**
+- [ ] 13. Captura da falha real do submit público (Sentry, `tenantId` + motivo) no controller/interceptor
+- [ ] 14. Dedup em memória por `(tenantId, motivo)` com janela `CHECKOUT_ALERT_DEDUP_MINUTES`
+- [ ] 15. E-mail de staff no primeiro disparo da janela (AC10) + teste unitário do dedup
+
+**Bloco D — fechamento**
+- [ ] 16. `.env.example` + seção Config do spec; provisionar o tenant `canary` em produção
+- [ ] 17. Regressão cross-tenant: confirmar tenant `canary` fora de qualquer relatório do `lmfit` (AC11)
+
+## Risks & unknowns
+
+Status depois da REFINEMENT — a maioria foi verificada contra o código, não só suposta.
+
+1. ~~**Primeiro `.e2e-spec.ts` do repo — `AppModule` inteiro pode arrastar cron/Sentry.**~~
+   **Resolvido.** Ver linha "Bootstrap do AppModule" na tabela de Decisions — verificado provider a
+   provider que nada lança na ausência de env vars opcionais.
+2. ~~**`@nestjs/schedule` no ambiente de teste.**~~ **Resolvido.** `ScheduleModule.forRoot()` registra
+   os crons (inclusive o novo `checkout-canary.cron.ts`), mas nenhum é `EVERY_MINUTE`; nada dispara
+   dentro da janela de execução de um teste. AC7/AC9 chamam o método do cron diretamente, sem
+   depender do agendador.
+3. ~~**Rate limit do `ThrottlerModule` no e2e.**~~ **Resolvido.** 120 req/60s por tenant
+   (`app.module.ts:64`); a suíte inteira faz ~15 requisições. Sem risco na v1; reavaliar só se a
+   suíte crescer para paralelizar casos.
+4. **Segredos mínimos para o boot não falhar.** `JWT_ACCESS_SECRET`/`JWT_CUSTOMER_ACCESS_SECRET`
+   exigem ≥32 caracteres (visto em `.env.example`). O harness precisa de um `.env.test` com valores
+   dummy válidos — vira parte da task 1, não é mais incerteza, é trabalho conhecido.
+5. **Tempo de CI.** O deploy hoje roda só `npm test` (~poucos segundos); `test:e2e` sobe app +
+   memory-server, ordem de alguns segundos a mais. Ainda não medido de verdade — task 5 mede e decide
+   se roda em todo push ou só em push pra `main`.
+6. **Isolamento do canário.** Confirmar que o tenant `canary` não aparece em nenhum relatório
+   cross-tenant antes de ligar em produção — é o que a AC11 prova ao vivo, não um risco de código
+   (os relatórios já são escopados por `tenantId` em toda a base, é validação, não incerteza).
+
+## Sizing
+
+**S → M, confirmado.** A ROADMAP tinha S; ajustada para **M** nesta REFINEMENT (linha da tabela
+atualizada). Razão: é o primeiro harness de integração do repo — mesmo com os riscos 1–3 resolvidos
+sem mudança de código, ainda há devDependency nova, seed helper próprio, 5 casos de teste, um cron
+novo com 4 ACs próprios e um caminho de alerta com dedup. Nenhuma tarefa individual é grande; a soma
+não é mais S.
+
+## Definition of Ready — review
+
+- **Escopo cabe?** Sim — 3 blocos internos, cada um shipável e revertível sozinho.
+- **ACs testáveis?** Sim — todas as 11 nomeiam o teste/comando/verificação que as prova.
+- **Decisões resolvidas?** Sim — as 7 da tabela acima, sem nenhuma pendente de terceiro.
+- **Tarefas ordenadas por dependência?** Sim — Bloco A (1–7) não depende de B/C; B (8–12) e C (13–15)
+  são independentes entre si; D (16–17) fecha os dois.
+- **Veredito:** pronto para IMPLEMENT, começando pela task 1.
 
 ## Follow-up record
 
 ### PLAN        — [x] explored code · [x] draft spec · [x] decisions listed          → Draft on 2026-08-13
-### REFINEMENT  — [ ] decisions resolved · [ ] assumptions checked · [ ] ACs testable · [ ] DoR review → Ready on ___
+### REFINEMENT  — [x] decisions resolved · [x] assumptions checked · [x] ACs testable · [x] DoR review → Ready on 2026-08-13
 ### IMPLEMENT   — [ ] tasks done · [ ] tsc green per task · [ ] env documented       → done on ___
 ### TEST        — [ ] AC-named tests · [ ] negative paths · suites: api _/_ · web _/_ → green on ___
 ### VERIFY      — [ ] browser walk + screenshots · [ ] AC checklist · [ ] cross-tenant probe · [ ] regression sweep → all ✅ on ___
