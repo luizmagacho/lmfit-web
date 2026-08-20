@@ -234,6 +234,9 @@ export function ProductVariantsEditor({
                 </div>
               </th>
               <th className="px-2 py-2 font-medium whitespace-nowrap" style={{ color: lmfitTokens.accentBlue }}>
+                Cód. de barras
+              </th>
+              <th className="px-2 py-2 font-medium whitespace-nowrap" style={{ color: lmfitTokens.accentBlue }}>
                 Preço (BRL)
               </th>
               <th className="px-2 py-2 font-medium whitespace-nowrap" style={{ color: lmfitTokens.accentBlue }}>
@@ -291,6 +294,20 @@ export function ProductVariantsEditor({
                     onChange={(e) => {
                       const next = drafts.slice();
                       next[i] = { ...d, sku: e.target.value };
+                      pushDrafts(next);
+                    }}
+                  />
+                </td>
+                <td className="px-2 py-1.5 align-middle">
+                  <input
+                    className="w-full min-w-[7rem] border rounded px-2 py-1.5 min-h-9 text-sm font-mono"
+                    style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                    placeholder={d.serverId ? "gerado automaticamente" : "auto ao salvar"}
+                    title="Deixe em branco pra gerar um EAN-13 real sozinho — só preencha se a peça já tem um EAN/GTIN de fabricante"
+                    value={d.barcode ?? ""}
+                    onChange={(e) => {
+                      const next = drafts.slice();
+                      next[i] = { ...d, barcode: e.target.value };
                       pushDrafts(next);
                     }}
                   />

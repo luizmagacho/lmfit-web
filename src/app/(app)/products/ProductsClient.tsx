@@ -103,7 +103,15 @@ const columns: ResourceColumn[] = [
     hideInForm: true,
     required: false,
   },
-  { key: "barcode", label: "Cód. de barras (EAN/GTIN)", placeholder: "Opcional" },
+  {
+    key: "barcode",
+    label: "Cód. de barras (EAN/GTIN)",
+    // A edição de verdade agora é por variante, dentro de `ProductVariantsEditor` — este campo
+    // no nível do produto nunca era lido por `mergeSubmitPayload` (só existia pra alimentar a
+    // coluna de importação/exportação em massa via Excel), então mostrá-lo no modal de
+    // criar/editar era enganoso: dava a impressão de que preenchê-lo tinha efeito.
+    hideInForm: true,
+  },
   { key: "weightGrams", label: "Peso (g)", fieldType: "number" },
   {
     key: "description",

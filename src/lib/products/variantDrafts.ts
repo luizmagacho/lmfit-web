@@ -15,6 +15,9 @@ export type ProductVariantDraft = {
   /** Preço definido à mão pelo usuário nesta variação — a calculadora de
    * custo+margem não deve mais sobrescrevê-lo. */
   priceManuallySet: boolean;
+  /** Vazio = o backend gera um EAN-13 real sozinho ao salvar (Loop 35, faixa de uso interno
+   *  GS1) — só preencha aqui se a peça já tem um EAN/GTIN de fabricante de verdade. */
+  barcode?: string;
 };
 
 /** Espelha o cálculo do servidor em products.service.ts resolveReadyMadePricing. */
@@ -66,6 +69,7 @@ export function draftsFromProductRow(row: Record<string, unknown> | null): Produ
         acceptsBackorder: false,
         backorderMinQty: 1,
         priceManuallySet: false,
+        barcode: undefined,
       },
     ];
   }
@@ -93,6 +97,7 @@ export function draftsFromProductRow(row: Record<string, unknown> | null): Produ
         acceptsBackorder: v.acceptsBackorder === true,
         backorderMinQty: Math.max(1, Math.floor(num(v.backorderMinQty, 1))),
         priceManuallySet: isManualPrice(price),
+        barcode: String(v.barcode ?? "").trim() || undefined,
       });
     }
     return out.length ? out : draftsFromProductRow(null);
@@ -111,6 +116,7 @@ export function draftsFromProductRow(row: Record<string, unknown> | null): Produ
       acceptsBackorder: row.acceptsBackorder === true,
       backorderMinQty: Math.max(1, Math.floor(num(row.backorderMinQty, 1))),
       priceManuallySet: isManualPrice(flatPrice),
+      barcode: String(row.barcode ?? "").trim() || undefined,
     },
   ];
 }
@@ -158,6 +164,10 @@ export function draftsToApiVariants(
       acceptsBackorder: d.acceptsBackorder,
       backorderMinQty: Math.max(1, Math.floor(d.backorderMinQty || 1)),
     };
+    // Vazio = omite o campo por completo (não manda "" nem undefined explícito) — deixa o
+    // backend gerar um EAN-13 real numa variante nova, ou preservar o que já existe numa
+    // variante existente. Só manda quando o usuário realmente digitou algo (ex. EAN de fabricante).
+    if (d.barcode?.trim()) o.barcode = d.barcode.trim();
     if (d.serverId) o._id = d.serverId;
     return o;
   });
