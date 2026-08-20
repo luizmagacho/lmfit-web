@@ -1,4 +1,5 @@
 import { http } from "@/lib/http";
+import { parseBRLToNumber } from "@/lib/formatMoney";
 
 export type ReportSummary = {
   range: { from: string; to: string };
@@ -79,7 +80,16 @@ export function rangeIso(days: number) {
 export async function fetchReportSummary(from: string, to: string): Promise<ReportSummary | null> {
   try {
     const { data } = await http.get<ReportSummary>("/reports/summary", { params: { from, to } });
-    return data;
+    if (!data) return null;
+    // `revenue.total` e `stockValue.totalRetail` batem no BrlMoneyResponseInterceptor global
+    // (`{ total, orderCount, source }` casa a heurística de "objeto de receita") e chegam como
+    // string pt-BR ("1.234,56") — dividir isso direto por `orderCount` vira NaN, não um erro.
+    return {
+      ...data,
+      revenue: { ...data.revenue, total: parseBRLToNumber(data.revenue?.total) },
+      topVariants: (data.topVariants ?? []).map((v) => ({ ...v, revenue: parseBRLToNumber(v.revenue) })),
+      stockValue: { ...data.stockValue, totalRetail: parseBRLToNumber(data.stockValue?.totalRetail) },
+    };
   } catch {
     return null;
   }
@@ -108,7 +118,8 @@ export async function fetchRevenueByProduct(
     const { data } = await http.get<RevenueByProductResponse>("/reports/revenue-by-product", {
       params: { from, to, limit },
     });
-    return data;
+    if (!data) return null;
+    return { ...data, items: (data.items ?? []).map((it) => ({ ...it, revenue: parseBRLToNumber(it.revenue) })) };
   } catch {
     return null;
   }
@@ -123,7 +134,8 @@ export async function fetchSalesByInfluencer(
     const { data } = await http.get<SalesByInfluencerResponse>("/reports/sales-by-influencer", {
       params: { from, to, limit },
     });
-    return data;
+    if (!data) return null;
+    return { ...data, items: (data.items ?? []).map((it) => ({ ...it, revenue: parseBRLToNumber(it.revenue) })) };
   } catch {
     return null;
   }
@@ -133,11 +145,14 @@ export async function fetchSalesToday(): Promise<SalesTodayResponse | null> {
   try {
     const { data } = await http.get<SalesTodayResponse>("/reports/sales-today");
     if (!data) return null;
+    // `Number("1.234,56")` é NaN (vírgula não é separador decimal em JS) — `parseBRLToNumber`
+    // já existe pra isso, o `Number(x) || 0` antigo aqui só mascarava zerando qualquer valor
+    // com milhar/centavos em vez de ler o valor real.
     return {
       date: data.date,
-      total: Number(data.total) || 0,
+      total: parseBRLToNumber(data.total),
       orderCount: Number(data.orderCount) || 0,
-      avgTicket: Number(data.avgTicket) || 0,
+      avgTicket: parseBRLToNumber(data.avgTicket),
     };
   } catch {
     return null;
@@ -150,7 +165,8 @@ export async function fetchAbcCurve(
 ): Promise<AbcResponse | null> {
   try {
     const { data } = await http.get<AbcResponse>("/reports/abc", { params: { from, to } });
-    return data;
+    if (!data) return null;
+    return { ...data, items: (data.items ?? []).map((it) => ({ ...it, revenue: parseBRLToNumber(it.revenue) })) };
   } catch {
     return null;
   }
