@@ -14,6 +14,7 @@ import {
   type ReturnRequestPayload,
 } from "@/components/organisms/ReturnRequestForm";
 import { ProductGrid } from "@/components/organisms/ProductGrid";
+import { CustomerBarcodeCard } from "@/components/organisms/CustomerBarcodeCard";
 
 type Address = {
   _id: string;
@@ -394,6 +395,7 @@ export function ContaClient() {
             {redeemMsg}
           </p>
         ) : null}
+        <CustomerBarcodeCard customerCode={user.customerCode} />
       </section>
 
       {/* Meus pedidos */}

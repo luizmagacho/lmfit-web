@@ -37,7 +37,8 @@ import {
   Tag,
   Undo2,
   MessageCircle,
-  Megaphone
+  Megaphone,
+  Barcode
 } from "lucide-react";
 
 const navKeys = [
@@ -51,6 +52,7 @@ const navKeys = [
   // { href: "/crm/segments", key: "nav.segments", icon: UserCheck },
   { href: "/suppliers", key: "nav.suppliers", icon: Truck },
   { href: "/products", key: "nav.products", icon: Package },
+  { href: "/labels", key: "nav.labels", icon: Barcode },
   { href: "/materials", key: "nav.materials", icon: Layers },
   { href: "/orders", key: "nav.orders", icon: ShoppingCart },
   { href: "/returns", key: "nav.returns", icon: Undo2 },
@@ -98,6 +100,10 @@ const tourStepsInfo: Record<string, { title: string; desc: string }> = {
   "nav.products": {
     title: "Produtos (Grade e SKU)",
     desc: "Grade de cor x tamanho com gerador dinâmico de SKUs inteligentes em tempo real."
+  },
+  "nav.labels": {
+    title: "Etiquetas",
+    desc: "Selecione variantes e imprima etiquetas com o código de barras real de cada uma pra colar na peça."
   },
   "nav.materials": {
     title: "Materiais (Insumos)",

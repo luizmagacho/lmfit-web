@@ -1,6 +1,6 @@
 # Loop 27 — Frete real (Melhor Envio)
 
-**Status:** Ready
+**Status:** Done (13/08/2026)
 **Roadmap entry:** ROADMAP.md §2.1 Onda 1 · **Depends on:** —
 **Repos touched:** lmfit-api / lmfit-web
 
@@ -91,10 +91,10 @@ plugável — sem token configurado, o comportamento de hoje continua idêntico,
 - [ ] **AC7** — `pickup`/`standard`/`express` continuam funcionando exatamente como hoje (regressão),
   inclusive o desconto `freeAboveTotal`. *(verify: suíte existente de `order-drafts.service.spec.ts` +
   `it('AC7: pickup/standard/express sem mudança de comportamento')`)*
-- [ ] **AC8** — Settings ganha os campos de endereço de origem + token/ambiente da Melhor Envio,
+- [x] **AC8** — Settings ganha os campos de endereço de origem + token/ambiente da Melhor Envio,
   salvos via `PATCH /tenants/:id/shipping` (mesmo endpoint, campos novos). *(verify: browser walk +
   `it('AC8: updateShippingConfig grava endereço de origem e credenciais da Melhor Envio')`)*
-- [ ] **AC9** — PDP mostra prazo/preço reais quando o CEP digitado é válido e o tenant tem token
+- [x] **AC9** — PDP mostra prazo/preço reais quando o CEP digitado é válido e o tenant tem token
   configurado; sem token, mostra a mesma estimativa fixa de hoje. *(verify: browser walk em dev)*
 
 ## Design notes
@@ -175,10 +175,10 @@ assim que o token existir — registrar como o primeiro item da VERIFY quando is
 - [x] 9. Testes: AC6 (cotação escolhida persiste), rejeição sem CEP, rejeição de id que não bate com
       nenhuma opção real (nunca confia em preço do cliente), AC7 regressão
 
-**Bloco C — Settings + frontend** 🔲 carry-over — ver Result
-- [ ] 10. Settings "Frete": endereço de origem + token/ambiente Melhor Envio (AC8)
-- [ ] 11. `ShippingPicker.tsx` lista opções reais quando existirem, fallback quando não (AC9)
-- [ ] 12. PDP: prazo/preço reais ao digitar CEP válido (AC9)
+**Bloco C — Settings + frontend** ✅ done 13/08/2026
+- [x] 10. Settings "Frete": endereço de origem + token/ambiente Melhor Envio (AC8)
+- [x] 11. `ShippingPicker.tsx` lista opções reais quando existirem, fallback quando não (AC9)
+- [x] 12. PDP: prazo/preço reais ao digitar CEP válido (AC9)
 
 ## Risks & unknowns
 
@@ -201,11 +201,11 @@ IMPLEMENT.
 
 ### PLAN        — [x] explored code · [x] draft spec · [x] decisions listed          → Draft on 2026-08-13
 ### REFINEMENT  — [x] decisions resolved · [x] assumptions checked (API real via doc oficial) · [x] ACs testable · [x] DoR review → Ready on 2026-08-13
-### IMPLEMENT   — [x] Blocos A+B done · [ ] Bloco C (UI) · [x] tsc green per task · [x] env documented → Blocos A+B done on 2026-08-13
-### TEST        — [x] AC1-AC7 testados (Blocos A+B) · [ ] AC8/AC9 (Bloco C não implementado) · suites: api 50/50 (474 testes) + e2e 5/5 → green on 2026-08-13 (parcial)
-### VERIFY      — [x] boot local + curl real contra dev (AC1/AC5) · [ ] browser walk do Bloco C (não existe ainda) → parcial em 2026-08-13
-### DOCUMENT    — [x] spec Result (parcial) · [ ] ROADMAP changelog final · [ ] living docs → em andamento
-### PLAN AGAIN  — [ ] retro · [ ] carry-overs filed · [ ] roadmap re-prioritized · [ ] memory updated → Bloco C aguardando retomada
+### IMPLEMENT   — [x] Blocos A+B done · [x] Bloco C (UI) done · [x] tsc green per task · [x] env documented → Blocos A+B+C done on 2026-08-13
+### TEST        — [x] AC1-AC7 testados (Blocos A+B) · [x] AC8/AC9 (Bloco C) verificados ao vivo no browser · suites: api 50/50 (474 testes) + e2e 5/5 → green on 2026-08-13
+### VERIFY      — [x] boot local + curl real contra dev (AC1/AC5) · [x] browser walk completo do Bloco C (Settings, PDP, checkout, pedido real) → completo em 2026-08-13
+### DOCUMENT    — [x] spec Result completo · [x] ROADMAP changelog final · [ ] living docs → loop fechado
+### PLAN AGAIN  — [ ] retro · [x] carry-overs filed (compra de etiqueta = Loop 27-B futuro) · [ ] roadmap re-prioritized · [ ] memory updated
 
 ## Verification record
 
@@ -223,31 +223,48 @@ Blocos A/B — backend, sem UI ainda:
 | Boot real | `npm run start:dev` local (Mongo de dev) → `Nest application successfully started`; `POST /public/shipping/quote` real contra o tenant `lmfit` com uma variante real → 3 opções fixas formatadas em BRL (`"19,90"`), confirmando o `BrlMoneyResponseInterceptor` global já se aplica sem nenhum código novo |
 | Regressão | `tsc --noEmit` limpo · `npx jest` 50 suítes/474 testes verdes (469 antes deste loop + 8 do shipping + testes reescritos de shippingMethod) · `npm run test:e2e` 5/5 |
 
-AC8/AC9 (Bloco C — Settings + PDP/checkout) não têm evidência ainda: a UI não foi construída nesta
-passada.
+Bloco C — Settings + PDP/checkout, verificado ao vivo em 13/08/2026 (tenant `kivoni`, dev local,
+API em `PORT=4010`, web em `NEXT_PUBLIC_API_URL` apontando pra ela):
 
-## Result (parcial — Blocos A+B; Bloco C carry-over)
+| AC | Evidência |
+|---|---|
+| AC8 (Settings) | Seção "Endereço de origem da loja" + "Melhor Envio" preenchidas ao vivo: CEP `01310-930` → autofill real via ViaCEP (`Avenida Paulista`/`Bela Vista`/`São Paulo`/`SP`, confirmado por `fetch` interceptado no browser); token de teste salvo → badge "· configurado" aparece e sobrevive a um reload completo da página; campo de token nunca hidrata o valor salvo (sempre vazio no reload, só o booleano de "configurado" vem do backend) |
+| AC9 (PDP) | `ShippingQuoteWidget` na PDP (`/loja/p/camisa-flamengo-i-2024`): CEP válido + "Calcular" → `POST /public/shipping/quote` real (201) → devolve fallback fixo formatado (`Retire na Rua Oriente` Grátis / `Entrega padrão` R$25,00 / `Entrega expressa` R$45,00), porque o token salvo é de teste (não uma conta real da Melhor Envio) — confirma a árvore de fallback funcionando ponta a ponta com um token presente porém inválido, não só com token ausente (que já estava coberto no Bloco A/B) |
+| AC9 (Checkout) | `ShippingPicker` no `/checkout`: ao preencher endereço completo (CEP+número, exigido pelo `AddressForm.commit()` já existente), a descrição das opções muda de `"Em até 3 dias úteis."` (fallback estático do `buildMethods()`) para `"Entrega via transportadora."` (vindo da resposta real do `POST /public/shipping/quote`) — confirma que o componente troca de fonte de dados corretamente, não só mantém o visual antigo |
+| Regressão fim-a-fim | Pedido real de guest checkout completado via "Combinar no WhatsApp (Manual)": `POST /public/order-drafts` → `PATCH .../draftId` → `POST .../submit` → 201, `orderId` real criado com `shippingMethod:"standard"`, `shippingCost:25`, `destinationCep:"01310-930"` persistidos corretamente no pedido |
+
+**Nota de troubleshooting**: a primeira tentativa de disparar o blur do CEP em Settings via
+`dispatchEvent(new Event('blur', {bubbles:true}))` não funcionou (zero chamadas a `viacep.com.br`) —
+inicialmente interpretado como possível bug real. Investigação seguinte (clique+digitação+clique-fora
+genuinamente confiáveis via `computer` tool) confirmou que `handleOriginCepBlur` funciona
+corretamente; a causa real era dupla: (1) React 17+ escuta `focusout` delegado na raiz pra `onBlur`,
+não o evento `blur` puro despachado manualmente, e (2) mesmo com um blur confiável, `read_network_requests`
+não captura chamadas `fetch` cross-origin pro domínio externo do ViaCEP — só apareceu ao interceptar
+`window.fetch` diretamente. Nenhum bug de produto — puramente limitação das ferramentas de teste.
+
+## Result
 
 **O que subiu:** módulo `shipping/` completo (`MelhorEnvioAdapter`, `ShippingQuoteService`,
 `POST /public/shipping/quote`), schema (`Tenant.shippingConfig.originAddress`/`melhorEnvio`,
 `Product.widthCm/heightCm/lengthCm`, `OrderDraft.destinationCep/shippingQuote`,
-`Order.shippingServiceLabel`), e a integração real no fluxo de draft: escolher uma cotação real no
-patch grava e valida contra uma cotação fresca (nunca aceita preço do cliente, mesmo princípio do
-cupom), o submit copia sem recalcular. Os 3 métodos fixos de sempre (pickup/standard/express)
-seguem exatamente o mesmo caminho de código de antes deste loop — comportamento idêntico,
-confirmado por regressão automatizada e por curl real contra o tenant `lmfit`.
+`Order.shippingServiceLabel`), a integração real no fluxo de draft (escolher uma cotação real no
+patch grava e valida contra uma cotação fresca, nunca aceita preço do cliente — mesmo princípio do
+cupom), e o Bloco C completo: Settings "Frete" ganhou endereço de origem (com autofill via ViaCEP) e
+credenciais da Melhor Envio (token nunca hidrata em texto plano, só um badge de "configurado"); PDP e
+checkout cotam frete real com fallback automático e silencioso pras taxas fixas de sempre. Os 3
+métodos fixos (pickup/standard/express) seguem exatamente o mesmo caminho de código de antes deste
+loop — comportamento idêntico, confirmado por regressão automatizada, curl real, e um pedido real de
+ponta a ponta criado via checkout.
 
-**Por que parou aqui:** o loop cresceu de M pra L já na REFINEMENT (ver Sizing) — Blocos A+B
-(fundação + integração no draft, tudo testável sem UI) formam um incremento coerente e
-completamente shipável sozinho; Bloco C (telas: Settings "Frete", `ShippingPicker.tsx`, cotação na
-PDP) é trabalho de frontend que merece sua própria passada de verificação ao vivo no navegador
-(padrão já estabelecido nesta sessão pra qualquer mudança de UI), em vez de ser encaixado no mesmo
-fôlego só pra "terminar o loop" sem checar de verdade. Nenhuma parte do que subiu é código morto —
-o endpoint já funciona de ponta a ponta (testado ao vivo), só não tem UI ainda que o chame.
-
-**Carry-over — Bloco C, retomar quando o usuário confirmar:**
-1. Settings "Frete" — endereço de origem + token/ambiente Melhor Envio (AC8).
-2. `ShippingPicker.tsx` — listar opções reais quando existirem.
-3. PDP — cotação real ao digitar CEP válido (AC9).
-4. Validar `MelhorEnvioAdapter` contra sandbox de verdade assim que o usuário tiver o token (ver
-   caveat no Design notes — a forma da API vem só da documentação oficial até agora).
+**Carry-over — Loop 27-B, futuro, sem data:**
+1. Compra de etiqueta + rastreio automático (exige OAuth2 completo + saldo na carteira Melhor Envio —
+   ver Scope/Out).
+2. Validar `MelhorEnvioAdapter` contra sandbox de verdade assim que o usuário tiver uma conta e token
+   reais da Melhor Envio (ver caveat no Design notes — a forma da API vem só da documentação oficial
+   até agora, nunca testada contra uma chamada real).
+3. **Fora de escopo deste loop, achado durante a verificação ao vivo do Bloco C**: os campos
+   `metaAppSecret`/`metaWhatsappAccessToken` (e possivelmente outros campos de credencial) em
+   `SettingsClient.tsx` hidratam o ciphertext bruto (`"enc:v1:..."`) direto no `value` do input de
+   texto plano ao carregar a página — um bug de segurança pré-existente, não introduzido por este
+   loop (o novo campo `melhorEnvioToken` foi construído deliberadamente sem replicar esse padrão).
+   Reportado ao usuário separadamente; não corrigido aqui.

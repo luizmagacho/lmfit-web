@@ -15,6 +15,7 @@ export type CustomerAuthUser = {
   name: string;
   email: string | null;
   phone: string | null;
+  customerCode: string | null;
   loyaltyPoints: number;
   storeCreditBalance: number;
   redeemValuePerPoint: number;

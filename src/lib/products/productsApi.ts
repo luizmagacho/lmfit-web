@@ -11,6 +11,7 @@ type InventoryVariantRow = {
   price?: number;
   quantityInStock?: number;
   quantityOnHand?: number;
+  barcode?: string;
 };
 
 export type InventoryProduct = Record<string, unknown> & {

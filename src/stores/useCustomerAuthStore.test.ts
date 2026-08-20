@@ -111,7 +111,7 @@ describe("useCustomerAuthStore (Loop 7)", () => {
   it("logout() clears tokens and resets the store even if the API call fails", async () => {
     postMock.mockRejectedValueOnce(new Error("network"));
     useCustomerAuthStore.setState({
-      user: { id: "c1", name: "Ana", email: null, phone: null, loyaltyPoints: 0, storeCreditBalance: 0, redeemValuePerPoint: 0.01 },
+      user: { id: "c1", name: "Ana", email: null, phone: null, customerCode: null, loyaltyPoints: 0, storeCreditBalance: 0, redeemValuePerPoint: 0.01 },
     });
 
     await useCustomerAuthStore.getState().logout();

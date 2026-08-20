@@ -42,6 +42,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       "nav.segments": { "pt-BR": "CRM · Segmentos", "en": "CRM · Segments" },
       "nav.suppliers": { "pt-BR": "Fornecedores", "en": "Suppliers" },
       "nav.products": { "pt-BR": "Produtos", "en": "Products" },
+      "nav.labels": { "pt-BR": "Etiquetas", "en": "Labels" },
       "nav.materials": { "pt-BR": "Insumos", "en": "Materials" },
       "nav.orders": { "pt-BR": "Pedidos", "en": "Orders" },
       "nav.returns": { "pt-BR": "Devoluções", "en": "Returns" },

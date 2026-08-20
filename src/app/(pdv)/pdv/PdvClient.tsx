@@ -92,7 +92,7 @@ export function PdvClient() {
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerMode, setScannerMode] = useState<"product" | "customer" | null>(null);
   const [scanning, setScanning] = useState(false);
   const [orderData, setOrderData] = useState<{ variant: VariantRowData; product: Record<string, unknown> } | null>(null);
 
@@ -172,7 +172,7 @@ export function PdvClient() {
 
   const handleBarcodeDetected = useCallback(
     async (code: string) => {
-      setIsScannerOpen(false);
+      setScannerMode(null);
       setScanning(true);
       try {
         // Local primeiro (funciona sem rede); só cai pra rede se o código não estiver na
@@ -189,6 +189,29 @@ export function PdvClient() {
       }
     },
     [pickProduct],
+  );
+
+  /** Loop 34 — carteirinha do cliente: mesmo leitor (`BarcodeScannerModal`), só troca o que o
+   *  código escaneado resolve. Erro nunca trava o caixa — o vendedor sempre pode voltar pra
+   *  busca manual por nome/telefone. */
+  const handleCustomerBarcodeDetected = useCallback(
+    async (code: string) => {
+      setScannerMode(null);
+      try {
+        const { data } = await http.get<{ _id?: string; id?: string; name?: string }>(
+          `/customers/by-code/${encodeURIComponent(code)}`,
+        );
+        const id = String(data._id ?? data.id ?? "");
+        if (!id) throw new Error("customer without id");
+        cart.setCustomer({ id, name: data.name ?? "" });
+        setCustomerSearch("");
+        setCustomerResults([]);
+        toast.success(`Cliente: ${data.name ?? id}`);
+      } catch {
+        toast.error(`Carteirinha ${code} não encontrada.`);
+      }
+    },
+    [cart],
   );
 
   useEffect(() => {
@@ -419,6 +442,16 @@ export function PdvClient() {
             />
             <button
               type="button"
+              onClick={() => setScannerMode("customer")}
+              className="text-xs font-medium px-2 py-1 border rounded-md whitespace-nowrap hover:bg-black/5 dark:hover:bg-white/5 transition-colors bg-transparent flex items-center gap-1"
+              style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+              title="Escanear a carteirinha do cliente"
+            >
+              <ScanLine className="h-3.5 w-3.5" />
+              Escanear
+            </button>
+            <button
+              type="button"
               onClick={() => setIsNewCustomerOpen(true)}
               className="text-xs font-medium px-2 py-1 border rounded-md whitespace-nowrap hover:bg-black/5 dark:hover:bg-white/5 transition-colors bg-transparent"
               style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
@@ -524,7 +557,7 @@ export function PdvClient() {
           />
           <button
             type="button"
-            onClick={() => setIsScannerOpen(true)}
+            onClick={() => setScannerMode("product")}
             disabled={scanning}
             aria-label="Escanear código de barras"
             title="Escanear código de barras"
@@ -535,8 +568,11 @@ export function PdvClient() {
           </button>
         </div>
 
-        {isScannerOpen ? (
-          <BarcodeScannerModal onClose={() => setIsScannerOpen(false)} onDetected={handleBarcodeDetected} />
+        {scannerMode ? (
+          <BarcodeScannerModal
+            onClose={() => setScannerMode(null)}
+            onDetected={scannerMode === "product" ? handleBarcodeDetected : handleCustomerBarcodeDetected}
+          />
         ) : null}
 
         {term.length >= 2 ? (
