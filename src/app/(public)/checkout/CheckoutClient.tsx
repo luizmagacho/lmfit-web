@@ -35,7 +35,10 @@ export function CheckoutClient() {
     }
   }, [tenant]);
 
-  const shippingValue = shippingCost(checkout.shipping, tenant?.shippingConfig, snap.subtotal);
+  // Loop 27 — quando o cliente escolheu uma cotação real (Melhor Envio), o preço já veio do
+  // servidor guardado em `checkout.shippingQuote`; só cai na função pura de fallback pros 3
+  // métodos fixos de sempre, que nunca precisaram de rede.
+  const shippingValue = checkout.shippingQuote?.price ?? shippingCost(checkout.shipping, tenant?.shippingConfig, snap.subtotal);
   const total = snap.subtotal + shippingValue;
 
   const canSubmit = useMemo(() => {
@@ -59,6 +62,7 @@ export function CheckoutClient() {
           method: checkout.shipping,
           address: checkout.shipping === "pickup" ? null : checkout.address,
           cost: shippingValue,
+          destinationCep: checkout.address?.cep,
         },
         lines: snap.lines.map((l) => ({
           variantId: l.variantId,

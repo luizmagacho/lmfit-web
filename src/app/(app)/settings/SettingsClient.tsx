@@ -13,6 +13,7 @@ import { http } from "@/lib/http";
 import { extractListItems } from "@/lib/normalizeApiList";
 import { STOREFRONT_PRESETS, DEFAULT_THEME_PRESET, type ThemePreset } from "@/theme/storefrontPresets";
 import { buildStorefrontUrl } from "@/lib/tenantSlug";
+import { isValidCep, lookupCep, maskCep, onlyCepDigits } from "@/lib/cep";
 import { WhatsappSellersSection } from "./WhatsappSellersSection";
 
 /** (DDD) NNNNN-NNNN (móvel, 9 dígitos) ou (DDD) NNNN-NNNN (formato antigo, 8 dígitos) — mesma
@@ -46,12 +47,24 @@ export function SettingsClient() {
   const [logoUrl, setLogoUrl] = useState("");
   const [faviconUrl, setFaviconUrl] = useState("");
   const [infinitePayTag, setInfinitePayTag] = useState("");
+  // `infinitePayApiKey`, assim como os campos Meta abaixo, NUNCA é hidratado a partir do que o
+  // servidor devolve — só `infinitePayApiKeyConfigured` (derivado, exibição) diz se já existe uma
+  // chave salva; o campo de texto começa sempre vazio e só é reenviado se o lojista digitar algo
+  // novo. Mesmo princípio do `melhorEnvioToken` (Loop 27).
   const [infinitePayApiKey, setInfinitePayApiKey] = useState("");
+  const [infinitePayApiKeyConfigured, setInfinitePayApiKeyConfigured] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState("");
+  // metaAppSecret/metaWhatsappVerifyToken/metaWhatsappAccessToken são criptografados no backend
+  // (EncryptionService, prefixo "enc:v1:...") — hidratar `value` a partir do que o servidor devolve
+  // colocaria o texto cifrado bruto no DOM. Mesmo tratamento do `melhorEnvioToken` (Loop 27): só o
+  // booleano "*Configured" (derivado da presença de valor salvo) é usado pra exibição.
   const [metaAppSecret, setMetaAppSecret] = useState("");
+  const [metaAppSecretConfigured, setMetaAppSecretConfigured] = useState(false);
   const [metaWhatsappVerifyToken, setMetaWhatsappVerifyToken] = useState("");
+  const [metaWhatsappVerifyTokenConfigured, setMetaWhatsappVerifyTokenConfigured] = useState(false);
   const [metaWhatsappPhoneNumberId, setMetaWhatsappPhoneNumberId] = useState("");
   const [metaWhatsappAccessToken, setMetaWhatsappAccessToken] = useState("");
+  const [metaWhatsappAccessTokenConfigured, setMetaWhatsappAccessTokenConfigured] = useState(false);
   const [whatsappAiEnabled, setWhatsappAiEnabled] = useState(false);
   // Número de contato pra onde os checkouts (/loja e /catalogo) mandam o cliente no WhatsApp —
   // distinto da API oficial da Meta abaixo (aquela é pra IA responder automaticamente; este é só
@@ -75,14 +88,37 @@ export function SettingsClient() {
   const [standardFee, setStandardFee] = useState(19.9);
   const [expressFee, setExpressFee] = useState(39.9);
   const [freeAboveTotal, setFreeAboveTotal] = useState(0);
+  // Loop 27 — endereço de origem da loja + credenciais Melhor Envio, necessários pra cotação real
+  // de frete. `melhorEnvioToken` NUNCA é hidratado a partir do que o servidor devolve (o valor lá é
+  // criptografado, não dá pra mostrar de volta) — só `melhorEnvioTokenConfigured` (derivado, exibição)
+  // diz se já existe um token salvo; o campo de texto começa sempre vazio e só é reenviado se o
+  // lojista de fato digitar um valor novo.
+  const [originCep, setOriginCep] = useState("");
+  const [originLogradouro, setOriginLogradouro] = useState("");
+  const [originNumero, setOriginNumero] = useState("");
+  const [originComplemento, setOriginComplemento] = useState("");
+  const [originBairro, setOriginBairro] = useState("");
+  const [originCidade, setOriginCidade] = useState("");
+  const [originUf, setOriginUf] = useState("");
+  const [originCepLooking, setOriginCepLooking] = useState(false);
+  const [originCepError, setOriginCepError] = useState("");
+  const [melhorEnvioToken, setMelhorEnvioToken] = useState("");
+  const [melhorEnvioTokenConfigured, setMelhorEnvioTokenConfigured] = useState(false);
+  const [melhorEnvioAmbiente, setMelhorEnvioAmbiente] = useState<"sandbox" | "producao">("sandbox");
   const [savingShipping, setSavingShipping] = useState(false);
 
   const [metaPixelId, setMetaPixelId] = useState("");
+  // Mesmo tratamento do `melhorEnvioToken`/campos Meta acima: os 3 tokens de servidor são
+  // criptografados no backend, então só o booleano "*Configured" é derivado do que o servidor
+  // devolve — o valor cifrado nunca entra no state que alimenta o `value` do input.
   const [metaConversionsApiToken, setMetaConversionsApiToken] = useState("");
+  const [metaConversionsApiTokenConfigured, setMetaConversionsApiTokenConfigured] = useState(false);
   const [ga4MeasurementId, setGa4MeasurementId] = useState("");
   const [ga4ApiSecret, setGa4ApiSecret] = useState("");
+  const [ga4ApiSecretConfigured, setGa4ApiSecretConfigured] = useState(false);
   const [tiktokPixelId, setTiktokPixelId] = useState("");
   const [tiktokAccessToken, setTiktokAccessToken] = useState("");
+  const [tiktokAccessTokenConfigured, setTiktokAccessTokenConfigured] = useState(false);
   const [savingAnalytics, setSavingAnalytics] = useState(false);
 
   const [themePreset, setThemePreset] = useState<ThemePreset>(DEFAULT_THEME_PRESET);
@@ -156,12 +192,12 @@ export function SettingsClient() {
             setFaviconUrl(data.branding?.faviconUrl || "");
             setWhatsappNumber(formatWhatsappNumberMask(data.whatsappNumber || ""));
             setInfinitePayTag(data.infinitePayTag || "");
-            setInfinitePayApiKey(data.infinitePayApiKey || "");
+            setInfinitePayApiKeyConfigured(!!data.infinitePayApiKey);
             setGeminiApiKey(data.geminiApiKey || "");
-            setMetaAppSecret(data.metaAppSecret || "");
-            setMetaWhatsappVerifyToken(data.metaWhatsappVerifyToken || "");
+            setMetaAppSecretConfigured(!!data.metaAppSecret);
+            setMetaWhatsappVerifyTokenConfigured(!!data.metaWhatsappVerifyToken);
             setMetaWhatsappPhoneNumberId(data.metaWhatsappPhoneNumberId || "");
-            setMetaWhatsappAccessToken(data.metaWhatsappAccessToken || "");
+            setMetaWhatsappAccessTokenConfigured(!!data.metaWhatsappAccessToken);
             setWhatsappAiEnabled(data.whatsappAiEnabled ?? false);
             if (data.loyalty) {
               setLoyaltyEnabled(data.loyalty.enabled ?? false);
@@ -173,6 +209,16 @@ export function SettingsClient() {
               setStandardFee(data.shippingConfig.standardFee ?? 19.9);
               setExpressFee(data.shippingConfig.expressFee ?? 39.9);
               setFreeAboveTotal(data.shippingConfig.freeAboveTotal ?? 0);
+              const origin = data.shippingConfig.originAddress;
+              setOriginCep(origin?.cep ? maskCep(origin.cep) : "");
+              setOriginLogradouro(origin?.logradouro ?? "");
+              setOriginNumero(origin?.numero ?? "");
+              setOriginComplemento(origin?.complemento ?? "");
+              setOriginBairro(origin?.bairro ?? "");
+              setOriginCidade(origin?.cidade ?? "");
+              setOriginUf(origin?.uf ?? "");
+              setMelhorEnvioTokenConfigured(!!data.shippingConfig.melhorEnvio?.token);
+              setMelhorEnvioAmbiente(data.shippingConfig.melhorEnvio?.ambiente ?? "sandbox");
             }
             if (data.storefront) {
               if (data.storefront.themePreset && data.storefront.themePreset in STOREFRONT_PRESETS) {
@@ -219,11 +265,11 @@ export function SettingsClient() {
             }
             if (data.analytics) {
               setMetaPixelId(data.analytics.metaPixelId ?? "");
-              setMetaConversionsApiToken(data.analytics.metaConversionsApiToken ?? "");
+              setMetaConversionsApiTokenConfigured(!!data.analytics.metaConversionsApiToken);
               setGa4MeasurementId(data.analytics.ga4MeasurementId ?? "");
-              setGa4ApiSecret(data.analytics.ga4ApiSecret ?? "");
+              setGa4ApiSecretConfigured(!!data.analytics.ga4ApiSecret);
               setTiktokPixelId(data.analytics.tiktokPixelId ?? "");
-              setTiktokAccessToken(data.analytics.tiktokAccessToken ?? "");
+              setTiktokAccessTokenConfigured(!!data.analytics.tiktokAccessToken);
             }
           }
         })
@@ -379,6 +425,24 @@ export function SettingsClient() {
       // mistura tudo dentro de tenant.branding.*, então sem isso o cache local ficava com o valor
       // antigo até um refresh completo, mesmo o checkout já lendo tenant.whatsappNumber direto.
       setTenantWhatsappNumber(whatsappNumber.trim());
+      // Os campos de credencial nunca ficam com o valor digitado no state depois de salvos — só a
+      // confirmação de que agora existe algo salvo, mesmo princípio do `melhorEnvioToken`.
+      if (infinitePayApiKey.trim()) {
+        setInfinitePayApiKeyConfigured(true);
+        setInfinitePayApiKey("");
+      }
+      if (metaAppSecret.trim()) {
+        setMetaAppSecretConfigured(true);
+        setMetaAppSecret("");
+      }
+      if (metaWhatsappVerifyToken.trim()) {
+        setMetaWhatsappVerifyTokenConfigured(true);
+        setMetaWhatsappVerifyToken("");
+      }
+      if (metaWhatsappAccessToken.trim()) {
+        setMetaWhatsappAccessTokenConfigured(true);
+        setMetaWhatsappAccessToken("");
+      }
       setSuccessMsg("Customização salva com sucesso! O visual foi atualizado instantaneamente.");
     } catch (err: any) {
       console.error(err);
@@ -398,14 +462,40 @@ export function SettingsClient() {
     setSuccessMsg("");
 
     try {
+      const hasOriginAddress = isValidCep(originCep) && originLogradouro.trim() && originBairro.trim() && originCidade.trim() && originUf.trim();
       const payload = {
         pickupLabel: pickupLabel.trim() || undefined,
         standardFee,
         expressFee,
         freeAboveTotal: freeAboveTotal || undefined,
+        originAddress: hasOriginAddress
+          ? {
+              cep: maskCep(originCep),
+              logradouro: originLogradouro.trim(),
+              numero: originNumero.trim() || undefined,
+              complemento: originComplemento.trim() || undefined,
+              bairro: originBairro.trim(),
+              cidade: originCidade.trim(),
+              uf: originUf.trim().toUpperCase(),
+            }
+          : undefined,
+        // Só reenvia o token se o lojista digitou algo novo — string vazia/undefined preserva o
+        // que já estava salvo (o backend nunca troca o token sem um valor de verdade).
+        melhorEnvioToken: melhorEnvioToken.trim() || undefined,
+        melhorEnvioAmbiente,
       };
       await http.patch(`/tenants/${user.tenantId}/shipping`, payload);
-      setTenantShipping(payload);
+      // O token nunca entra no estado local (nem veio da resposta, nem é reidratado) — só a
+      // confirmação de que agora existe algum, se foi de fato trocado nesta chamada.
+      const { melhorEnvioToken: _sentToken, ...storeable } = payload;
+      setTenantShipping({
+        ...storeable,
+        melhorEnvio: { ambiente: melhorEnvioAmbiente },
+      });
+      if (melhorEnvioToken.trim()) {
+        setMelhorEnvioTokenConfigured(true);
+        setMelhorEnvioToken("");
+      }
       setSuccessMsg(language === "en" ? "Shipping settings saved successfully!" : "Frete salvo com sucesso!");
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
@@ -414,6 +504,27 @@ export function SettingsClient() {
     } finally {
       setSavingShipping(false);
     }
+  };
+
+  const handleOriginCepBlur = async () => {
+    const digits = onlyCepDigits(originCep);
+    if (digits.length !== 8) {
+      if (digits.length > 0) setOriginCepError(language === "en" ? "Invalid ZIP code." : "CEP inválido.");
+      return;
+    }
+    setOriginCepError("");
+    setOriginCepLooking(true);
+    const data = await lookupCep(digits);
+    setOriginCepLooking(false);
+    if (!data) {
+      setOriginCepError(language === "en" ? "ZIP code not found. Fill in manually." : "Não encontramos esse CEP. Preencha manualmente.");
+      return;
+    }
+    setOriginCep(data.cep);
+    if (data.logradouro) setOriginLogradouro(data.logradouro);
+    if (data.bairro) setOriginBairro(data.bairro);
+    if (data.cidade) setOriginCidade(data.cidade);
+    if (data.uf) setOriginUf(data.uf);
   };
 
   const handleSaveAnalytics = async (e: React.FormEvent) => {
@@ -440,6 +551,18 @@ export function SettingsClient() {
         ga4MeasurementId: payload.ga4MeasurementId,
         tiktokPixelId: payload.tiktokPixelId,
       });
+      if (metaConversionsApiToken.trim()) {
+        setMetaConversionsApiTokenConfigured(true);
+        setMetaConversionsApiToken("");
+      }
+      if (ga4ApiSecret.trim()) {
+        setGa4ApiSecretConfigured(true);
+        setGa4ApiSecret("");
+      }
+      if (tiktokAccessToken.trim()) {
+        setTiktokAccessTokenConfigured(true);
+        setTiktokAccessToken("");
+      }
       setSuccessMsg(language === "en" ? "Analytics settings saved successfully!" : "Analytics salvo com sucesso!");
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
@@ -725,12 +848,20 @@ export function SettingsClient() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Chave de API (Secret Key)</label>
+                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                            Chave de API (Secret Key)
+                            {infinitePayApiKeyConfigured ? (
+                              <span className="ml-2 font-normal normal-case" style={{ color: lmfitTokens.success }}>
+                                {language === "en" ? "· configured" : "· configurado"}
+                              </span>
+                            ) : null}
+                          </label>
                           <input
                             type="password"
                             value={infinitePayApiKey}
                             onChange={(e) => setInfinitePayApiKey(e.target.value)}
-                            placeholder="Ex: secret_..."
+                            placeholder={infinitePayApiKeyConfigured ? "••••••••••••••••" : "Ex: secret_..."}
+                            autoComplete="off"
                             className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
                             style={{
                               borderColor: lmfitTokens.border,
@@ -768,36 +899,64 @@ export function SettingsClient() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Access Token</label>
+                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                            Access Token
+                            {metaWhatsappAccessTokenConfigured ? (
+                              <span className="ml-2 font-normal normal-case" style={{ color: lmfitTokens.success }}>
+                                {language === "en" ? "· configured" : "· configurado"}
+                              </span>
+                            ) : null}
+                          </label>
                           <input
                             type="password"
                             value={metaWhatsappAccessToken}
                             onChange={(e) => setMetaWhatsappAccessToken(e.target.value)}
-                            placeholder="Ex: EAAG..."
+                            placeholder={metaWhatsappAccessTokenConfigured ? "••••••••••••••••" : "Ex: EAAG..."}
+                            autoComplete="off"
                             className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
                             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                           />
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">App Secret</label>
+                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                            App Secret
+                            {metaAppSecretConfigured ? (
+                              <span className="ml-2 font-normal normal-case" style={{ color: lmfitTokens.success }}>
+                                {language === "en" ? "· configured" : "· configurado"}
+                              </span>
+                            ) : null}
+                          </label>
                           <input
                             type="password"
                             value={metaAppSecret}
                             onChange={(e) => setMetaAppSecret(e.target.value)}
-                            placeholder="Ex: 32a1b..."
+                            placeholder={metaAppSecretConfigured ? "••••••••••••••••" : "Ex: 32a1b..."}
+                            autoComplete="off"
                             className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
                             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                           />
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Verify Token</label>
+                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                            Verify Token
+                            {metaWhatsappVerifyTokenConfigured ? (
+                              <span className="ml-2 font-normal normal-case" style={{ color: lmfitTokens.success }}>
+                                {language === "en" ? "· configured" : "· configurado"}
+                              </span>
+                            ) : null}
+                          </label>
                           <input
                             type="text"
                             value={metaWhatsappVerifyToken}
                             onChange={(e) => setMetaWhatsappVerifyToken(e.target.value)}
-                            placeholder={language === "en" ? "A password you choose" : "Uma senha que você escolhe"}
+                            placeholder={
+                              metaWhatsappVerifyTokenConfigured
+                                ? "••••••••••••••••"
+                                : language === "en" ? "A password you choose" : "Uma senha que você escolhe"
+                            }
+                            autoComplete="off"
                             className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
                             style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                           />
@@ -1375,6 +1534,161 @@ export function SettingsClient() {
                   </div>
                 </div>
 
+                {/* Loop 27 — endereço de origem, necessário pra cotação real de frete */}
+                <div className="space-y-4 pt-6 border-t" style={{ borderColor: lmfitTokens.border }}>
+                  <div>
+                    <h3 className="text-sm font-bold tracking-wide uppercase text-neutral-400 dark:text-neutral-500">
+                      {language === "en" ? "Store origin address" : "Endereço de origem da loja"}
+                    </h3>
+                    <p className="text-xs mt-1" style={{ color: lmfitTokens.textMuted }}>
+                      {language === "en"
+                        ? "Where shipments leave from — required for real Melhor Envio quotes. Without it, checkout keeps using the fixed fees above."
+                        : "De onde os envios saem — obrigatório pra cotação real via Melhor Envio. Sem isso, o checkout continua usando as taxas fixas acima."}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">CEP</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={maskCep(originCep)}
+                        onChange={(e) => setOriginCep(onlyCepDigits(e.target.value))}
+                        onBlur={handleOriginCepBlur}
+                        placeholder="00000-000"
+                        maxLength={9}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                      {originCepLooking ? (
+                        <span className="text-xs" style={{ color: lmfitTokens.textMuted }}>{language === "en" ? "Looking up…" : "Buscando…"}</span>
+                      ) : originCepError ? (
+                        <span className="text-xs" style={{ color: lmfitTokens.error }}>{originCepError}</span>
+                      ) : null}
+                    </div>
+                    <div className="sm:col-span-4 space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        {language === "en" ? "Address" : "Endereço"}
+                      </label>
+                      <input
+                        type="text"
+                        value={originLogradouro}
+                        onChange={(e) => setOriginLogradouro(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        {language === "en" ? "Number" : "Número"}
+                      </label>
+                      <input
+                        type="text"
+                        value={originNumero}
+                        onChange={(e) => setOriginNumero(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                    <div className="sm:col-span-4 space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        {language === "en" ? "Complement" : "Complemento"}
+                      </label>
+                      <input
+                        type="text"
+                        value={originComplemento}
+                        onChange={(e) => setOriginComplemento(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        {language === "en" ? "Neighborhood" : "Bairro"}
+                      </label>
+                      <input
+                        type="text"
+                        value={originBairro}
+                        onChange={(e) => setOriginBairro(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                    <div className="sm:col-span-3 space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        {language === "en" ? "City" : "Cidade"}
+                      </label>
+                      <input
+                        type="text"
+                        value={originCidade}
+                        onChange={(e) => setOriginCidade(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                    <div className="sm:col-span-1 space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">UF</label>
+                      <input
+                        type="text"
+                        maxLength={2}
+                        value={originUf}
+                        onChange={(e) => setOriginUf(e.target.value.toUpperCase())}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500 uppercase"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Loop 27 — credenciais Melhor Envio */}
+                <div className="space-y-4 pt-6 border-t" style={{ borderColor: lmfitTokens.border }}>
+                  <div>
+                    <h3 className="text-sm font-bold tracking-wide uppercase text-neutral-400 dark:text-neutral-500">
+                      Melhor Envio
+                    </h3>
+                    <p className="text-xs mt-1" style={{ color: lmfitTokens.textMuted }}>
+                      {language === "en"
+                        ? "Token with \"Shipping quote\" scope, generated in your Melhor Envio dashboard. Without it, checkout keeps using the fixed fees above — nothing breaks."
+                        : "Token com escopo \"Cotação de fretes\", gerado no painel da Melhor Envio. Sem ele, o checkout continua usando as taxas fixas acima — nada quebra."}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        {language === "en" ? "API token" : "Token da API"}
+                        {melhorEnvioTokenConfigured ? (
+                          <span className="ml-2 font-normal normal-case" style={{ color: lmfitTokens.success }}>
+                            {language === "en" ? "· configured" : "· configurado"}
+                          </span>
+                        ) : null}
+                      </label>
+                      <input
+                        type="password"
+                        value={melhorEnvioToken}
+                        onChange={(e) => setMelhorEnvioToken(e.target.value)}
+                        placeholder={melhorEnvioTokenConfigured ? "••••••••••••••••" : language === "en" ? "Paste the token here" : "Cole o token aqui"}
+                        autoComplete="off"
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        {language === "en" ? "Environment" : "Ambiente"}
+                      </label>
+                      <select
+                        value={melhorEnvioAmbiente}
+                        onChange={(e) => setMelhorEnvioAmbiente(e.target.value as "sandbox" | "producao")}
+                        className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                        style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                      >
+                        <option value="sandbox">Sandbox</option>
+                        <option value="producao">{language === "en" ? "Production" : "Produção"}</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex justify-end pt-4 border-t" style={{ borderColor: lmfitTokens.border }}>
                   <button
                     type="submit"
@@ -1428,12 +1742,18 @@ export function SettingsClient() {
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
                         {language === "en" ? "Conversions API token (optional)" : "Token da Conversions API (opcional)"}
+                        {metaConversionsApiTokenConfigured ? (
+                          <span className="ml-2 font-normal normal-case" style={{ color: lmfitTokens.success }}>
+                            {language === "en" ? "· configured" : "· configurado"}
+                          </span>
+                        ) : null}
                       </label>
                       <input
                         type="password"
                         value={metaConversionsApiToken}
                         onChange={(e) => setMetaConversionsApiToken(e.target.value)}
-                        placeholder="EAA..."
+                        placeholder={metaConversionsApiTokenConfigured ? "••••••••••••••••" : "EAA..."}
+                        autoComplete="off"
                         className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
                         style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                       />
@@ -1458,11 +1778,18 @@ export function SettingsClient() {
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
                         {language === "en" ? "Measurement Protocol API secret (optional)" : "API secret do Measurement Protocol (opcional)"}
+                        {ga4ApiSecretConfigured ? (
+                          <span className="ml-2 font-normal normal-case" style={{ color: lmfitTokens.success }}>
+                            {language === "en" ? "· configured" : "· configurado"}
+                          </span>
+                        ) : null}
                       </label>
                       <input
                         type="password"
                         value={ga4ApiSecret}
                         onChange={(e) => setGa4ApiSecret(e.target.value)}
+                        placeholder={ga4ApiSecretConfigured ? "••••••••••••••••" : undefined}
+                        autoComplete="off"
                         className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
                         style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                       />
@@ -1486,11 +1813,18 @@ export function SettingsClient() {
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
                         {language === "en" ? "Events API token (optional)" : "Token da Events API (opcional)"}
+                        {tiktokAccessTokenConfigured ? (
+                          <span className="ml-2 font-normal normal-case" style={{ color: lmfitTokens.success }}>
+                            {language === "en" ? "· configured" : "· configurado"}
+                          </span>
+                        ) : null}
                       </label>
                       <input
                         type="password"
                         value={tiktokAccessToken}
                         onChange={(e) => setTiktokAccessToken(e.target.value)}
+                        placeholder={tiktokAccessTokenConfigured ? "••••••••••••••••" : undefined}
+                        autoComplete="off"
                         className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
                         style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                       />

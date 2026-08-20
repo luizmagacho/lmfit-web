@@ -69,12 +69,28 @@ export interface PricingDisplayConfig {
   maxInstallments?: number;
 }
 
-/** Loop 3 — frete tenant-configurável: retirada/padrão/expresso + frete grátis acima de um total. */
+/** Loop 27 — endereço de origem da loja, mesmo shape do endereço de cliente (sem label/_id). */
+export interface ShippingOriginAddress {
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+}
+
+/** Loop 3 — frete tenant-configurável: retirada/padrão/expresso + frete grátis acima de um total.
+ *  Loop 27 acrescenta o necessário pra cotação real via Melhor Envio — o `token` NUNCA aparece
+ *  aqui de propósito (a API devolve o valor criptografado como está no banco; a tela de
+ *  Configurações nunca reidrata o campo de token com esse valor, só mostra "configurado" ou não). */
 export interface ShippingConfig {
   pickupLabel?: string;
   standardFee?: number;
   expressFee?: number;
   freeAboveTotal?: number;
+  originAddress?: ShippingOriginAddress;
+  melhorEnvio?: { ambiente?: "sandbox" | "producao" };
 }
 
 /** Loop 15 — pixels de conversão. Só os IDs (client-side) chegam aqui; os tokens de servidor

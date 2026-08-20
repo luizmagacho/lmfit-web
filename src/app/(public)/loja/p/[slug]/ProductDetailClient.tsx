@@ -10,6 +10,7 @@ import { useCartStore } from "@/stores/useCartStore";
 import { useTenant } from "@/context/TenantContext";
 import { lmfitTokens } from "@/theme/tokens";
 import { VariantSelector } from "@/components/organisms/VariantSelector";
+import { ShippingQuoteWidget } from "@/components/organisms/ShippingQuoteWidget";
 import { RelatedProducts } from "@/components/organisms/RelatedProducts";
 import { ProductReviews } from "@/components/organisms/ProductReviews";
 import { WishlistHeartButton } from "@/components/atoms/WishlistHeartButton";
@@ -86,6 +87,11 @@ export function ProductDetailClient({ slug }: { slug: string }) {
   const composition = product.composition ? String(product.composition) : null;
   const careInstructions = product.careInstructions ? String(product.careInstructions) : null;
   const category = typeof product.category === "string" ? product.category : "";
+  // Loop 27 — peso/dimensões vivem no produto, não na variante, então qualquer variante serve pra
+  // cotar frete real; só precisamos de UM id válido pra chamar POST /public/shipping/quote.
+  const firstVariantId = Array.isArray(product.variants)
+    ? documentId(product.variants[0] as Record<string, unknown>)
+    : undefined;
 
   // Loop 19a — religa a PDP à família de layout do preset (era código morto: os 5 `*PDP` existiam
   // desde o Loop 12 mas nada aqui os importava). `ClassicPDP` traz de volta a galeria sticky de
@@ -145,6 +151,8 @@ export function ProductDetailClient({ slug }: { slug: string }) {
         </div>
         <div className="h-px w-full bg-neutral-200" />
         <VariantSelector product={product} role={role} />
+        <div className="h-px w-full bg-neutral-200" />
+        <ShippingQuoteWidget variantId={firstVariantId} />
       </div>
     ),
     related: (

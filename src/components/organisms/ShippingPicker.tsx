@@ -1,11 +1,15 @@
 "use client";
 
 import * as React from "react";
+import { useEffect, useState } from "react";
 import { Store, Truck, Zap } from "lucide-react";
 import { useCheckoutStore, type ShippingMethod } from "@/stores/useCheckoutStore";
+import { useCartStore } from "@/stores/useCartStore";
 import { Badge } from "@/components/atoms/Badge";
 import { lmfitTokens } from "@/theme/tokens";
 import { useTenant } from "@/context/TenantContext";
+import { publicHttp } from "@/lib/publicHttp";
+import { isValidCep, onlyCepDigits } from "@/lib/cep";
 import type { ShippingConfig } from "@/stores/useTenantStore";
 
 /** Mesmos defaults do `computeShippingCost` no backend (`order-drafts.service.ts`) — usados só
@@ -44,10 +48,94 @@ function buildMethods(cfg: ShippingConfig | undefined, subtotal: number) {
   ];
 }
 
+/** BRL money fields chegam formatados como string pt-BR ("37,79") via
+ *  BrlMoneyResponseInterceptor global — mesmo parser já usado em ProductGrid.tsx. */
+function extractPrice(val: unknown): number {
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const parsed = parseFloat(val.replace(/\./g, "").replace(",", "."));
+    if (!isNaN(parsed)) return parsed;
+  }
+  return 0;
+}
+
+type ShippingOption = {
+  id: ShippingMethod;
+  label: string;
+  description: string;
+  price: number;
+  icon: typeof Store;
+  highlight?: boolean;
+  deliveryDays?: number;
+};
+
+/** Loop 27 — cotação real via Melhor Envio. Só dispara quando há CEP válido + itens no carrinho;
+ *  em qualquer outro caso (sem CEP ainda, API fora, tenant sem token configurado) o componente
+ *  segue mostrando `buildMethods()` (fallback fixo, offline) — nunca trava o checkout esperando a
+ *  rede. Um CEP inválido do lado do cliente nem chega a chamar a API (mesmo princípio de
+ *  `AddressForm`, que já bloqueia no client antes de bater no servidor). */
+function useRealShippingOptions(destinationCep: string | undefined, lines: Array<{ variantId: string; quantity: number }>) {
+  const [options, setOptions] = useState<ShippingOption[] | null>(null);
+
+  useEffect(() => {
+    const digits = onlyCepDigits(destinationCep ?? "");
+    if (!isValidCep(digits) || lines.length === 0) {
+      setOptions(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await publicHttp.post<
+          Array<{ method: string; label: string; price: unknown; deliveryDays?: number; isPickup?: boolean }>
+        >("/public/shipping/quote", {
+          destinationCep: digits,
+          lines: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+        });
+        if (cancelled) return;
+        setOptions(
+          data.map((o) => ({
+            id: o.method as ShippingMethod,
+            label: o.label,
+            description: o.isPickup
+              ? "Retire hoje mesmo. Sem frete."
+              : o.deliveryDays
+                ? `Em até ${o.deliveryDays} dia(s) útil(eis).`
+                : "Entrega via transportadora.",
+            price: extractPrice(o.price),
+            icon: o.isPickup ? Store : Truck,
+            highlight: o.isPickup,
+            deliveryDays: o.deliveryDays,
+          })),
+        );
+      } catch {
+        // Falha silenciosa — o caller cai no fallback fixo de sempre, o cliente nunca vê erro de frete.
+        if (!cancelled) setOptions(null);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [destinationCep, lines]);
+
+  return options;
+}
+
 export function ShippingPicker({ subtotal = 0 }: { subtotal?: number }) {
-  const { shipping, setShipping } = useCheckoutStore();
+  const { shipping, setShipping, setShippingQuote, address } = useCheckoutStore();
+  const cartLines = useCartStore((s) => s.lines);
   const { tenant } = useTenant();
-  const methods = buildMethods(tenant?.shippingConfig, subtotal);
+  const realOptions = useRealShippingOptions(address?.cep, cartLines);
+  const methods: ShippingOption[] = realOptions ?? buildMethods(tenant?.shippingConfig, subtotal);
+
+  function handleSelect(m: ShippingOption) {
+    setShipping(m.id);
+    setShippingQuote(
+      m.id.startsWith("me:") ? { method: m.id, label: m.label, price: m.price, deliveryDays: m.deliveryDays } : null,
+    );
+  }
+
   return (
     <ul className="space-y-2">
       {methods.map((m) => {
@@ -57,7 +145,7 @@ export function ShippingPicker({ subtotal = 0 }: { subtotal?: number }) {
           <li key={m.id}>
             <button
               type="button"
-              onClick={() => setShipping(m.id)}
+              onClick={() => handleSelect(m)}
               className="w-full text-left border rounded-lg p-3 flex items-start gap-3 bg-[var(--card-bg)]"
               style={{
                 borderColor: active ? lmfitTokens.primary : lmfitTokens.border,

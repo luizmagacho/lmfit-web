@@ -3,7 +3,10 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-export type ShippingMethod = "pickup" | "standard" | "express";
+// Loop 27 — deixou de ser um enum fechado: também aceita o id de uma cotação real da Melhor
+// Envio ("me:<id>", vindo de POST /public/shipping/quote). Mesma mudança já feita no backend
+// (PublicPatchDraftDto.shippingMethod).
+export type ShippingMethod = "pickup" | "standard" | "express" | (string & {});
 
 export type CheckoutAddress = {
   cep: string;
@@ -13,6 +16,17 @@ export type CheckoutAddress = {
   bairro: string;
   cidade: string;
   uf: string;
+};
+
+/** Loop 27 — detalhe da cotação real escolhida (Melhor Envio), mesmo shape do que o backend
+ *  guarda em `OrderDraft.shippingQuote`. `null` pros 3 métodos fixos de sempre — nesse caso o
+ *  preço exibido continua vindo da função pura `shippingCost()` (ShippingPicker.tsx), sem chamada
+ *  nenhuma à API. */
+export type ShippingQuote = {
+  method: string;
+  label: string;
+  price: number;
+  deliveryDays?: number;
 };
 
 export type PixPayment = {
@@ -28,6 +42,8 @@ type CheckoutState = {
   setAddress: (a: CheckoutAddress | null) => void;
   shipping: ShippingMethod;
   setShipping: (s: ShippingMethod) => void;
+  shippingQuote: ShippingQuote | null;
+  setShippingQuote: (q: ShippingQuote | null) => void;
   pix: PixPayment | null;
   setPix: (p: PixPayment | null) => void;
   updatePixStatus: (status: PixPayment["status"]) => void;
@@ -53,6 +69,8 @@ export const useCheckoutStore = create<CheckoutState>()(
       setAddress: (a) => set({ address: a }),
       shipping: "pickup",
       setShipping: (s) => set({ shipping: s }),
+      shippingQuote: null,
+      setShippingQuote: (q) => set({ shippingQuote: q }),
       pix: null,
       setPix: (p) => set({ pix: p }),
       updatePixStatus: (status) => set((s) => ({ pix: s.pix ? { ...s.pix, status } : s.pix })),
@@ -70,6 +88,7 @@ export const useCheckoutStore = create<CheckoutState>()(
         set({
           address: null,
           shipping: "pickup",
+          shippingQuote: null,
           pix: null,
           customerName: "",
           customerPhone: "",

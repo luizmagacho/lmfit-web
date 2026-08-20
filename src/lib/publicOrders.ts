@@ -43,7 +43,11 @@ export async function patchDraft(
 export async function createPublicDraftWithLines(params: {
   customer: { name: string; phone: string; email?: string | null };
   lines: Array<{ variantId: string; quantity: number; unitPrice: number }>;
-  shipping?: { method: string; address?: unknown; cost?: number };
+  // Loop 27 — `destinationCep` só importa quando `method` é uma cotação real da Melhor Envio
+  // ("me:<id>"); pickup/standard/express nunca precisaram de CEP. `cost` continua sendo enviado só
+  // por retrocompatibilidade de payload — o servidor sempre recalcula, nunca confia nele (ver
+  // PublicPatchDraftDto, que nem declara esse campo).
+  shipping?: { method: string; address?: unknown; cost?: number; destinationCep?: string };
 }): Promise<{ sessionToken: string; draft: PublicDraft }> {
   const { data } = await publicHttp.post<{ sessionToken: string }>("/public/order-drafts", {
     waId: params.customer.phone.replace(/\D/g, "") || undefined,
@@ -58,6 +62,7 @@ export async function createPublicDraftWithLines(params: {
     status: "review",
     shippingMethod: params.shipping?.method,
     shippingCost: params.shipping?.cost ?? 0,
+    destinationCep: params.shipping?.destinationCep,
   });
   return { sessionToken: token, draft };
 }
