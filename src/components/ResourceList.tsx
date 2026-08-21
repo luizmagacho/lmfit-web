@@ -537,7 +537,7 @@ export function ResourceList({
     } catch {
       /* servidor sem /export — exporta a página atual */
     }
-    downloadXlsxFile(fileBase, buildDataAoA(excelColumns, rows));
+    await downloadXlsxFile(fileBase, buildDataAoA(excelColumns, rows));
   }
 
   async function onImportFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -550,7 +550,7 @@ export function ResourceList({
       const buf = await file.arrayBuffer();
       let items: Record<string, unknown>[];
       try {
-        items = parseWorkbookToItems(buf, excelColumns);
+        items = await parseWorkbookToItems(buf, excelColumns);
       } catch {
         setImportBanner({ kind: "error", text: "Planilha inválida ou ilegível." });
         return;
@@ -880,7 +880,7 @@ export function ResourceList({
                 className="text-sm min-h-11 px-3 rounded-md border touch-manipulation disabled:opacity-50"
                 style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                 disabled={importing}
-                onClick={() => downloadTemplate(fileBase, excelColumns)}
+                onClick={() => void downloadTemplate(fileBase, excelColumns)}
               >
                 Modelo Excel
               </button>

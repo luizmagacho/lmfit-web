@@ -257,6 +257,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   id={`sidebar-nav-${item.key.replace("nav.", "")}`}
+                  // A barra lateral fica sempre visível em toda página — o prefetch automático
+                  // do <Link> (dispara pra qualquer link no viewport) faz até ~29 requisições de
+                  // prefetch simultâneas a cada navegação, competindo com as chamadas de API
+                  // reais da página atual (confirmado ao vivo em produção: a requisição do
+                  // próprio documento pedido ficava na fila atrás desses prefetches).
+                  prefetch={false}
                   className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors"
                   style={{
                     backgroundColor: active ? `color-mix(in srgb, ${lmfitTokens.primary} 15%, transparent)` : "transparent",

@@ -339,7 +339,9 @@ export function DashboardClient() {
                     </span>
                     <span className="shrink-0 tabular-nums" style={{ color: lmfitTokens.textMuted }}>
                       {formatBRL(p.revenue)}
-                      {typeof p.units === "number" ? ` · ${p.units} units` : ""}
+                      {typeof p.units === "number"
+                        ? ` · ${p.units} ${language === "en" ? "units" : "un"}`
+                        : ""}
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-[var(--chart-track)] overflow-hidden" aria-hidden>
@@ -381,7 +383,7 @@ export function DashboardClient() {
                     {inf.name}
                   </span>
                   <span className="shrink-0 tabular-nums" style={{ color: lmfitTokens.textMuted }}>
-                    {formatBRL(inf.revenue)} · {inf.units} un · {inf.orderCount}{" "}
+                    {formatBRL(inf.revenue)} · {inf.units} {language === "en" ? "units" : "un"} · {inf.orderCount}{" "}
                     {language === "en" ? "orders" : "pedidos"}
                   </span>
                 </div>
@@ -484,7 +486,7 @@ export function DashboardClient() {
                 <div className="flex justify-between text-sm gap-2">
                   <span style={{ color: lmfitTokens.text }}>{v.sku ?? v.variantId}</span>
                   <span style={{ color: lmfitTokens.textMuted }}>
-                    {formatBRL(v.revenue)} · {v.units} units
+                    {formatBRL(v.revenue)} · {v.units} {language === "en" ? "units" : "un"}
                   </span>
                 </div>
                 <div className="h-2 rounded-full bg-[var(--chart-track)] overflow-hidden" aria-hidden>

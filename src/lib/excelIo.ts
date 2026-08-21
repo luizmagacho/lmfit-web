@@ -1,4 +1,11 @@
-import * as XLSX from "xlsx";
+// `xlsx` é ~140kB e só é usado pelos 3 caminhos de import/export abaixo — importar estaticamente
+// aqui fazia TODA página que usa `ResourceList` (Clientes, Produtos, Notas, ~10 telas ao todo)
+// carregar essa lib inteira no First Load JS mesmo quando ninguém nunca clica em
+// Importar/Exportar Excel. `import()` dinâmico só busca o módulo quando uma dessas funções roda
+// de verdade (o browser faz cache do chunk depois da 1ª vez).
+async function loadXlsx() {
+  return import("xlsx");
+}
 
 export type ExcelColumn = {
   key: string;
@@ -60,10 +67,11 @@ function coerceImportValue(raw: unknown, c: ExcelColumn): unknown {
 }
 
 /** First sheet: row 1 = headers (column label or API key, case-insensitive). */
-export function parseWorkbookToItems(
+export async function parseWorkbookToItems(
   buffer: ArrayBuffer | Uint8Array,
   columns: ExcelColumn[],
-): Record<string, unknown>[] {
+): Promise<Record<string, unknown>[]> {
+  const XLSX = await loadXlsx();
   const wb = XLSX.read(buffer, { type: "array", cellDates: true });
   const sheetName = wb.SheetNames[0];
   if (!sheetName) return [];
@@ -126,7 +134,8 @@ export function buildDataAoA(
   return [header, ...data];
 }
 
-export function downloadXlsxFile(fileBase: string, aoa: (string | number)[][]): void {
+export async function downloadXlsxFile(fileBase: string, aoa: (string | number)[][]): Promise<void> {
+  const XLSX = await loadXlsx();
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Dados");
@@ -134,7 +143,7 @@ export function downloadXlsxFile(fileBase: string, aoa: (string | number)[][]): 
   XLSX.writeFile(wb, name);
 }
 
-export function downloadTemplate(fileBase: string, columns: ExcelColumn[]): void {
+export async function downloadTemplate(fileBase: string, columns: ExcelColumn[]): Promise<void> {
   const header = columns.map((c) => c.label);
-  downloadXlsxFile(`${fileBase}-modelo`, [header]);
+  await downloadXlsxFile(`${fileBase}-modelo`, [header]);
 }
