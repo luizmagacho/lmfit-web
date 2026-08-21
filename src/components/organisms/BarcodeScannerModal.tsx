@@ -36,8 +36,17 @@ export function BarcodeScannerModal({
 
     async function start() {
       try {
+        // Pede resolução alta explicitamente — sem isso, alguns Android escolhem um preset baixo
+        // por padrão (às vezes <720p), insuficiente pra resolver as barras finas de um EAN-13
+        // pequeno na tela (etiqueta física real tem barras nítidas até em baixa resolução; ler a
+        // etiqueta digital direto de um monitor é mais exigente: moiré + subpixel do próprio monitor
+        // já degradam o sinal, então a câmera precisa entregar o máximo de detalhe que conseguir).
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
+          video: {
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
         });
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
@@ -49,7 +58,13 @@ export function BarcodeScannerModal({
         // API só existe em navegadores Chromium. No iPhone TODO navegador (Safari, Chrome,
         // Firefox) roda por baixo no motor do Safari, que nunca implementou essa API — então
         // sem essa troca a leitura por câmera simplesmente não funciona em nenhum app no iOS.
-        const hints = new Map<DecodeHintType, unknown>([[DecodeHintType.POSSIBLE_FORMATS, BARCODE_FORMATS]]);
+        // TRY_HARDER: decodificação mais lenta por frame, mas bem mais tolerante a entradas
+        // difíceis (baixo contraste, levemente fora de foco/ângulo) — o caso comum ao ler um
+        // código pequeno direto da tela de um monitor em vez de uma etiqueta impressa de verdade.
+        const hints = new Map<DecodeHintType, unknown>([
+          [DecodeHintType.POSSIBLE_FORMATS, BARCODE_FORMATS],
+          [DecodeHintType.TRY_HARDER, true],
+        ]);
         const reader = new BrowserMultiFormatReader(hints);
         const controls = await reader.decodeFromStream(stream, videoRef.current ?? undefined, (result) => {
           if (cancelled || detectedRef.current || !result) return;

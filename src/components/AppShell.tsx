@@ -180,6 +180,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { tenant } = useTenant();
+  const user = useAuthStore((s) => s.user);
+  const markTourSeen = useAuthStore((s) => s.markTourSeen);
   const [tourActive, setTourActive] = useState(false);
 
   const storeName = tenant?.name || "Kivoni";
@@ -188,17 +190,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setMenuOpen(false);
   }, [pathname]);
 
+  // Por usuário no banco (User.hasSeenTour), não por navegador/localStorage — senão troca de
+  // aparelho ou limpeza de dados do navegador faz o tour reaparecer pro mesmo usuário.
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const completed = localStorage.getItem("lmfit-tour-completed");
-      if (!completed) {
-        const timer = setTimeout(() => {
-          setTourActive(true);
-        }, 1000);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, []);
+    if (!user || user.hasSeenTour) return;
+    const timer = setTimeout(() => {
+      setTourActive(true);
+      // Marca como visto já ao exibir, não só ao terminar/pular — senão quem só navega pra
+      // outro lugar sem interagir com o popup vê o tour de novo em todo login seguinte.
+      void markTourSeen();
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [user, markTourSeen]);
 
   return (
     <RequireAuth>
@@ -543,7 +546,6 @@ function TourGuide({
     if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      localStorage.setItem("lmfit-tour-completed", "true");
       onClose();
       setCurrentStep(0);
     }
@@ -556,7 +558,6 @@ function TourGuide({
   };
 
   const handleSkip = () => {
-    localStorage.setItem("lmfit-tour-completed", "true");
     onClose();
     setCurrentStep(0);
   };

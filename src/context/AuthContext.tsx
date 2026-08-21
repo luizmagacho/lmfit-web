@@ -25,5 +25,6 @@ export function useAuth() {
   const loading = useAuthStore((s) => s.loading);
   const login = useAuthStore((s) => s.login);
   const logout = useAuthStore((s) => s.logout);
-  return { user, loading, login, logout };
+  const markTourSeen = useAuthStore((s) => s.markTourSeen);
+  return { user, loading, login, logout, markTourSeen };
 }

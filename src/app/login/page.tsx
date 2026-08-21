@@ -19,7 +19,7 @@ function safeInternalNext(raw: string | null): string | null {
 
 function LoginForm() {
   const { user, loading: authLoading, login } = useAuth();
-  const { tenant, slug, loading: tenantLoading } = useTenant();
+  const { tenant, loading: tenantLoading } = useTenant();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextRaw = searchParams.get("next");
@@ -30,13 +30,6 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  // Set default admin email when slug changes
-  useEffect(() => {
-    if (slug) {
-      setEmail(`admin@${slug}.local`);
-    }
-  }, [slug]);
 
   useEffect(() => {
     if (!authLoading && user) router.replace(nextPath ?? "/dashboard");

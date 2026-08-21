@@ -19,6 +19,8 @@ export type AuthUser = {
   tenantId?: string;
   /** Local fixo de trabalho (PDV offline) — ausente até um admin atribuir um local. */
   locationId?: string;
+  /** Guia de onboarding (AppShell) já mostrada — por usuário no banco, não por navegador. */
+  hasSeenTour?: boolean;
 };
 
 type AuthState = {
@@ -31,6 +33,7 @@ type AuthState = {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   inferredRole: () => CustomerRole;
+  markTourSeen: () => Promise<void>;
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -97,5 +100,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (r.includes("atacad")) return "wholesaler";
     if (r.includes("varejo") || r.includes("retail") || r.includes("customer")) return "retail";
     return "staff";
+  },
+
+  markTourSeen: async () => {
+    // Otimista: some do estado local já na hora de mostrar o tour, não espera o PATCH voltar —
+    // se a chamada falhar (rede instável), o pior caso é o tour aparecer de novo no próximo login,
+    // não travar a UI.
+    set((s) => (s.user ? { user: { ...s.user, hasSeenTour: true } } : s));
+    try {
+      await http.patch("/auth/me/tour-seen");
+    } catch {
+      /* ignore — próximo GET /auth/me reflete o estado real do banco */
+    }
   },
 }));
