@@ -58,6 +58,37 @@ export function resolveLine(product: PdvProduct, variantId: string): ResolvedLin
   };
 }
 
+/** "Nome do produto · cor/tamanho" — usado tanto na lista da sessão quanto nos toasts. Sem o
+ *  nome do produto, duas peças diferentes escaneadas em sequência ficavam indistinguíveis na
+ *  lista quando só cor/tamanho apareciam (ex.: "Azul · P" não diz qual produto é azul e P). */
+export function describeLine(line: ResolvedLine): string {
+  const variant = [line.color, line.size].filter(Boolean).join("/");
+  return variant ? `${line.productName} · ${variant}` : line.productName;
+}
+
+/** Beep sintetizado (Web Audio API) — sem depender de um arquivo de áudio externo. Confirma a
+ *  leitura por som, sem precisar olhar pra tela a cada peça (o jeito real que um leitor de
+ *  balcão físico funciona). Falha em silêncio se o navegador bloquear áudio sem gesto do usuário
+ *  — nunca deve travar o fluxo de escaneamento por isso. */
+function playBeep() {
+  try {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.value = 0.15;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+    osc.onended = () => void ctx.close();
+  } catch {
+    /* sem áudio disponível — leitura continua funcionando normalmente */
+  }
+}
+
 async function resolveBarcode(code: string): Promise<{ product: PdvProduct; variantId?: string } | null> {
   const local = await lookupLocalByBarcodeAsProduct(code);
   if (local) return local as { product: PdvProduct; variantId?: string };
@@ -119,6 +150,8 @@ export function BarcodeCartScannerModal({ onClose }: { onClose: () => void }) {
         return;
       }
 
+      playBeep();
+
       if (modeRef.current === "manual") {
         // Fica pausado com o item em espera até o operador confirmar a quantidade — só volta a
         // escanear depois do "Adicionar" ou "Cancelar" (ver botões abaixo).
@@ -131,13 +164,12 @@ export function BarcodeCartScannerModal({ onClose }: { onClose: () => void }) {
       cart.addOrIncrement(line, 1);
       setSession((prev) => {
         const idx = prev.findIndex((e) => e.variantId === line.variantId);
-        const label = [line.color, line.size].filter(Boolean).join(" · ");
-        if (idx === -1) return [...prev, { variantId: line.variantId, label: label || line.productName, sku: line.sku, qty: 1 }];
+        if (idx === -1) return [...prev, { variantId: line.variantId, label: describeLine(line), sku: line.sku, qty: 1 }];
         const next = prev.slice();
         next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
         return next;
       });
-      toast.success(`+1 ${line.productName}`);
+      toast.success(`+1 ${describeLine(line)}`);
       resume(1200);
     },
     [cart, resume],
@@ -192,11 +224,10 @@ export function BarcodeCartScannerModal({ onClose }: { onClose: () => void }) {
     if (!pending) return;
     const qty = Math.max(1, Math.floor(pending.qty) || 1);
     cart.addOrIncrement(pending.line, qty);
-    const label = [pending.line.color, pending.line.size].filter(Boolean).join(" · ");
-    toast.success(`${qty}x ${pending.line.productName}${label ? ` · ${label}` : ""}`);
+    toast.success(`${qty}x ${describeLine(pending.line)}`);
     setSession((prev) => {
       const idx = prev.findIndex((e) => e.variantId === pending.line.variantId);
-      if (idx === -1) return [...prev, { variantId: pending.line.variantId, label: label || pending.line.productName, sku: pending.line.sku, qty }];
+      if (idx === -1) return [...prev, { variantId: pending.line.variantId, label: describeLine(pending.line), sku: pending.line.sku, qty }];
       const next = prev.slice();
       next[idx] = { ...next[idx], qty: next[idx].qty + qty };
       return next;

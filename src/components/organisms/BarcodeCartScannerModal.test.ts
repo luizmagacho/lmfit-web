@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveLine } from "./BarcodeCartScannerModal";
+import { resolveLine, describeLine } from "./BarcodeCartScannerModal";
 import type { PdvProduct } from "@/lib/pdv/searchProducts";
 
 function product(overrides: Partial<PdvProduct> = {}): PdvProduct {
@@ -44,5 +44,20 @@ describe("resolveLine (barcode → cart line)", () => {
     const line = resolveLine(p, "v3");
     expect(line?.color).toBeUndefined();
     expect(line?.size).toBeUndefined();
+  });
+});
+
+describe("describeLine", () => {
+  it("always includes the product name, not just color/size — scanning two different products must stay distinguishable in the session list", () => {
+    const line = resolveLine(product(), "v1")!;
+    expect(describeLine(line)).toBe("Cropped LM · Preto/P");
+  });
+
+  it("falls back to just the product name when there's no color/size", () => {
+    const p = product({
+      variants: [{ _id: "v3", sku: "SOLO", price: 50 }],
+    });
+    const line = resolveLine(p, "v3")!;
+    expect(describeLine(line)).toBe("Cropped LM");
   });
 });
