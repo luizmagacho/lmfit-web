@@ -4,6 +4,7 @@ import * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { resolvePrimaryImageUrl } from "@/lib/productImageUrl";
 import { draftsFromProductRow } from "@/lib/products/variantDrafts";
+import { extractPrice, productPriceRetail, productPriceWholesale, productMinWholesale } from "@/lib/products/variantPricing";
 import { resolveUnitPrice, type CustomerRole } from "@/lib/pricing";
 import { documentId } from "@/lib/normalizeApiList";
 import { useCartStore } from "@/stores/useCartStore";
@@ -13,34 +14,6 @@ import { Skeleton } from "@/components/atoms/Skeleton";
 import { lmfitTokens } from "@/theme/tokens";
 
 type Product = Record<string, unknown>;
-
-function extractPrice(val: unknown): number {
-  if (typeof val === "number") return val;
-  if (typeof val === "string") {
-    const parsed = parseFloat(val.replace(/\./g, '').replace(',', '.'));
-    if (!isNaN(parsed)) return parsed;
-  }
-  return 0;
-}
-
-function productPriceRetail(p: Product): number {
-  const anyp = p as { priceRetail?: unknown; price?: unknown };
-  if (anyp.priceRetail !== undefined && anyp.priceRetail !== null) return extractPrice(anyp.priceRetail);
-  if (anyp.price !== undefined && anyp.price !== null) return extractPrice(anyp.price);
-  return 0;
-}
-
-function productPriceWholesale(p: Product): number | null {
-  const anyp = p as { priceWholesale?: unknown };
-  if (anyp.priceWholesale === undefined || anyp.priceWholesale === null || anyp.priceWholesale === '') return null;
-  return extractPrice(anyp.priceWholesale);
-}
-
-function productMinWholesale(p: Product): number {
-  const anyp = p as { minWholesaleQty?: number };
-  const n = typeof anyp.minWholesaleQty === "number" ? anyp.minWholesaleQty : 1;
-  return Math.max(1, Math.floor(n));
-}
 
 export function VariantGrid({
   product,

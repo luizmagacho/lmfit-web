@@ -8,14 +8,15 @@ import { PdvTemplate } from "@/components/templates/PdvTemplate";
 import { VariantGrid } from "@/components/organisms/VariantGrid";
 import { QuickCart } from "@/components/organisms/QuickCart";
 import { BarcodeScannerModal } from "@/components/organisms/BarcodeScannerModal";
+import { BarcodeCartScannerModal } from "@/components/organisms/BarcodeCartScannerModal";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Badge } from "@/components/atoms/Badge";
 import { OrderWarningsPanel } from "@/components/OrderWarningsPanel";
 import { NewCustomerModal } from "@/components/organisms/NewCustomerModal";
 import { PaymentModal, type PaymentMethod } from "@/components/organisms/PaymentModal";
 import type { VariantRowData } from "@/components/molecules/VariantQtyRow";
-import { pdvSearchProducts, pdvLookupByBarcode, type PdvProduct } from "@/lib/pdv/searchProducts";
-import { searchLocalAsProducts, lookupLocalByBarcodeAsProduct, listAllLocalAsProducts, refreshSnapshot, refreshWalkInCustomer, getCachedWalkInCustomer } from "@/lib/pdv/catalogSnapshot";
+import { pdvSearchProducts, type PdvProduct } from "@/lib/pdv/searchProducts";
+import { searchLocalAsProducts, listAllLocalAsProducts, refreshSnapshot, refreshWalkInCustomer, getCachedWalkInCustomer } from "@/lib/pdv/catalogSnapshot";
 import { enqueueSale } from "@/lib/pdv/outbox";
 import { enqueueCustomer } from "@/lib/pdv/customerOutbox";
 import { flushNow } from "@/lib/pdv/syncEngine";
@@ -93,7 +94,6 @@ export function PdvClient() {
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [scannerMode, setScannerMode] = useState<"product" | "customer" | null>(null);
-  const [scanning, setScanning] = useState(false);
   const [orderData, setOrderData] = useState<{ variant: VariantRowData; product: Record<string, unknown> } | null>(null);
 
   useEffect(() => {
@@ -168,27 +168,6 @@ export function PdvClient() {
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
-  );
-
-  const handleBarcodeDetected = useCallback(
-    async (code: string) => {
-      setScannerMode(null);
-      setScanning(true);
-      try {
-        // Local primeiro (funciona sem rede); só cai pra rede se o código não estiver na
-        // foto local deste PDV.
-        const local = await lookupLocalByBarcodeAsProduct(code);
-        const { product, variantId } = local ?? (await pdvLookupByBarcode(code));
-        pickProduct(product as PdvProduct);
-        const label = matchBarcodeVariantLabel(product as PdvProduct, variantId);
-        toast.success(label ? `${product.name} · ${label}` : `${product.name}`);
-      } catch (e: any) {
-        toast.error(e?.response?.data?.message || `Código ${code} não encontrado.`);
-      } finally {
-        setScanning(false);
-      }
-    },
-    [pickProduct],
   );
 
   /** Loop 34 — carteirinha do cliente: mesmo leitor (`BarcodeScannerModal`), só troca o que o
@@ -558,7 +537,6 @@ export function PdvClient() {
           <button
             type="button"
             onClick={() => setScannerMode("product")}
-            disabled={scanning}
             aria-label="Escanear código de barras"
             title="Escanear código de barras"
             className="flex-none min-h-12 min-w-12 rounded-md border flex items-center justify-center disabled:opacity-50 touch-manipulation bg-transparent"
@@ -568,11 +546,10 @@ export function PdvClient() {
           </button>
         </div>
 
-        {scannerMode ? (
-          <BarcodeScannerModal
-            onClose={() => setScannerMode(null)}
-            onDetected={scannerMode === "product" ? handleBarcodeDetected : handleCustomerBarcodeDetected}
-          />
+        {scannerMode === "product" ? (
+          <BarcodeCartScannerModal onClose={() => setScannerMode(null)} />
+        ) : scannerMode === "customer" ? (
+          <BarcodeScannerModal onClose={() => setScannerMode(null)} onDetected={handleCustomerBarcodeDetected} />
         ) : null}
 
         {term.length >= 2 ? (

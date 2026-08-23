@@ -56,4 +56,15 @@ describe("useCartStore", () => {
     useCartStore.getState().setRole("staff");
     expect(useCartStore.getState().lines[0].mode).toBe("atacado");
   });
+
+  it("scanning the same variant twice sums quantity instead of creating a second line (PDV sequential scan mode)", () => {
+    useCartStore.getState().addOrIncrement(baseLine(), 1);
+    expect(useCartStore.getState().lines).toHaveLength(1);
+    expect(useCartStore.getState().lines[0].quantity).toBe(1);
+
+    useCartStore.getState().addOrIncrement(baseLine(), 1);
+    const snap = useCartStore.getState().snapshot();
+    expect(snap.lines).toHaveLength(1);
+    expect(snap.lines[0].quantity).toBe(2);
+  });
 });
