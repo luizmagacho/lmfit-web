@@ -98,19 +98,32 @@ export function unlockScannerAudio(): void {
 }
 
 function playBeep() {
+  // Vibração é um reforço, não substituto do som — funciona mesmo com o celular no silencioso
+  // (que no iOS Safari SILENCIA o Web Audio API por completo, diferente de um app nativo), então
+  // cobre o caso em que a chave física de silêncio some com o beep inteiro sem nenhum aviso.
+  try {
+    navigator.vibrate?.(80);
+  } catch {
+    /* sem suporte a vibração — segue só no som */
+  }
+
   const ctx = getSharedAudioContext();
   if (!ctx) return;
   try {
     if (ctx.state === "suspended") void ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = 880;
-    gain.gain.value = 0.15;
+    osc.type = "square";
+    osc.frequency.value = 1500;
+    // Sobe rápido e desliga suave (em vez de cortar seco) — mais parecido com o "bipe" de um
+    // leitor de balcão de verdade, e mais fácil de notar que o tom baixo/curto de antes.
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
-    osc.stop(ctx.currentTime + 0.1);
+    osc.stop(ctx.currentTime + 0.18);
   } catch {
     /* sem áudio disponível — leitura continua funcionando normalmente */
   }
