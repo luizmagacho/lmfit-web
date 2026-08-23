@@ -152,6 +152,14 @@ export function BarcodeCartScannerModal({ onClose }: { onClose: () => void }) {
   const controlsRef = useRef<IScannerControls | null>(null);
   const busyRef = useRef(false);
   const cancelledRef = useRef(false);
+  // Confirmação por repetição: só aceita um código depois de ler o MESMO valor 2 vezes seguidas.
+  // Ler direto de uma tela (moiré do próprio monitor) de vez em quando faz o decodificador
+  // "acertar" um código diferente do real por um frame só — isso passa na validação de checksum
+  // do próprio formato (por isso não dá erro de decodificação, só resolve pro produto errado ou
+  // pra um código que não existe) e explica o "às vezes dá erro, às vezes não" no mesmo código
+  // físico. Exigir 2 leituras iguais seguidas filtra esse tipo de erro isolado sem atrasar
+  // perceptivelmente uma leitura boa — a câmera decodifica vários frames por segundo.
+  const lastSeenRef = useRef<{ code: string; count: number }>({ code: "", count: 0 });
 
   const [mode, setMode] = useState<ScanMode>("manual");
   const [error, setError] = useState<string | null>(null);
@@ -167,6 +175,7 @@ export function BarcodeCartScannerModal({ onClose }: { onClose: () => void }) {
   const resume = useCallback((delayMs: number) => {
     setTimeout(() => {
       busyRef.current = false;
+      lastSeenRef.current = { code: "", count: 0 };
     }, delayMs);
   }, []);
 
@@ -234,8 +243,16 @@ export function BarcodeCartScannerModal({ onClose }: { onClose: () => void }) {
         ]);
         const reader = new BrowserMultiFormatReader(hints);
         const controls = await reader.decodeFromStream(stream, videoRef.current ?? undefined, (result) => {
-          if (cancelledRef.current || !result) return;
-          void handleDetected(result.getText());
+          if (cancelledRef.current || !result || busyRef.current || pendingRef.current) return;
+          const text = result.getText();
+          if (lastSeenRef.current.code === text) {
+            lastSeenRef.current.count += 1;
+          } else {
+            lastSeenRef.current = { code: text, count: 1 };
+          }
+          if (lastSeenRef.current.count < 2) return;
+          lastSeenRef.current = { code: "", count: 0 };
+          void handleDetected(text);
         });
         if (cancelledRef.current) {
           controls.stop();
