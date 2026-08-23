@@ -8,7 +8,7 @@ import { PdvTemplate } from "@/components/templates/PdvTemplate";
 import { VariantGrid } from "@/components/organisms/VariantGrid";
 import { QuickCart } from "@/components/organisms/QuickCart";
 import { BarcodeScannerModal } from "@/components/organisms/BarcodeScannerModal";
-import { BarcodeCartScannerModal } from "@/components/organisms/BarcodeCartScannerModal";
+import { BarcodeCartScannerModal, unlockScannerAudio } from "@/components/organisms/BarcodeCartScannerModal";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Badge } from "@/components/atoms/Badge";
 import { OrderWarningsPanel } from "@/components/OrderWarningsPanel";
@@ -536,7 +536,12 @@ export function PdvClient() {
           />
           <button
             type="button"
-            onClick={() => setScannerMode("product")}
+            onClick={() => {
+              // Síncrono aqui, dentro do clique de verdade — é o gesto que os navegadores
+              // exigem pra permitir áudio depois (ver comentário em `unlockScannerAudio`).
+              unlockScannerAudio();
+              setScannerMode("product");
+            }}
             aria-label="Escanear código de barras"
             title="Escanear código de barras"
             className="flex-none min-h-12 min-w-12 rounded-md border flex items-center justify-center disabled:opacity-50 touch-manipulation bg-transparent"

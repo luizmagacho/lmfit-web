@@ -66,14 +66,42 @@ export function describeLine(line: ResolvedLine): string {
   return variant ? `${line.productName} · ${variant}` : line.productName;
 }
 
-/** Beep sintetizado (Web Audio API) — sem depender de um arquivo de áudio externo. Confirma a
- *  leitura por som, sem precisar olhar pra tela a cada peça (o jeito real que um leitor de
- *  balcão físico funciona). Falha em silêncio se o navegador bloquear áudio sem gesto do usuário
- *  — nunca deve travar o fluxo de escaneamento por isso. */
-function playBeep() {
+/** Beep de confirmação (Web Audio API), sem depender de nenhum arquivo de áudio externo — confirma
+ *  a leitura por som, sem precisar olhar pra tela a cada peça (o jeito que um leitor de balcão
+ *  físico funciona de verdade).
+ *
+ *  Um `AudioContext` criado (ou até só usado) dentro de uma callback assíncrona nasce/fica
+ *  "suspended" pela política de autoplay do navegador — o detector de código roda a partir de um
+ *  frame de câmera, não de um clique direto, então criar o contexto ali dentro toca silenciosamente
+ *  sem erro nenhum. O jeito que funciona de verdade: UM contexto só, módulo-level, destravado
+ *  (`resume()`) SÍNCRONO dentro do clique de verdade em "Escanear" (`unlockScannerAudio`, chamado
+ *  por `PdvClient.tsx`) — depois de destravado uma vez, o mesmo contexto continua tocando som
+ *  mesmo chamado de dentro de callbacks assíncronas depois. */
+let sharedAudioCtx: AudioContext | null = null;
+
+function getSharedAudioContext(): AudioContext | null {
+  if (sharedAudioCtx) return sharedAudioCtx;
   try {
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
+    sharedAudioCtx = new Ctx();
+  } catch {
+    sharedAudioCtx = null;
+  }
+  return sharedAudioCtx;
+}
+
+/** Chamar SÍNCRONO dentro do onClick real do botão "Escanear" — é o gesto do usuário que os
+ *  navegadores exigem pra permitir áudio depois, mesmo que o som em si só toque muito depois. */
+export function unlockScannerAudio(): void {
+  const ctx = getSharedAudioContext();
+  if (ctx?.state === "suspended") void ctx.resume();
+}
+
+function playBeep() {
+  const ctx = getSharedAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") void ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
@@ -83,7 +111,6 @@ function playBeep() {
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.1);
-    osc.onended = () => void ctx.close();
   } catch {
     /* sem áudio disponível — leitura continua funcionando normalmente */
   }
