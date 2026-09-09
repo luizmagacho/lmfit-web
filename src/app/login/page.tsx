@@ -135,6 +135,11 @@ function LoginForm() {
               )}
             </button>
           </div>
+          <div className="mt-1.5 text-right">
+            <Link href="/forgot-password" className="text-xs underline" style={{ color: lmfitTokens.textMuted }}>
+              Esqueci minha senha
+            </Link>
+          </div>
         </label>
         <button
           type="submit"
