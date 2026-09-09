@@ -21,17 +21,17 @@ export function IndustrialHeader({ tenant, homeHref, searchDraft, setSearchDraft
             style={{ border: "2px solid #000" }}
           />
           <span className="storefront-brand-heading text-sm text-[var(--foreground)]">
-            "{tenant?.name}"
+            &quot;{tenant?.name}&quot;
           </span>
         </Link>
         <nav className="hidden sm:flex items-center gap-4 ml-2 text-xs font-bold uppercase" aria-label="Navegação">
           <Link href="/loja" className="inline-flex items-center gap-0.5 hover:underline text-[var(--foreground)]">
             <ArrowUpRight size={11} aria-hidden />
-            "LOJA"
+            &quot;LOJA&quot;
           </Link>
           <Link href="/devolucoes" className="inline-flex items-center gap-0.5 hover:underline text-[var(--foreground)]">
             <ArrowUpRight size={11} aria-hidden />
-            "TROCAS"
+            &quot;TROCAS&quot;
           </Link>
         </nav>
         <form onSubmit={submitSearch} className="flex-1 min-w-0 max-w-xs ml-auto relative">
