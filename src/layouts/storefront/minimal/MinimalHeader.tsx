@@ -26,7 +26,7 @@ export function MinimalHeader({ tenant, homeHref, searchDraft, setSearchDraft, s
 
   if (preset === "luxo") {
     return (
-      <header className="py-8 mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <header className="max-w-7xl mx-auto px-4 py-8 mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <div />
         <Link href={homeHref} className="inline-flex items-center gap-2.5 justify-self-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -80,7 +80,7 @@ export function MinimalHeader({ tenant, homeHref, searchDraft, setSearchDraft, s
   }
 
   return (
-    <header className="flex flex-col gap-2 py-6 mb-4">
+    <header className="max-w-7xl mx-auto px-4 flex flex-col gap-2 py-6 mb-4">
       <div className="flex items-center gap-4">
         <Link href={homeHref} className="inline-flex items-center gap-2.5 flex-shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}

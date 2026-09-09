@@ -245,7 +245,7 @@ function BatchEditorModal({ batch, allBatches, onClose, onSaved }: {
                 {isEn ? "+ Input" : "+ Insumo"}
               </button>
             </div>
-            <div className="rounded-lg border overflow-hidden" style={{ borderColor: lmfitTokens.border }}>
+            <div className="rounded-xl border overflow-hidden" style={{ borderColor: lmfitTokens.border }}>
               <table className="w-full text-xs">
                 <thead>
                   <tr style={{ backgroundColor: "var(--chart-track)", color: lmfitTokens.textMuted }}>
@@ -355,7 +355,7 @@ function BatchRow({ batch, onEdit, onDelete }: { batch: ProductionBatch; onEdit:
     Planejado: "#6366f1", Corte: "#f59e0b", Costura: "#3b82f6",
     Acabamento: "#8b5cf6", Pronto: "#10b981",
   };
-  const color = STATUS_COLORS[batch.status] ?? lmfitTokens.primary;
+  const color = STATUS_COLORS[batch.status] ?? "#6b7280";
   const isEn = language === "en";
 
   return (

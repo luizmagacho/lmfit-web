@@ -70,7 +70,11 @@ const STOCK_STATE_BADGE: Record<VariantStockState, BadgeVariant | null> = {
 
 export function VariantSelector({ product, role }: { product: Product; role: CustomerRole }) {
   const cart = useCartStore();
-  const { buttonStyle } = useThemeTokens();
+  const { buttonStyle, layoutFamily } = useThemeTokens();
+  // Loop 28 — família minimal (Luxo/Wellness/Minimal) troca os botões de tamanho em caixa por uma
+  // linha de texto puro sublinhado, mesmo padrão de silêncio visual do resto da família; as outras
+  // 9 famílias continuam com o botão de sempre, sem regressão.
+  const isMinimal = layoutFamily === "minimal";
   const mode = inferModeForUser(role);
   const variants = useMemo(() => (Array.isArray(product.variants) ? product.variants : []), [product]);
 
@@ -203,7 +207,23 @@ export function VariantSelector({ product, role }: { product: Product; role: Cus
             const st = deriveStockState(v);
             const active = selectedSize === sizeLabel || (sizesForColor.length === 1 && !selectedSize);
             const disabled = st === "esgotado";
-            return (
+            return isMinimal ? (
+              <button
+                key={String(v.size ?? documentId(v))}
+                type="button"
+                disabled={disabled}
+                onClick={() => setSelectedSize(sizeLabel)}
+                aria-pressed={active}
+                className="min-w-11 min-h-11 px-2 bg-transparent border-0 text-sm disabled:cursor-not-allowed"
+                style={{
+                  color: disabled ? lmfitTokens.border : active ? lmfitTokens.text : lmfitTokens.textMuted,
+                  textDecoration: disabled ? "line-through" : active ? "underline" : undefined,
+                  textUnderlineOffset: "4px",
+                }}
+              >
+                {sizeLabel}
+              </button>
+            ) : (
               <button
                 key={String(v.size ?? documentId(v))}
                 type="button"
@@ -232,7 +252,14 @@ export function VariantSelector({ product, role }: { product: Product; role: Cus
 
       {selectedVariant ? (
         <div className="space-y-3">
-          <PriceTag price={displayPrice} mode={mode} />
+          <div>
+            <PriceTag price={displayPrice} mode={mode} />
+            {isMinimal ? (
+              <span className="block text-[10px] font-medium uppercase tracking-[0.1em] mt-1.5" style={{ color: lmfitTokens.textMuted }}>
+                Impostos inclusos
+              </span>
+            ) : null}
+          </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center border rounded-md" style={{ borderColor: lmfitTokens.border }}>
               <button

@@ -6,6 +6,8 @@ import { Truck } from "lucide-react";
 import { isValidCep, lookupCep, maskCep, onlyCepDigits } from "@/lib/cep";
 import { publicHttp } from "@/lib/publicHttp";
 import { lmfitTokens } from "@/theme/tokens";
+import { useThemeTokens } from "@/context/TenantContext";
+import { Button } from "@/components/atoms/Button";
 
 /** BRL money fields chegam formatados como string pt-BR ("37,79") via
  *  BrlMoneyResponseInterceptor global — mesmo parser já usado em ProductGrid.tsx/ShippingPicker.tsx. */
@@ -33,6 +35,7 @@ type QuoteOption = {
  * variante do mesmo produto dá o mesmo resultado — só precisa de um id válido pra consultar).
  */
 export function ShippingQuoteWidget({ variantId }: { variantId?: string }) {
+  const { buttonStyle } = useThemeTokens();
   const [cep, setCep] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,15 +107,9 @@ export function ShippingQuoteWidget({ variantId }: { variantId?: string }) {
           className="flex-1 min-w-0 px-3 py-2 rounded-lg border bg-[var(--card-bg)] text-sm outline-none focus:ring-1 focus:ring-violet-500"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
         />
-        <button
-          type="button"
-          onClick={handleCalculate}
-          disabled={loading || !variantId}
-          className="px-4 py-2 rounded-lg border text-sm font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
-          style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
-        >
+        <Button type="button" variant={buttonStyle} onClick={handleCalculate} disabled={loading || !variantId}>
           {loading ? "Calculando…" : "Calcular"}
-        </button>
+        </Button>
       </div>
       {error ? (
         <p className="text-xs" style={{ color: lmfitTokens.error }}>

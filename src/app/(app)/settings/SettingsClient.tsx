@@ -19,6 +19,22 @@ import { WhatsappSellersSection } from "./WhatsappSellersSection";
 /** (DDD) NNNNN-NNNN (móvel, 9 dígitos) ou (DDD) NNNN-NNNN (formato antigo, 8 dígitos) — mesma
  *  máscara já aplicada ao telefone do cliente no checkout (CatalogFloatingCart.tsx). Função pura
  *  e exportada pra formatar tanto digitação quanto o valor já salvo vindo do servidor. */
+/** Rótulo ao lado do campo "Secret Key" da Stripe (Loop 36) — `null` quando nada está salvo ainda
+ *  (não mostra badge nenhum). O webhook só fica pendente no instante entre salvar uma chave e o
+ *  backend confirmar o registro (normalmente nunca visível de verdade, já que uma chave só é
+ *  persistida DEPOIS do webhook ser criado com sucesso — ver `StripeCheckoutConfigService`), mas
+ *  o aviso existe pra não esconder um estado inconsistente caso ele apareça. */
+export function stripeSecretKeyStatusLabel(
+  configured: boolean,
+  webhookConfigured: boolean,
+  language: "pt-BR" | "en",
+): string | null {
+  if (!configured) return null;
+  const base = language === "en" ? "· configured" : "· configurado";
+  if (webhookConfigured) return base;
+  return base + (language === "en" ? " (webhook pending)" : " (webhook pendente)");
+}
+
 export function formatWhatsappNumberMask(raw: string): string {
   let v = raw.replace(/\D/g, "");
   if (v.length > 11) v = v.slice(0, 11);
@@ -53,6 +69,18 @@ export function SettingsClient() {
   // novo. Mesmo princípio do `melhorEnvioToken` (Loop 27).
   const [infinitePayApiKey, setInfinitePayApiKey] = useState("");
   const [infinitePayApiKeyConfigured, setInfinitePayApiKeyConfigured] = useState(false);
+  // Stripe do PRÓPRIO tenant (checkout público, Loop 36) — segunda opção de pagamento ao lado da
+  // InfinitePay. `publishableKey` é seguro por design da Stripe (feito pra ser público), então é o
+  // único dos dois campos hidratado com o valor real; `secretKey` segue o mesmo princípio acima
+  // (nunca hidratado, só o booleano `*Configured`). `stripeWebhookConfigured` é informativo: fica
+  // falso só no instante entre salvar uma chave inválida e o backend rejeitar (nunca deveria ficar
+  // "preso" nesse estado, já que uma chave só é persistida depois do webhook ser criado com sucesso).
+  const [stripePublishableKey, setStripePublishableKey] = useState("");
+  const [stripeSecretKey, setStripeSecretKey] = useState("");
+  const [stripeSecretKeyConfigured, setStripeSecretKeyConfigured] = useState(false);
+  const [stripeWebhookConfigured, setStripeWebhookConfigured] = useState(false);
+  const [stripeSaving, setStripeSaving] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
   const [geminiApiKey, setGeminiApiKey] = useState("");
   // metaAppSecret/metaWhatsappVerifyToken/metaWhatsappAccessToken são criptografados no backend
   // (EncryptionService, prefixo "enc:v1:...") — hidratar `value` a partir do que o servidor devolve
@@ -192,12 +220,17 @@ export function SettingsClient() {
             setFaviconUrl(data.branding?.faviconUrl || "");
             setWhatsappNumber(formatWhatsappNumberMask(data.whatsappNumber || ""));
             setInfinitePayTag(data.infinitePayTag || "");
-            setInfinitePayApiKeyConfigured(!!data.infinitePayApiKey);
+            // Loop 36 — o backend (`TenantsService.toAdminResponse`) agora nunca devolve o valor
+            // cru/cifrado desses campos, só o booleano `*Configured` calculado no servidor.
+            setInfinitePayApiKeyConfigured(!!data.infinitePayApiKeyConfigured);
             setGeminiApiKey(data.geminiApiKey || "");
-            setMetaAppSecretConfigured(!!data.metaAppSecret);
-            setMetaWhatsappVerifyTokenConfigured(!!data.metaWhatsappVerifyToken);
+            setMetaAppSecretConfigured(!!data.metaAppSecretConfigured);
+            setMetaWhatsappVerifyTokenConfigured(!!data.metaWhatsappVerifyTokenConfigured);
             setMetaWhatsappPhoneNumberId(data.metaWhatsappPhoneNumberId || "");
-            setMetaWhatsappAccessTokenConfigured(!!data.metaWhatsappAccessToken);
+            setMetaWhatsappAccessTokenConfigured(!!data.metaWhatsappAccessTokenConfigured);
+            setStripePublishableKey(data.stripeCheckout?.publishableKey || "");
+            setStripeSecretKeyConfigured(!!data.stripeCheckout?.secretKeyConfigured);
+            setStripeWebhookConfigured(!!data.stripeCheckout?.webhookConfigured);
             setWhatsappAiEnabled(data.whatsappAiEnabled ?? false);
             if (data.loyalty) {
               setLoyaltyEnabled(data.loyalty.enabled ?? false);
@@ -217,7 +250,7 @@ export function SettingsClient() {
               setOriginBairro(origin?.bairro ?? "");
               setOriginCidade(origin?.cidade ?? "");
               setOriginUf(origin?.uf ?? "");
-              setMelhorEnvioTokenConfigured(!!data.shippingConfig.melhorEnvio?.token);
+              setMelhorEnvioTokenConfigured(!!data.shippingConfig.melhorEnvio?.tokenConfigured);
               setMelhorEnvioAmbiente(data.shippingConfig.melhorEnvio?.ambiente ?? "sandbox");
             }
             if (data.storefront) {
@@ -265,11 +298,11 @@ export function SettingsClient() {
             }
             if (data.analytics) {
               setMetaPixelId(data.analytics.metaPixelId ?? "");
-              setMetaConversionsApiTokenConfigured(!!data.analytics.metaConversionsApiToken);
+              setMetaConversionsApiTokenConfigured(!!data.analytics.metaConversionsApiTokenConfigured);
               setGa4MeasurementId(data.analytics.ga4MeasurementId ?? "");
-              setGa4ApiSecretConfigured(!!data.analytics.ga4ApiSecret);
+              setGa4ApiSecretConfigured(!!data.analytics.ga4ApiSecretConfigured);
               setTiktokPixelId(data.analytics.tiktokPixelId ?? "");
-              setTiktokAccessTokenConfigured(!!data.analytics.tiktokAccessToken);
+              setTiktokAccessTokenConfigured(!!data.analytics.tiktokAccessTokenConfigured);
             }
           }
         })
@@ -444,11 +477,53 @@ export function SettingsClient() {
         setMetaWhatsappAccessToken("");
       }
       setSuccessMsg("Customização salva com sucesso! O visual foi atualizado instantaneamente.");
+
+      // Stripe (Loop 36) é salvo à parte, num PATCH próprio (/stripe-checkout): esse endpoint
+      // chama a API real da Stripe pra registrar o webhook, então pode falhar por motivos que não
+      // têm nada a ver com o resto da branding (chave inválida, Stripe fora do ar) — um erro aqui
+      // não deve apagar o "salvo com sucesso" de tudo que já foi salvo acima.
+      if (stripeSecretKey.trim() || stripePublishableKey.trim()) {
+        setStripeSaving(true);
+        setStripeError(null);
+        try {
+          await http.patch(`/tenants/${user.tenantId}/stripe-checkout`, {
+            secretKey: stripeSecretKey.trim() || undefined,
+            publishableKey: stripePublishableKey.trim() || undefined,
+          });
+          if (stripeSecretKey.trim()) {
+            setStripeSecretKeyConfigured(true);
+            setStripeWebhookConfigured(true);
+            setStripeSecretKey("");
+          }
+        } catch (stripeErr: any) {
+          console.error(stripeErr);
+          setStripeError(stripeErr.response?.data?.message || "Não foi possível salvar a integração com a Stripe.");
+        } finally {
+          setStripeSaving(false);
+        }
+      }
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.response?.data?.message || "Ocorreu um erro ao salvar as configurações.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleClearStripeIntegration = async () => {
+    if (user?.role !== "admin" || !user?.tenantId) return;
+    setStripeSaving(true);
+    setStripeError(null);
+    try {
+      await http.patch(`/tenants/${user.tenantId}/stripe-checkout`, { secretKey: "" });
+      setStripeSecretKeyConfigured(false);
+      setStripeWebhookConfigured(false);
+      setStripePublishableKey("");
+    } catch (err: any) {
+      console.error(err);
+      setStripeError(err.response?.data?.message || "Não foi possível remover a integração com a Stripe.");
+    } finally {
+      setStripeSaving(false);
     }
   };
 
@@ -867,6 +942,74 @@ export function SettingsClient() {
                               borderColor: lmfitTokens.border,
                               color: lmfitTokens.text,
                             }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pagamentos / Stripe (Loop 36) — segunda opção de pagamento no checkout, ao
+                        lado da InfinitePay acima; a loja escolhe uma, a outra, ou as duas. */}
+                    <div className="space-y-4 pt-6 border-t" style={{ borderColor: lmfitTokens.border }}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-sm font-bold tracking-wide uppercase text-neutral-400 dark:text-neutral-500">
+                            {language === "en" ? "Payment Integration (Stripe)" : "Integração de Pagamento (Stripe)"}
+                          </h3>
+                          <p className="text-xs mt-1" style={{ color: lmfitTokens.textMuted }}>
+                            {language === "en"
+                              ? "Adds a second online payment option (card via Stripe) next to InfinitePay. Get your keys from your Stripe Dashboard → Developers → API keys."
+                              : "Adiciona uma segunda opção de pagamento online (cartão via Stripe), ao lado da InfinitePay. Pegue as chaves no seu Dashboard da Stripe → Developers → API keys."}
+                          </p>
+                        </div>
+                        {stripeSecretKeyConfigured ? (
+                          <button
+                            type="button"
+                            onClick={handleClearStripeIntegration}
+                            disabled={stripeSaving}
+                            className="text-xs whitespace-nowrap underline decoration-dotted disabled:opacity-60"
+                            style={{ color: lmfitTokens.textMuted }}
+                          >
+                            {language === "en" ? "Remove Stripe integration" : "Remover integração Stripe"}
+                          </button>
+                        ) : null}
+                      </div>
+
+                      {stripeError ? (
+                        <p className="text-xs" style={{ color: lmfitTokens.error }}>
+                          {stripeError}
+                        </p>
+                      ) : null}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Publishable Key</label>
+                          <input
+                            type="text"
+                            value={stripePublishableKey}
+                            onChange={(e) => setStripePublishableKey(e.target.value)}
+                            placeholder="pk_live_..."
+                            className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                            Secret Key
+                            {stripeSecretKeyStatusLabel(stripeSecretKeyConfigured, stripeWebhookConfigured, language) ? (
+                              <span className="ml-2 font-normal normal-case" style={{ color: lmfitTokens.success }}>
+                                {stripeSecretKeyStatusLabel(stripeSecretKeyConfigured, stripeWebhookConfigured, language)}
+                              </span>
+                            ) : null}
+                          </label>
+                          <input
+                            type="password"
+                            value={stripeSecretKey}
+                            onChange={(e) => setStripeSecretKey(e.target.value)}
+                            placeholder={stripeSecretKeyConfigured ? "••••••••••••••••" : "sk_live_..."}
+                            autoComplete="off"
+                            className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50/50 dark:bg-neutral-900/50 text-sm outline-none transition-all focus:ring-1 focus:ring-violet-500"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
                           />
                         </div>
                       </div>

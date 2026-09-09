@@ -25,10 +25,11 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
     // nenhuma — todo mundo caía no `ease` padrão do navegador, silenciosamente.
     <StorefrontThemeVars>
       <div className="min-h-screen bg-[var(--lmfit-surface)] text-[var(--foreground)] pb-28">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <PublicHeader />
-          {children}
-        </div>
+        {/* Loop 29 — o header vive FORA do container de leitura (max-w-7xl) desde aqui: famílias de
+           faixa cheia (Expressive/Industrial) precisam bater as duas bordas da viewport, não só as
+           do container de 1280px. Cada header agora centra o próprio conteúdo (ver *Header.tsx). */}
+        <PublicHeader />
+        <div className="max-w-7xl mx-auto px-4 py-6">{children}</div>
         <ChatWidget />
         <AnalyticsScripts />
         <CookieConsentBanner />

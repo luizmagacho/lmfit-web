@@ -122,7 +122,7 @@ export default function ReportsPage() {
             <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
               Top SKUs por receita
             </h2>
-            <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+            <div className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
               {data.topVariants.length === 0 ? (
                 <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
                   Sem linhas de pedido no período.
@@ -167,7 +167,7 @@ export default function ReportsPage() {
             Gerenciar influenciadores
           </Link>
         </div>
-        <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+        <div className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
           {!influencerData?.items?.length ? (
             <p className="text-sm" style={{ color: lmfitTokens.textMuted }}>
               Nenhuma venda de influenciador neste período. Vincule um cupom a um influenciador em{" "}
@@ -214,7 +214,7 @@ function StatCard({
 }) {
   return (
     <div
-      className="rounded-lg border p-4 space-y-1"
+      className="rounded-xl border p-4 space-y-1"
       style={{ borderColor: lmfitTokens.border, backgroundColor: "var(--card-bg)" }}
     >
       <div className="text-sm" style={{ color: lmfitTokens.textMuted }}>

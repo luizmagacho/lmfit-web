@@ -476,7 +476,7 @@ export function PurchaseEditorClient({ purchaseId }: { purchaseId: string | null
         </label>
       </div>
 
-      <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <div className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
             Linhas

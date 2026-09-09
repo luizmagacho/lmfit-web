@@ -506,7 +506,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
 
       {autoBackorderNote != null ? (
         <div
-          className="rounded-lg border px-3 py-3 text-sm"
+          className="rounded-xl border px-3 py-3 text-sm"
           style={{ borderColor: lmfitTokens.border, backgroundColor: lmfitTokens.warningBg }}
           role="status"
         >
@@ -669,7 +669,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         )}
       </div>
 
-      <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <div className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
             Linhas
@@ -835,7 +835,7 @@ export function OrderEditorClient({ orderId }: { orderId: string | null }) {
         )}
       </div>
 
-      <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-2" style={{ borderColor: lmfitTokens.border }}>
+      <div className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-2" style={{ borderColor: lmfitTokens.border }}>
         <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
           Cupom de desconto
         </h2>

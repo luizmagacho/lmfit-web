@@ -10,13 +10,15 @@ import { formatBRL } from "@/lib/formatMoney";
 import { slugifyFileBase } from "@/lib/slugifyFileBase";
 import { orderChannelLabel, ORDER_CHANNELS } from "@/lib/orders/orderChannel";
 import type { OrderChannel, OrderWithWarnings } from "@/lib/orders/types";
-import { orderStatusLabel } from "@/lib/orders/orderStatus";
+import { orderStatusLabel, ORDER_STATUS_COLORS } from "@/lib/orders/orderStatus";
 import { parseBRLToNumber } from "@/lib/orders/normalizeLines";
 import { listOrders, updateOrder, ordersExportParams } from "@/lib/orders/ordersApi";
 import { OrdersKanban } from "./OrdersKanban";
 import { useLanguage } from "@/context/LanguageContext";
 import { lmfitTokens } from "@/theme/tokens";
 
+// Loop 32 — cor por status (antes o status era só texto puro na tabela); tons neutros/semânticos,
+// nunca a cor da marca do tenant (essa fica reservada pra ações primárias, não pra rótulo de estado).
 export function OrdersClient() {
   const { t, language } = useLanguage();
   const [page, setPage] = useState(1);
@@ -185,7 +187,7 @@ export function OrdersClient() {
           </select>
         </label>
         <div className="flex items-end">
-          <div className="flex p-1 rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
+          <div className="flex p-1 rounded-xl border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
             <button
               onClick={() => setView("list")}
               className="px-4 py-2 text-sm font-medium rounded-md transition-colors"
@@ -224,7 +226,7 @@ export function OrdersClient() {
           lang={language}
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
+        <div className="overflow-x-auto rounded-xl border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>
@@ -280,8 +282,16 @@ export function OrdersClient() {
                     <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.text }}>
                       {t(`channel.${row.channel}`, orderChannelLabel(row.channel as string))}
                     </td>
-                    <td className="px-3 py-2 align-top" style={{ color: lmfitTokens.text }}>
-                      {t(`status.${row.status}`, orderStatusLabel(row.status as string))}
+                    <td className="px-3 py-2 align-top">
+                      <span
+                        className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
+                        style={{
+                          backgroundColor: ORDER_STATUS_COLORS[String(row.status)]?.bg ?? "var(--chart-track)",
+                          color: ORDER_STATUS_COLORS[String(row.status)]?.fg ?? lmfitTokens.textMuted,
+                        }}
+                      >
+                        {t(`status.${row.status}`, orderStatusLabel(row.status as string))}
+                      </span>
                       {row.autoBackorderedAt ? (
                         <span
                           className="inline-block mt-1 text-[10px] font-medium normal-case tracking-normal rounded px-1.5 py-0.5"

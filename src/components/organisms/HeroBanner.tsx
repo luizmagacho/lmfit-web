@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useTenant, useThemeTokens } from "@/context/TenantContext";
 import { lmfitTokens } from "@/theme/tokens";
+import { resolveButtonVisualStyle } from "@/components/atoms/Button";
 import type { HeroComposition, HeroTreatment } from "@/theme/storefrontPresets";
 
 const CAROUSEL_INTERVAL_MS = 5000;
@@ -242,6 +243,7 @@ interface HeroBannerSlideData {
 }
 
 function HeroBannerCarousel({ slides }: { slides: HeroBannerSlideData[] }) {
+  const { buttonStyle } = useThemeTokens();
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -287,8 +289,8 @@ function HeroBannerCarousel({ slides }: { slides: HeroBannerSlideData[] }) {
                 {slide.subtitle ? <p className="text-white/90 text-xs sm:text-sm mt-0.5">{slide.subtitle}</p> : null}
                 {slide.ctaLabel ? (
                   <span
-                    className="inline-block mt-2 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md w-fit"
-                    style={{ backgroundColor: lmfitTokens.primary, color: "white" }}
+                    className="inline-block mt-2 px-3 py-1.5 text-xs sm:text-sm font-semibold w-fit"
+                    style={resolveButtonVisualStyle(buttonStyle)}
                   >
                     {slide.ctaLabel}
                   </span>
@@ -321,7 +323,7 @@ function HeroBannerCarousel({ slides }: { slides: HeroBannerSlideData[] }) {
  *  overlay/tipografia por preset + carrossel automático quando `heroImages` tem 2+ fotos. */
 export function HeroBanner() {
   const { tenant } = useTenant();
-  const { heroTreatment, heroAspectRatio, heroComposition } = useThemeTokens();
+  const { heroTreatment, heroAspectRatio, heroComposition, buttonStyle } = useThemeTokens();
   const sf = tenant?.storefront;
 
   const banners = (sf?.heroBanners ?? []).filter((b) => b.imageUrl);
@@ -365,8 +367,8 @@ export function HeroBanner() {
               {sf.heroSubtitle ? <p className="text-white/90 text-sm mt-1 max-w-md">{sf.heroSubtitle}</p> : null}
               {sf.heroCtaLabel ? (
                 <span
-                  className="inline-block mt-3 px-4 py-2 text-sm font-semibold rounded-md w-fit"
-                  style={{ backgroundColor: lmfitTokens.primary, color: "white" }}
+                  className="inline-block mt-3 px-4 py-2 text-sm font-semibold w-fit"
+                  style={resolveButtonVisualStyle(buttonStyle)}
                 >
                   {sf.heroCtaLabel}
                 </span>
@@ -386,8 +388,8 @@ export function HeroBanner() {
           ) : null}
           {sf.heroCtaLabel ? (
             <span
-              className="inline-block mt-3 px-4 py-2 text-sm font-semibold rounded-md"
-              style={{ backgroundColor: lmfitTokens.primary, color: "white" }}
+              className="inline-block mt-3 px-4 py-2 text-sm font-semibold"
+              style={resolveButtonVisualStyle(buttonStyle)}
             >
               {sf.heroCtaLabel}
             </span>

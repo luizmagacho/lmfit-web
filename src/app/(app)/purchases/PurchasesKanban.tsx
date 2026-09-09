@@ -25,7 +25,7 @@ const STATUS_LABELS: Record<string, Record<string, string>> = {
 };
 
 function getStatusColor(status: string) {
-  return STATUS_COLORS[status] ?? lmfitTokens.primary;
+  return STATUS_COLORS[status] ?? "#6b7280";
 }
 
 function PurchaseKanbanCard({
@@ -57,7 +57,7 @@ function PurchaseKanbanCard({
     <div
       draggable
       onDragStart={(e) => handleDragStart(e, item)}
-      className={`p-3 rounded-lg border bg-[var(--card-bg)] shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing transition-all ${updating === item._id || draggedItem?._id === item._id ? "opacity-50" : ""}`}
+      className={`p-3 rounded-xl border bg-[var(--card-bg)] shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing transition-all ${updating === item._id || draggedItem?._id === item._id ? "opacity-50" : ""}`}
       style={{ borderColor: lmfitTokens.border }}
     >
       <div className="flex justify-between items-start mb-2 gap-2">

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { StorefrontGate } from "../StorefrontGate";
 import { CartDrawer } from "@/components/organisms/CartDrawer";
+import { ForceCartRole } from "@/components/ForceCartRole";
 import { getServerTenant } from "@/lib/serverTenant";
 
 /**
@@ -48,6 +49,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function LojaLayout({ children }: { children: ReactNode }) {
   return (
     <StorefrontGate>
+      <ForceCartRole mode="varejo" />
       {children}
       <CartDrawer />
     </StorefrontGate>

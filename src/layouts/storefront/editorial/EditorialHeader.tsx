@@ -27,7 +27,7 @@ export function EditorialHeader({ tenant, homeHref, searchDraft, setSearchDraft,
 
   return (
     <header
-      className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 mb-2 transition-transform bg-[var(--lmfit-surface)]"
+      className="sticky top-0 z-40 max-w-7xl mx-auto px-4 pt-2 pb-3 mb-2 transition-transform bg-[var(--lmfit-surface)]"
       style={{
         transform: hidden ? "translateY(-110%)" : "translateY(0)",
         transitionDuration: "var(--kivoni-storefront-motion-duration)",

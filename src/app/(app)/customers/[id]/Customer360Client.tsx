@@ -12,6 +12,7 @@ import {
 } from "@/lib/crm/customer360";
 import type { CustomerRecord } from "@/lib/crm/customer360";
 import { formatBRL } from "@/lib/formatMoney";
+import { orderStatusLabel, ORDER_STATUS_COLORS } from "@/lib/orders/orderStatus";
 import type { OrderWithWarnings } from "@/lib/orders/types";
 import { lmfitTokens } from "@/theme/tokens";
 
@@ -122,7 +123,7 @@ export function Customer360Client({ customerId }: { customerId: string }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-2 text-sm" style={{ borderColor: lmfitTokens.border }}>
+        <div className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-2 text-sm" style={{ borderColor: lmfitTokens.border }}>
           <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
             Contato
           </h2>
@@ -147,7 +148,7 @@ export function Customer360Client({ customerId }: { customerId: string }) {
             </a>
           ) : null}
         </div>
-        <div className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-2 text-sm" style={{ borderColor: lmfitTokens.border }}>
+        <div className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-2 text-sm" style={{ borderColor: lmfitTokens.border }}>
           <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
             Resumo
           </h2>
@@ -166,7 +167,7 @@ export function Customer360Client({ customerId }: { customerId: string }) {
         </div>
       </div>
 
-      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
           Notas internas
         </h2>
@@ -206,7 +207,7 @@ export function Customer360Client({ customerId }: { customerId: string }) {
         </ul>
       </section>
 
-      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
           Linha do tempo
         </h2>
@@ -245,7 +246,7 @@ export function Customer360Client({ customerId }: { customerId: string }) {
         </ul>
       </section>
 
-      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-2" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-2" style={{ borderColor: lmfitTokens.border }}>
         <h2 className="font-medium" style={{ color: lmfitTokens.text }}>
           Pedidos
         </h2>
@@ -279,7 +280,21 @@ export function Customer360Client({ customerId }: { customerId: string }) {
                   return (
                     <tr key={id || `order-${idx}`} className="border-b" style={{ borderColor: lmfitTokens.border }}>
                       <td className="py-2 pr-2">{display(o.reference)}</td>
-                      <td className="py-2 pr-2">{display(o.status)}</td>
+                      <td className="py-2 pr-2">
+                        {o.status ? (
+                          <span
+                            className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
+                            style={{
+                              backgroundColor: ORDER_STATUS_COLORS[String(o.status)]?.bg ?? "var(--chart-track)",
+                              color: ORDER_STATUS_COLORS[String(o.status)]?.fg ?? lmfitTokens.textMuted,
+                            }}
+                          >
+                            {orderStatusLabel(o.status as string)}
+                          </span>
+                        ) : (
+                          display(o.status)
+                        )}
+                      </td>
                       <td className="py-2 pr-2 tabular-nums">
                         {Number.isFinite(total) ? formatBRL(total) : "—"}
                       </td>

@@ -160,7 +160,7 @@ export function PurchasesListClient() {
           />
         </label>
         <div className="flex items-end">
-          <div className="flex p-1 rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
+          <div className="flex p-1 rounded-xl border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
             <button
               onClick={() => setView("list")}
               className="px-4 py-2 text-sm font-medium rounded-md transition-colors"
@@ -199,7 +199,7 @@ export function PurchasesListClient() {
           lang={language}
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
+        <div className="overflow-x-auto rounded-xl border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>

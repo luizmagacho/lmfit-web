@@ -383,7 +383,7 @@ function HistorySection() {
   return (
     <div className="space-y-3">
       <EmitPanel onEmitted={() => setReload((n) => n + 1)} />
-      <div className="overflow-x-auto rounded-lg border" style={{ borderColor: lmfitTokens.border }}>
+      <div className="overflow-x-auto rounded-xl border" style={{ borderColor: lmfitTokens.border }}>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>

@@ -206,7 +206,7 @@ export function LabelsClient() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <div
-          className="lg:col-span-5 rounded-lg border bg-[var(--card-bg)] p-5 space-y-4 no-print"
+          className="lg:col-span-5 rounded-xl border bg-[var(--card-bg)] p-5 space-y-4 no-print"
           style={{ borderColor: lmfitTokens.border }}
         >
           <input
@@ -223,7 +223,7 @@ export function LabelsClient() {
             Mostrar preço na etiqueta
           </label>
 
-          <div className="rounded-lg border p-3 space-y-2" style={{ borderColor: lmfitTokens.border }}>
+          <div className="rounded-xl border p-3 space-y-2" style={{ borderColor: lmfitTokens.border }}>
             <p className="text-xs font-semibold" style={{ color: lmfitTokens.textMuted }}>
               Tamanho da folha/rolo de impressão
             </p>
@@ -319,7 +319,7 @@ export function LabelsClient() {
               {error}
             </p>
           ) : (
-            <div className="rounded-lg border overflow-hidden" style={{ borderColor: lmfitTokens.border }}>
+            <div className="rounded-xl border overflow-hidden" style={{ borderColor: lmfitTokens.border }}>
               <div
                 className="flex items-center gap-2 px-3 py-2 text-xs font-semibold border-b"
                 style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}
@@ -381,7 +381,7 @@ export function LabelsClient() {
         </div>
 
         <div
-          className="lg:col-span-7 rounded-lg border bg-white p-5 print-area"
+          className="lg:col-span-7 rounded-xl border bg-white p-5 print-area"
           style={{ borderColor: lmfitTokens.border }}
         >
           {selectedRows.length === 0 ? (

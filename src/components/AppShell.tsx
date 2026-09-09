@@ -41,9 +41,16 @@ import {
   Barcode
 } from "lucide-react";
 
+// Loop 31 — os 6 primeiros ficam na ordem de prioridade pedida (Dashboard, Produtos, Produção,
+// Pedidos, PDV, Etiquetas); o resto mantém a ordem relativa de antes. Configurações continua por
+// último (mesmo lugar de sempre).
 const navKeys = [
   { href: "/dashboard", key: "nav.dashboard", icon: LayoutDashboard },
+  { href: "/products", key: "nav.products", icon: Package },
+  { href: "/production", key: "nav.production", icon: Scissors },
+  { href: "/orders", key: "nav.orders", icon: ShoppingCart },
   { href: "/pdv", key: "nav.pdv", icon: Smartphone },
+  { href: "/labels", key: "nav.labels", icon: Barcode },
   { href: "/inventory", key: "nav.inventory", icon: Layers },
   { href: "/locations", key: "nav.locations", icon: Warehouse },
   { href: "/customers", key: "nav.customers", icon: Users },
@@ -51,16 +58,12 @@ const navKeys = [
   // { href: "/crm/tasks", key: "nav.tasks", icon: CheckSquare },
   // { href: "/crm/segments", key: "nav.segments", icon: UserCheck },
   { href: "/suppliers", key: "nav.suppliers", icon: Truck },
-  { href: "/products", key: "nav.products", icon: Package },
-  { href: "/labels", key: "nav.labels", icon: Barcode },
   { href: "/materials", key: "nav.materials", icon: Layers },
-  { href: "/orders", key: "nav.orders", icon: ShoppingCart },
   { href: "/returns", key: "nav.returns", icon: Undo2 },
   { href: "/reviews", key: "nav.reviews", icon: MessageCircle },
   { href: "/promotions", key: "nav.promotions", icon: Tag },
   { href: "/influencers", key: "nav.influencers", icon: Megaphone },
   { href: "/purchases", key: "nav.purchases", icon: CreditCard },
-  { href: "/production", key: "nav.production", icon: Scissors },
   { href: "/invoices", key: "nav.invoices", icon: FileText },
   { href: "/fiscal", key: "nav.fiscal", icon: Receipt },
   { href: "/financial", key: "nav.financial", icon: Wallet },

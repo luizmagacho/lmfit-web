@@ -559,7 +559,7 @@ export function PdvClient() {
 
         {term.length >= 2 ? (
           <div
-            className="rounded-lg border bg-[var(--card-bg)] overflow-hidden"
+            className="rounded-xl border bg-[var(--card-bg)] overflow-hidden"
           >
             {searching ? (
               <div className="p-3 space-y-2">
@@ -596,7 +596,7 @@ export function PdvClient() {
             )}
           </div>
         ) : browseProducts.length > 0 && !pdv.activeProduct ? (
-          <div className="rounded-lg border bg-[var(--card-bg)] overflow-hidden">
+          <div className="rounded-xl border bg-[var(--card-bg)] overflow-hidden">
             <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide opacity-60 border-b" style={{ borderColor: lmfitTokens.border }}>
               Produtos
             </div>

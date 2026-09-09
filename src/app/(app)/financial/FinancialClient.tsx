@@ -499,7 +499,7 @@ function ManualEntryModal({
             </label>
           </div>
           {!entry?._id && (
-            <div className="flex gap-4 p-3 rounded-lg mt-2" style={{ backgroundColor: "rgba(0,0,0,0.02)" }}>
+            <div className="flex gap-4 p-3 rounded-xl mt-2" style={{ backgroundColor: "rgba(0,0,0,0.02)" }}>
               <div className="flex-1">
                 <label className="block text-xs font-medium mb-1" style={{ color: lmfitTokens.text }}>{lang === "en" ? "Installments" : "Parcelas"}</label>
                 <input type="number" min="1" max="120" value={form.installments} onChange={e => setForm({ ...form, installments: parseInt(e.target.value) || 1 })} className="w-full border rounded-md px-3 py-1.5 text-sm bg-transparent" style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }} />

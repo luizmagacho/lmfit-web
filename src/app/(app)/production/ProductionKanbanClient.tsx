@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<string, Record<string, string>> = {
 };
 
 function getStatusColor(status: string) {
-  return STATUS_COLORS[status] ?? lmfitTokens.primary;
+  return STATUS_COLORS[status] ?? "#6b7280";
 }
 
 function KanbanCard({
@@ -84,13 +84,13 @@ function KanbanCard({
 
       {/* Cost summary */}
       <div className="grid grid-cols-2 gap-1.5">
-        <div className="rounded-lg p-2 text-center" style={{ backgroundColor: "var(--chart-track)" }}>
+        <div className="rounded-xl p-2 text-center" style={{ backgroundColor: "var(--chart-track)" }}>
           <p className="text-[9px] font-medium uppercase tracking-wide mb-0.5" style={{ color: lmfitTokens.textMuted }}>
             {isEn ? "Pieces" : "Peças"}
           </p>
           <p className="text-sm font-bold tabular-nums" style={{ color: lmfitTokens.text }}>{batch.batchQty}</p>
         </div>
-        <div className="rounded-lg p-2 text-center" style={{ backgroundColor: "var(--chart-track)" }}>
+        <div className="rounded-xl p-2 text-center" style={{ backgroundColor: "var(--chart-track)" }}>
           <p className="text-[9px] font-medium uppercase tracking-wide mb-0.5" style={{ color: lmfitTokens.textMuted }}>
             {isEn ? "Cost/Piece" : "Custo/Peça"}
           </p>

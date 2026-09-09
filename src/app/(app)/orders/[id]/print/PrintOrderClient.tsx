@@ -222,7 +222,7 @@ export function PrintOrderClient({ orderId }: { orderId: string }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Options Column (Screen only) */}
         <div
-          className="lg:col-span-4 rounded-lg border bg-[var(--card-bg)] p-5 space-y-5 no-print"
+          className="lg:col-span-4 rounded-xl border bg-[var(--card-bg)] p-5 space-y-5 no-print"
           style={{ borderColor: lmfitTokens.border }}
         >
           <div>

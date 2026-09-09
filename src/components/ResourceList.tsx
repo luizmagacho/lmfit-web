@@ -934,7 +934,9 @@ export function ResourceList({
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-lg border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
+      {/* Loop 32 — raio 12px (era 8px) pra bater com o resto do painel redesenhado (Dashboard/
+         Pedidos); é o wrapper de tabela de todas as telas em cima de ResourceList, não só Produtos. */}
+      <div className="overflow-x-auto rounded-xl border bg-[var(--card-bg)]" style={{ borderColor: lmfitTokens.border }}>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b text-left" style={{ borderColor: lmfitTokens.border }}>

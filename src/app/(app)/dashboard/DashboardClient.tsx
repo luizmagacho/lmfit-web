@@ -262,7 +262,7 @@ export function DashboardClient() {
       </section>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+        <section className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
             {language === "en" ? "Sales and Purchases" : "Vendas e Compras na semana"}
           </h2>
@@ -276,20 +276,20 @@ export function DashboardClient() {
                     title={`${p.date}\nVendas: ${formatBRL(p.totalSales)}\nCompras: ${formatBRL(p.totalPurchases)}`}
                   >
                     <div className="flex w-full justify-center gap-1 items-end h-[7rem]">
-                      {/* Barra de Vendas */}
+                      {/* Barra de Vendas — cor da marca do tenant (lmfitTokens.primary), não mais azul fixo */}
                       <div
                         className="w-1/2 max-w-[2rem] rounded-t transition-all"
                         style={{
                           height: `${Math.max(8, (p.totalSales / maxSalesAndPurchases) * 100)}%`,
-                          backgroundColor: "#0ea5e9", // azul
+                          backgroundColor: lmfitTokens.primary,
                         }}
                       />
-                      {/* Barra de Compras */}
+                      {/* Barra de Compras — neutra, pra não competir com a cor da marca */}
                       <div
                         className="w-1/2 max-w-[2rem] rounded-t transition-all"
                         style={{
                           height: `${Math.max(8, (p.totalPurchases / maxSalesAndPurchases) * 100)}%`,
-                          backgroundColor: "#f59e0b", // amarelo/laranja
+                          backgroundColor: lmfitTokens.border,
                         }}
                       />
                     </div>
@@ -304,11 +304,11 @@ export function DashboardClient() {
               </div>
               <div className="flex justify-center gap-4 text-xs mt-2" style={{ color: lmfitTokens.textMuted }}>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-[#0ea5e9]"></div>
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: lmfitTokens.primary }}></div>
                   {language === "en" ? "Sales" : "Vendas"}
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-[#f59e0b]"></div>
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: lmfitTokens.border }}></div>
                   {language === "en" ? "Purchases" : "Compras"}
                 </div>
               </div>
@@ -320,7 +320,7 @@ export function DashboardClient() {
           )}
         </section>
 
-        <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+        <section className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
             {language === "en" ? "Revenue per Product" : "Receita por produto"}
           </h2>
@@ -365,7 +365,7 @@ export function DashboardClient() {
         </section>
       </div>
 
-      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <div className="flex flex-wrap justify-between gap-2 items-baseline">
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
             {language === "en" ? "Top Influencers" : "Top Influenciadores"}
@@ -412,7 +412,7 @@ export function DashboardClient() {
         )}
       </section>
 
-      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <div className="flex flex-wrap justify-between gap-2 items-baseline">
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
             {language === "en" ? "ABC Curve (80/15/5)" : "Curva ABC (80/15/5)"}
@@ -470,7 +470,7 @@ export function DashboardClient() {
         )}
       </section>
 
-      <section className="rounded-lg border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-xl border bg-[var(--card-bg)] p-4 space-y-3" style={{ borderColor: lmfitTokens.border }}>
         <div className="flex flex-wrap justify-between gap-2 items-baseline">
           <h2 className="text-lg font-medium" style={{ color: lmfitTokens.text }}>
             {language === "en" ? "Top Variants (SKU) — same data as reports" : "Top variantes (SKU) — mesmo dado dos relatórios"}
@@ -539,7 +539,7 @@ function KpiCard({
 }) {
   return (
     <div
-      className="rounded-lg border p-4 space-y-1 bg-[var(--card-bg)]"
+      className="rounded-xl border p-4 space-y-1 bg-[var(--card-bg)]"
       style={{ borderColor: lmfitTokens.border }}
     >
       <div className="text-sm" style={{ color: lmfitTokens.textMuted }}>

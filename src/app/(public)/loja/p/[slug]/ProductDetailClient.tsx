@@ -19,6 +19,7 @@ import { ImageCarousel } from "@/components/ImageCarousel";
 import { documentId } from "@/lib/normalizeApiList";
 import { resolveLayoutFamily } from "@/layouts/storefront/resolveLayoutFamily";
 import type { PdpSlots } from "@/layouts/storefront/types";
+import { AccordionSection } from "@/components/organisms/AccordionSection";
 import { ClassicPDP } from "@/layouts/storefront/classic/ClassicPDP";
 import { EditorialPDP } from "@/layouts/storefront/editorial/EditorialPDP";
 import { MinimalPDP } from "@/layouts/storefront/minimal/MinimalPDP";
@@ -98,8 +99,25 @@ export function ProductDetailClient({ slug }: { slug: string }) {
   // duas colunas no desktop que o blueprint (STOREFRONT-V2.md §2.4) sempre previu — a versão em
   // coluna única abaixo era ela mesma um regresso (perdido na reconstrução pós-corrupção do iCloud
   // em 2026-07-26), não o comportamento que este loop precisa preservar byte a byte.
+  const family = resolveLayoutFamily(tenant?.storefront?.themePreset);
+  // Loop 28 — família minimal (Luxo/Wellness/Minimal) troca o link "← Loja" por uma trilha
+  // silenciosa "Loja · Categoria", no mesmo espírito de silêncio visual do resto da família; as
+  // outras 9 famílias continuam com a seta + link de sempre, sem regressão.
+  const isMinimalFamily = family === "minimal";
+
   const slots: PdpSlots = {
-    backLink: (
+    backLink: isMinimalFamily ? (
+      <div className="text-[11px] font-medium uppercase tracking-[0.16em]" style={{ color: lmfitTokens.textMuted }}>
+        <Link href="/loja" className="hover:opacity-70" style={{ color: lmfitTokens.textMuted }}>
+          Loja
+        </Link>
+        {category ? (
+          <>
+            &nbsp;&nbsp;·&nbsp;&nbsp;<span style={{ color: lmfitTokens.text }}>{category}</span>
+          </>
+        ) : null}
+      </div>
+    ) : (
       <Link
         href="/loja"
         className="inline-flex items-center gap-1 text-sm font-medium hover:opacity-80 transition-opacity"
@@ -127,7 +145,26 @@ export function ProductDetailClient({ slug }: { slug: string }) {
     // Nenhuma família tem hoje uma tira de miniaturas separada — `ImageCarousel` já é auto-contido
     // (setas + dots); inventar uma agora expandiria o escopo deste loop além de "religar".
     thumbs: null,
-    info: (
+    info: isMinimalFamily ? (
+      <div className="space-y-6">
+        <h1 className="text-2xl sm:text-3xl font-semibold" style={{ color: lmfitTokens.text }}>
+          {name}
+        </h1>
+        <VariantSelector product={product} role={role} />
+        <div>
+          {desc ? <AccordionSection title="Descrição" defaultOpen>{desc}</AccordionSection> : null}
+          {composition || careInstructions ? (
+            <AccordionSection title="Composição & cuidados">
+              {composition ? <div>{composition}</div> : null}
+              {careInstructions ? <div>{careInstructions}</div> : null}
+            </AccordionSection>
+          ) : null}
+          <AccordionSection title="Envio e trocas">
+            <ShippingQuoteWidget variantId={firstVariantId} />
+          </AccordionSection>
+        </div>
+      </div>
+    ) : (
       <div className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-2xl sm:text-3xl font-semibold" style={{ color: lmfitTokens.text }}>
@@ -165,7 +202,7 @@ export function ProductDetailClient({ slug }: { slug: string }) {
     productName: name,
   };
 
-  switch (resolveLayoutFamily(tenant?.storefront?.themePreset)) {
+  switch (family) {
     case "editorial":
       return <EditorialPDP slots={slots} />;
     case "minimal":

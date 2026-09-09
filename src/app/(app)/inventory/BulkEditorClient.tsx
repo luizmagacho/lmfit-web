@@ -217,7 +217,7 @@ export function BulkEditorClient() {
       ) : null}
 
       <section
-        className="rounded-lg border bg-[var(--card-bg)] p-3 grid grid-cols-1 md:grid-cols-5 gap-3 items-end"
+        className="rounded-xl border bg-[var(--card-bg)] p-3 grid grid-cols-1 md:grid-cols-5 gap-3 items-end"
         style={{ borderColor: lmfitTokens.border }}
       >
         <label className="text-xs col-span-1" style={{ color: lmfitTokens.textMuted }}>
@@ -285,7 +285,7 @@ export function BulkEditorClient() {
         </button>
       </section>
 
-      <section className="rounded-lg border bg-[var(--card-bg)] overflow-hidden" style={{ borderColor: lmfitTokens.border }}>
+      <section className="rounded-xl border bg-[var(--card-bg)] overflow-hidden" style={{ borderColor: lmfitTokens.border }}>
         <div
           className="flex items-center gap-2 border-b px-3 py-2 text-xs"
           style={{ borderColor: lmfitTokens.border, color: lmfitTokens.textMuted }}

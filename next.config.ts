@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    // Loop 30 — só pra permitir as ilustrações SVG de produto seedadas em dev local
+    // (lmfit-api/uploads/futebol/*.svg); CSP restritiva no próprio SVG serve, como o Next recomenda.
+    dangerouslyAllowSVG: true,
+    contentDispositionType: "attachment",
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: "https",

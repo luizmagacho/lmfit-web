@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import { globalHttp } from "@/lib/globalHttp";
 import "./landing.css";
 
@@ -103,9 +104,9 @@ const ClothesIcon3 = () => (
 );
 
 const STEPS = [
-  { num: "1", title: "Crie sua loja", desc: "Escolha o nome, suba seu logo e defina as cores da sua marca em minutos." },
-  { num: "2", title: "Cadastre seus produtos", desc: "Adicione fotos, variações, preços e estoque. Importe de planilha se quiser." },
-  { num: "3", title: "Compartilhe o link", desc: "Envie suaLoja.kivoni.com.br para suas clientes e comece a vender." },
+  { num: "1", title: "Crie sua loja", desc: "Cadastro simples — sua loja fica pronta com um subdomínio kivoni.com.br em minutos." },
+  { num: "2", title: "Escolha o tema e cadastre os produtos", desc: "Selecione o modelo de loja, aplique a cor da sua marca e suba o catálogo com fotos, variações e estoque." },
+  { num: "3", title: "Venda em qualquer canal", desc: "Online, WhatsApp ou balcão — os pedidos caem todos no mesmo painel, com o mesmo estoque." },
 ];
 
 interface PlanFeature {
@@ -200,7 +201,11 @@ const MOCK_PRODUCTS = [
 ];
 
 export default function KivoLandingPage() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  // Loop 31 — usa o mesmo next-themes do resto do app (em vez de um estado local com sua própria
+  // chave de localStorage): assim a landing respeita o sistema operacional do visitante por padrão
+  // (ThemeProvider tem defaultTheme="system") e fica em sincronia com a preferência que a pessoa já
+  // tiver salvo em Configurações, se ela logar depois.
+  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
 
@@ -241,25 +246,17 @@ export default function KivoLandingPage() {
   }
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("kivo-theme");
-    if (savedTheme === "light" || savedTheme === "dark") {
-      setTheme(savedTheme);
-    } else {
-      setTheme("light");
-    }
     setMounted(true);
   }, []);
 
   const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    localStorage.setItem("kivo-theme", nextTheme);
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
 
   const logoUrl = "/kivoni-symbol.svg";
 
   return (
-    <div className={`kivo-landing ${!mounted || theme === "light" ? "kivo-light" : ""}`}>
+    <div className={`kivo-landing ${mounted && resolvedTheme === "light" ? "kivo-light" : ""}`}>
       {/* Background effects */}
       <div className="kivo-grid-bg" />
 
@@ -288,9 +285,9 @@ export default function KivoLandingPage() {
               onClick={toggleTheme}
               className="kivo-theme-toggle"
               aria-label="Alternar tema"
-              title={mounted && theme === "light" ? "Ativar Modo Escuro" : "Ativar Modo Claro"}
+              title={mounted && resolvedTheme === "light" ? "Ativar Modo Escuro" : "Ativar Modo Claro"}
             >
-              {mounted && theme === "light" ? <MoonIcon /> : <SunIcon />}
+              {mounted && resolvedTheme === "light" ? <MoonIcon /> : <SunIcon />}
             </button>
             
             <Link href="/login" className="kivo-btn kivo-btn--ghost kivo-btn--sm">
@@ -309,28 +306,25 @@ export default function KivoLandingPage() {
         <div className="kivo-glow-orb kivo-glow-orb--purple" />
         <div className="kivo-glow-orb kivo-glow-orb--cyan" />
 
-        <div className="kivo-hero-badge">✨ Plataforma White-Label para Lojistas</div>
+        <div className="kivo-hero-badge">✨ Loja online, WhatsApp e PDV no mesmo estoque</div>
 
         <h1>
-          Sua marca.
+          A loja completa pra quem
           <br />
-          Seu catálogo.
-          <br />
-          <span className="kivo-gradient-word">Sem limites.</span>
+          <span className="kivo-gradient-word">vende moda de verdade.</span>
         </h1>
 
         <p className="kivo-hero-sub">
-          Crie sua loja online profissional em minutos. Catálogo com a sua cara,
-          pedidos via WhatsApp, controle de estoque e muito mais — tudo no seu
-          subdomínio exclusivo.
+          Catálogo com tema próprio, pedido pelo WhatsApp, caixa da loja física
+          e atacado — tudo com o mesmo estoque, sem planilha duplicada.
         </p>
 
         <div className="kivo-hero-actions">
           <a href="#contato" className="kivo-btn kivo-btn--primary">
             Criar minha loja grátis
           </a>
-          <a href="#features" className="kivo-btn kivo-btn--ghost">
-            Ver recursos
+          <a href="#como-funciona" className="kivo-btn kivo-btn--ghost">
+            Ver como funciona
           </a>
         </div>
 
@@ -361,10 +355,10 @@ export default function KivoLandingPage() {
       {/* Features */}
       <section id="features" className="kivo-section kivo-section--center">
         <div className="kivo-section-label">⚡ Recursos</div>
-        <h2 className="kivo-section-title">Tudo que você precisa para vender mais</h2>
+        <h2 className="kivo-section-title">Pare de operar sua loja em 5 apps diferentes</h2>
         <p className="kivo-section-desc">
-          Do catálogo à nota fiscal — as mesmas ferramentas que grandes operações
-          usam, agora num só lugar para qualquer lojista.
+          Catálogo, pedidos, estoque e caixa conversando entre si — mude em um
+          lugar, atualiza em todos.
         </p>
 
         <div className="kivo-bento-grid">
@@ -372,8 +366,8 @@ export default function KivoLandingPage() {
           <div className="kivo-bento-card kivo-bento-card--large">
             <div className="kivo-bento-content">
               <div className="kivo-bento-icon">🛍️</div>
-              <h3>Catálogo Profissional</h3>
-              <p>Seus produtos com fotos, variações de cor e tamanho, preços e estoque sincronizado em tempo real.</p>
+              <h3>Catálogo com Tema Próprio</h3>
+              <p>Escolha entre modelos prontos (editorial, minimalista, streetwear...) e personalize com a cor da sua marca.</p>
             </div>
             <div className="kivo-bento-visual">
               <div className="kivo-bento-mockup-mobile">
@@ -394,12 +388,12 @@ export default function KivoLandingPage() {
           {/* Card 2: Venda em todo canal (Medium) */}
           <div className="kivo-bento-card kivo-bento-card--medium">
             <div className="kivo-bento-content">
-              <div className="kivo-bento-icon">🛒</div>
-              <h3>Venda em Todo Canal</h3>
-              <p>Conecte TikTok Shop, Mercado Livre e Shopee — pedidos importados e pagos com PIX, cartão ou Mercado Pago sem sair da plataforma.</p>
+              <div className="kivo-bento-icon">💬</div>
+              <h3>Pedido pelo WhatsApp</h3>
+              <p>A cliente manda o pedido pelo WhatsApp e ele já cai organizado no seu painel, com o estoque atualizado na hora.</p>
             </div>
             <div className="kivo-bento-visual" style={{ minHeight: "150px", display: "flex", flexWrap: "wrap", alignContent: "flex-start", gap: "0.5rem" }}>
-              {["TikTok Shop", "Mercado Livre", "Shopee", "WhatsApp"].map((ch) => (
+              {["Loja online", "WhatsApp", "PDV"].map((ch) => (
                 <span
                   key={ch}
                   style={{
@@ -487,21 +481,21 @@ export default function KivoLandingPage() {
             </div>
           </div>
 
-          {/* Card 6: Cupons & fidelidade (Half) */}
+          {/* Card 6: Atacado e varejo (Half) */}
           <div className="kivo-bento-card kivo-bento-card--half">
             <div className="kivo-bento-content">
-              <div className="kivo-bento-icon">🎁</div>
-              <h3>Cupons & Fidelidade</h3>
-              <p>Cupons de desconto no checkout e cashback que vira crédito automático na próxima compra do cliente.</p>
+              <div className="kivo-bento-icon">📦</div>
+              <h3>Atacado e Varejo Juntos</h3>
+              <p>Mesma peça, dois preços — o sistema decide automaticamente qual mostrar pra cada cliente.</p>
             </div>
           </div>
 
-          {/* Card 7: Devoluções & trocas (Half) */}
+          {/* Card 7: Produção por lote (Half) */}
           <div className="kivo-bento-card kivo-bento-card--half">
             <div className="kivo-bento-content">
-              <div className="kivo-bento-icon">↩️</div>
-              <h3>Devoluções & Trocas</h3>
-              <p>Registrou a devolução, o estoque volta e o crédito de loja é lançado pro cliente — tudo automático.</p>
+              <div className="kivo-bento-icon">✂️</div>
+              <h3>Produção por Lote</h3>
+              <p>Acompanhe custo e prazo de cada lote, do corte até o produto pronto pra vender.</p>
             </div>
           </div>
 
@@ -519,7 +513,7 @@ export default function KivoLandingPage() {
       {/* How it works */}
       <section id="como-funciona" className="kivo-section kivo-section--center">
         <div className="kivo-section-label">🚀 Como funciona</div>
-        <h2 className="kivo-section-title">Online em 3 passos</h2>
+        <h2 className="kivo-section-title">No ar em três passos</h2>
         <p className="kivo-section-desc">
           Sem código, sem complicação. Sua loja pronta para vender em minutos.
         </p>
@@ -537,9 +531,9 @@ export default function KivoLandingPage() {
       {/* Pricing */}
       <section id="precos" className="kivo-section kivo-section--center">
         <div className="kivo-section-label">💎 Planos</div>
-        <h2 className="kivo-section-title">Escolha o plano ideal para você</h2>
+        <h2 className="kivo-section-title">Cresça sem trocar de sistema</h2>
         <p className="kivo-section-desc">
-          Comece grátis e faça upgrade quando sua loja crescer. Sem multas, sem fidelidade.
+          Comece grátis. Suba de plano só quando precisar do próximo recurso.
         </p>
 
         <div className="kivo-billing-toggle">
@@ -603,7 +597,7 @@ export default function KivoLandingPage() {
       {/* CTA Banner with Store Request Form */}
       <section id="contato" className="kivo-section" style={{ paddingBottom: 0 }}>
         <div className="kivo-cta" style={{ maxWidth: "800px" }}>
-          <h2>Pronta para criar sua loja?</h2>
+          <h2>Sua loja pode estar no ar hoje</h2>
           <p>
             Preencha os dados abaixo e configure sua loja online em até 24 horas!
           </p>

@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Kivoni — Sua marca. Seu catálogo. Sem limites.",
+  title: "Kivoni — A loja completa pra quem vende moda de verdade",
   description:
-    "Plataforma white-label para lojistas. Crie seu catálogo online profissional, gerencie estoque, receba pedidos via WhatsApp e muito mais.",
-  keywords: ["catálogo online", "white label", "e-commerce", "loja virtual", "WhatsApp"],
+    "Catálogo com tema próprio, pedido pelo WhatsApp, caixa da loja física e atacado — tudo com o mesmo estoque, sem planilha duplicada.",
+  keywords: ["catálogo online", "white label", "e-commerce", "loja virtual", "WhatsApp", "PDV"],
   openGraph: {
-    title: "Kivoni — Sua marca. Seu catálogo. Sem limites.",
-    description: "Plataforma white-label para lojistas criarem sua loja online profissional.",
+    title: "Kivoni — A loja completa pra quem vende moda de verdade",
+    description: "Catálogo com tema próprio, pedido pelo WhatsApp, caixa da loja física e atacado — tudo no mesmo estoque.",
     type: "website",
   },
 };
@@ -17,5 +17,5 @@ export default function LandingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="dark">{children}</div>;
+  return <>{children}</>;
 }

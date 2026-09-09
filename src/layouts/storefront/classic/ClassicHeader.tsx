@@ -11,7 +11,7 @@ import type { FamilyHeaderProps } from "../types";
  *  categorias em chips logo abaixo (navegação óbvia, o cliente encontra rápido). */
 export function ClassicHeader({ tenant, homeHref, searchDraft, setSearchDraft, submitSearch }: FamilyHeaderProps) {
   return (
-    <header className="mb-2">
+    <header className="max-w-7xl mx-auto px-4 mb-2">
       <div className="flex items-center gap-3 pb-4 border-b border-[var(--lmfit-border)]">
         <Link href={homeHref} className="inline-flex items-center gap-2 flex-shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
