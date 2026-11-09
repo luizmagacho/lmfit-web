@@ -37,11 +37,23 @@ export default function UsersPage() {
     return m;
   }, [locations]);
 
+  // A API exige `password` (mín. 6 caracteres) pra criar usuário, mas essa coluna nunca existiu
+  // no formulário — resultado: toda tentativa de criar usuário caía no erro de validação do
+  // backend sem nenhum campo na tela pra corrigir. `excel: false` porque senha não faz sentido em
+  // planilha de import/export; `tableColumns` abaixo garante que ela só aparece no formulário, não
+  // como coluna da tabela.
   const columns: ResourceColumn[] = useMemo(
     () => [
       { key: "_id", label: "ID" },
       { key: "name", label: "Nome" },
       { key: "email", label: "E-mail" },
+      {
+        key: "password",
+        label: "Senha",
+        fieldType: "password",
+        excel: false,
+        placeholder: "Mínimo 6 caracteres (deixe em branco ao editar para manter a atual)",
+      },
       { key: "role", label: "Papel" },
       {
         key: "assignedLocationId",
@@ -56,6 +68,8 @@ export default function UsersPage() {
     [locations],
   );
 
+  const tableColumns = ["_id", "name", "email", "role", "assignedLocationId"];
+
   return (
     <>
       <div className="mb-4 text-sm text-[var(--lmfit-muted)]" style={{ color: "var(--lmfit-text-muted)" }}>
@@ -69,6 +83,7 @@ export default function UsersPage() {
         title="Usuários"
         endpoint="/users"
         columns={columns}
+        tableColumns={tableColumns}
         cellRender={{
           assignedLocationId: (row) => {
             const id = row.assignedLocationId as string | undefined | null;
@@ -76,11 +91,25 @@ export default function UsersPage() {
             return locationNameById.get(id) ?? "—";
           },
         }}
-        mergeSubmitPayload={(payload) => {
-          if (payload.assignedLocationId === NO_LOCATION) {
-            return { ...payload, assignedLocationId: null };
+        validateBeforeSubmit={({ modal, formValues }) => {
+          // Só exige senha na criação — editando, campo em branco significa "manter a atual"
+          // (a API também já ignora um `password` vazio/nulo no PATCH).
+          const pwd = formValues.password ?? "";
+          if (modal === "create" && pwd.trim().length < 6) {
+            return "A senha deve ter no mínimo 6 caracteres.";
           }
-          return payload;
+          return null;
+        }}
+        mergeSubmitPayload={(payload, { modal }) => {
+          let next = payload;
+          if (next.assignedLocationId === NO_LOCATION) {
+            next = { ...next, assignedLocationId: null };
+          }
+          if (modal === "edit" && !next.password) {
+            next = { ...next };
+            delete next.password;
+          }
+          return next;
         }}
       />
     </>

@@ -10,7 +10,7 @@ async function loadXlsx() {
 export type ExcelColumn = {
   key: string;
   label: string;
-  fieldType?: "text" | "email" | "tel" | "number" | "checkbox" | "select" | "textarea" | "url" | "imageFile";
+  fieldType?: "text" | "email" | "tel" | "number" | "checkbox" | "select" | "textarea" | "url" | "imageFile" | "password";
   editable?: boolean;
 };
 

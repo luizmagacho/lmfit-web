@@ -46,7 +46,8 @@ export type ResourceColumn = {
     | "select"
     | "textarea"
     | "url"
-    | "imageFile";
+    | "imageFile"
+    | "password";
   /** If false, column appears in the table but not in create/edit forms */
   editable?: boolean;
   /** When true, block save if the field is empty (except checkbox). */
@@ -1383,6 +1384,16 @@ export function ResourceList({
                                 [c.key]: normalizeEmail(prev[c.key] ?? ""),
                               }))
                             }
+                          />
+                        ) : ft === "password" ? (
+                          <input
+                            type="password"
+                            autoComplete="new-password"
+                            className="mt-1 w-full border rounded px-3 py-2 min-h-11"
+                            style={{ borderColor: lmfitTokens.border, color: lmfitTokens.text }}
+                            placeholder={c.placeholder}
+                            value={val}
+                            onChange={(e) => setFormValues((prev) => ({ ...prev, [c.key]: e.target.value }))}
                           />
                         ) : (
                           <input
