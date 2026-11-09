@@ -242,6 +242,9 @@ export function OrdersClient() {
                 <th className="px-3 py-2 font-medium hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
                   {t("orders.channel", "Canal")}
                 </th>
+                <th className="px-3 py-2 font-medium hidden md:table-cell" style={{ color: lmfitTokens.accentBlue }}>
+                  {t("orders.seller", "Vendedor")}
+                </th>
                 <th className="px-3 py-2 font-medium" style={{ color: lmfitTokens.accentBlue }}>
                   {t("orders.status", "Status")}
                 </th>
@@ -259,7 +262,7 @@ export function OrdersClient() {
             <tbody>
               {!loading && rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-8 text-center" style={{ color: lmfitTokens.textMuted }}>
+                  <td colSpan={9} className="px-3 py-8 text-center" style={{ color: lmfitTokens.textMuted }}>
                     Nenhum pedido encontrado.
                   </td>
                 </tr>
@@ -281,6 +284,9 @@ export function OrdersClient() {
                     </td>
                     <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.text }}>
                       {t(`channel.${row.channel}`, orderChannelLabel(row.channel as string))}
+                    </td>
+                    <td className="px-3 py-2 align-top hidden md:table-cell" style={{ color: lmfitTokens.text }}>
+                      {row.sellerName || "—"}
                     </td>
                     <td className="px-3 py-2 align-top">
                       <span

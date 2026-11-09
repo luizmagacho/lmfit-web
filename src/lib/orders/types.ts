@@ -49,6 +49,8 @@ export type OrderRecord = {
   clientSaleId?: string;
   autoBackorderedAt?: string | null;
   autoBackorderNote?: string | null;
+  /** Nome de quem fez a venda, salvo no momento da venda (ver comentário no schema da API). */
+  sellerName?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };

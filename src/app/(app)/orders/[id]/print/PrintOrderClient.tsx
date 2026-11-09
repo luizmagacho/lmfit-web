@@ -433,6 +433,9 @@ export function PrintOrderClient({ orderId }: { orderId: string }) {
                 <p className="text-xs text-neutral-500">
                   Realizado em: {formattedOrderDate || "—"}
                 </p>
+                {order.sellerName ? (
+                  <p className="text-xs text-neutral-500">Vendedor(a): {order.sellerName}</p>
+                ) : null}
               </div>
               <div className="relative w-20 h-20 shrink-0">
                 <Image
