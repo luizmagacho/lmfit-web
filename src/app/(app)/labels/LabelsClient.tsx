@@ -152,7 +152,18 @@ export function LabelsClient() {
    *  cortado embaixo. ~37.8px/cm (96dpi); `barcodeMargin`/`barcodeFontSize` somam de volta ao
    *  orçamento total porque o `<canvas>` do jsbarcode inclui as duas margens + a linha de texto,
    *  não só a altura das barras. */
-  const barcodeMargin = 2;
+  // Quiet zone (margem em branco nas pontas do código) pequena demais é a causa mais comum de
+  // "imprimiu mas o leitor não lê": o EAN-13 decodifica certo (dígito verificador ok), mas sem
+  // ~7 módulos de margem de cada lado o scanner perde a guarda de início/fim do código. Um valor
+  // fixo de margem (2px) quebrava a leitura só pra caber em etiquetas pequenas — agora a margem
+  // acompanha a largura do módulo (barra), e é a barra que encolhe (com um piso) quando a
+  // etiqueta é estreita demais pro tamanho padrão, em vez da margem.
+  const EAN13_MODULES = 95; // 3 + 42 + 5 + 42 + 3 (guardas + dois grupos de 6 dígitos)
+  const QUIET_ZONE_MODULES = 7; // mínimo recomendado de cada lado pra um EAN-13 ler de forma confiável
+  const tagWidthPx = tagWidthCm * 37.8;
+  const maxBarcodeWidth = Math.max(0.6, (tagWidthPx - 4) / (EAN13_MODULES + QUIET_ZONE_MODULES * 2));
+  const barcodeWidth = Math.min(1.2, maxBarcodeWidth);
+  const barcodeMargin = Math.max(2, Math.round(barcodeWidth * QUIET_ZONE_MODULES));
   const barcodeFontSize = 8;
   const barcodeExtra = barcodeMargin * 2 + (barcodeFontSize + 4);
   const reservedPx = (showPrice ? 12 : 0) + 11 + 6 + 6 + barcodeExtra;
@@ -411,7 +422,7 @@ export function LabelsClient() {
                       <Barcode
                         value={r.barcode}
                         format="EAN13"
-                        width={1.2}
+                        width={barcodeWidth}
                         height={barcodeHeightPx}
                         margin={barcodeMargin}
                         fontSize={barcodeFontSize}
@@ -420,7 +431,7 @@ export function LabelsClient() {
                       <>
                         <Barcode
                           value={r.barcode}
-                          width={1.2}
+                          width={barcodeWidth}
                           height={barcodeHeightPx}
                           margin={barcodeMargin}
                           fontSize={barcodeFontSize}
